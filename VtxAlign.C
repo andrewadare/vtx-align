@@ -1,8 +1,8 @@
 
-#include "VtxAlignmentUtils.h"
 #include "SvxTGeo.h"
 #include "SvxGeoTrack.h"
 #include "SvxProj.h"
+#include "GLSFitter.h"
 #include "Mille.h"
 
 #include <TFile.h>
@@ -68,7 +68,7 @@ void RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
 void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
                    string comment = "", double sumto=0.0);
 
-void VtxAlign(int iter = 1)
+void VtxAlign(int iter = 0)
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
