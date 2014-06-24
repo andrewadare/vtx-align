@@ -1,0 +1,14 @@
+*~
+
+# Auto-generated Millepede files
+*.end
+*.log
+*.res
+*.txt
+*.his
+*.bin
+
+# Root libs and dictionary files
+*.d
+*.so
+*.pcm
