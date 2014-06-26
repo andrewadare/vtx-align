@@ -6,6 +6,7 @@
 #include "TNtuple.h"
 #include "TTreeReader.h"
 #include "TTreeReaderValue.h"
+#include "TGraphErrors.h"
 
 const int nlayers = 4;
 const int nladders = 24;
@@ -29,6 +30,22 @@ void DrawResults()
   TNtuple *ht[ntrees] = {0};
   ht[0] = (TNtuple *) inFile->Get("ht1");
   ht[1] = (TNtuple *) inFile->Get("ht2");
+
+  TGraphErrors *gdead[nlayers];
+  for (int lyr=0; lyr<nlayers; lyr++)
+  {
+    gdead[lyr] = new TGraphErrors();
+    SetGraphProps(gdead[lyr],kNone, kOrange-8, kNone,kDot);
+    gdead[lyr]->SetFillColorAlpha(kOrange-8, 0.5);
+    gdead[lyr]->SetLineWidth(0);
+    for (int ldr=0; ldr<nLadders[lyr]; ldr++)
+    {
+      double dx = Dead(lyr,ldr) ? 0.5 : 0.0;
+      double dy = Dead(lyr,ldr) ? 0.089 : 0.0;
+      gdead[lyr]->SetPoint(ldr, ldr + 0.5, 0.0);
+      gdead[lyr]->SetPointError(ldr, dx, dy);
+    }
+  }
 
   TLatex ltx;
   ltx.SetNDC();
@@ -171,10 +188,14 @@ void DrawResults()
     }
     ltx.SetTextSize(0.07);
     DrawObject(hds[lyr][0], "e0p", Form("ds_lyr%d",lyr), cList);
+    gdead[lyr]->Draw("e5p,same");
     hds[lyr][1]->Draw("e0p,same");
+    gPad->RedrawAxis();
     ltx.DrawLatex(0.23, 0.92, hds[lyr][0]->GetTitle());
     DrawObject(hdz[lyr][0], "e0p", Form("dz_lyr%d",lyr), cList);
+    gdead[lyr]->Draw("e5p,same");
     hdz[lyr][1]->Draw("e0p,same");
+    gPad->RedrawAxis();
     ltx.DrawLatex(0.23, 0.92, hdz[lyr][0]->GetTitle());
   }
   ltx.SetTextSize(0.06);
@@ -248,7 +269,7 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
     float s = *ds;
     float z = *dz;
 
-    // Printf("%s %d %d %d %f %f %x", 
+    // Printf("%s %d %d %d %f %f %x",
     //        treename, lyr, ldr, stage, s, z, hs[lyr][ldr][stage]);
     if (s>-0.2 && s<0.2 && z>-0.2 && z<0.2)
     {
