@@ -500,6 +500,10 @@ DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
   for (int i=0; i<geo->GetNLayers(); i++)
     for (int j=0; j<geo->GetNLadders(i); j++)
     {
+      TPolyLine *s = geo->LadderOutlineXY(i,j);
+      s->SetLineColor(opt.Contains("faint") ? kGray : kGray+2);
+      s->SetLineWidth(opt.Contains("faint") ? 1 : 2);
+      s->Draw("same");
 
       if (opt.Contains("dead") && Dead(i,j)) // Mark dead ladders
       {
@@ -512,12 +516,6 @@ DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
         ltx.SetTextColor(kRed-4);
         ltx.DrawLatex(xyz[0], xyz[1], "#times");
       }
-
-      TPolyLine *s = geo->LadderOutlineXY(i,j);
-      s->SetLineColor(opt.Contains("faint") ? kGray : kGray+2);
-      s->SetLineWidth(opt.Contains("faint") ? 1 : 2);
-      s->Draw("same");
-
       if (opt.Contains("faint"))
         continue;
 
@@ -526,8 +524,6 @@ DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
       int vert = xyz[1] > 0 ? 1 : 3;
       label.SetTextAlign(10*horz + vert);
       label.DrawLatex(xyz[0], xyz[1], Form(" %d ", j));
-
-
     }
   return c;
 }
