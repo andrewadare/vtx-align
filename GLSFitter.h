@@ -11,10 +11,48 @@
 using namespace std;
 
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L);
+TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov);
 void TrackFitZResid(SvxGeoTrack &gt, double *pars = 0);
 void TrackFitSResid(SvxGeoTrack &gt, double *pars = 0);
 void ZeroFieldResiduals(SvxGeoTrack &gt, double *pars /* y0, z0, phi, theta */);
 void Residuals(SvxGeoTrack &tt, SvxGeoTrack &mt, TNtuple *t);
+
+TVectorD
+SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov)
+{
+  // Simple generalized linear least-squares fitter.
+  // Solve y(X) = beta'*X + error(L) for beta (vector of regression coefs.)
+  // L is the inverse covariance matrix for y.
+  // Least-squares solution involves solving X' L X beta = X' L y
+
+  double tol = 1.e-15;
+  TMatrixD XT(X); XT.T();
+  TMatrixD A = XT*L*X;
+  TVectorD b = XT*L*y;
+
+  // Now solve A*beta = b using SVD. Decompose A = U S V'.
+  TDecompSVD svd(A);
+  TMatrixD UT = svd.GetU(); UT.T();
+  TMatrixD V  = svd.GetV();
+
+  // Construct Moore-Penrose pseudoinverse of S
+  TVectorD s = svd.GetSig();
+  int n = s.GetNrows();
+  TMatrixD Sd(n,n);
+  for (int i=0; i<n; i++)
+    Sd(i,i) = s(i)>tol ? 1./s(i) : 0.;
+
+  // Result
+  TVectorD beta = V * Sd * UT * b;
+  
+  // and covariance matrix
+  V *= Sd;
+  TMatrixD C(V,TMatrixD::kMultTranspose,V);
+  cov.ResizeTo(C);
+  cov = C;
+
+  return beta;
+}
 
 TVectorD
 SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L)
