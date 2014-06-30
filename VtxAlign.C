@@ -45,7 +45,8 @@ const char *pedeConstFile = "pede-const.txt";
 string pedeBinFileStd = "standalone.bin";
 string pedeBinFileCnt = "svxcnttrks.bin";
 
-void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0, TNtuple *trkTree = 0, TString opt = "");
+void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0,
+               TNtuple *trkTree = 0, TString opt = "");
 bool TrackOk(SvxGeoTrack &t);
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
@@ -53,7 +54,7 @@ int Label(int layer, int ladder, string coord);
 void ParInfo(int label, int &layer, int &ladder, string &coord);
 void GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
-void UpdateResiduals(SvxGeoTrack &track);
+// void UpdateResiduals(SvxGeoTrack &track);
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks);
 TCanvas *DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt);
 void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2);
@@ -67,22 +68,29 @@ void PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
 void RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
 void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
                    string comment = "", double sumto=0.0);
+TVectorD BeamCenter(geoTracks &tracks, int ntrk, TString arm);
+TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
+TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
+void FitTracks(geoTracks &tracks);
+void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 void VtxAlign(int iter = 0)
 {
+  int run = 411768;
+
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
   {
     Printf("\"which pede\" returns nothing. Exiting.");
     gSystem->Exit(-1);
   }
-  int run = 411768;
+
   TString pisaFileIn  = (iter==0) ?
                         Form("geom/svxPISA-%d.par", run) :
                         Form("geom/svxPISA-%d.par.%d", run, iter);
   TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
   TString inFileName  = (iter==0) ?
-                        Form("rootfiles/%d_cluster.root", run) :
+                        Form("rootfiles/%d_june26_small.root", run) :
                         Form("rootfiles/%d_cluster.%d.root", run, iter);
   TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
 
@@ -137,18 +145,23 @@ void VtxAlign(int iter = 0)
   // Original ladder positions
   vecd x0; vecd y0; vecd z0;
   GetLadderXYZ(tgeo, x0, y0, z0);
+  geoTracks tracks_nocut;
   geoTracks tracks;
   geoTracks cnttracks;
 
-  GetTracksFromTree(svxseg, tgeo, tracks);
+  GetTracksFromTree(svxseg, tgeo, tracks_nocut);
   if (nCntTracks > 0)
     GetTracksFromTree(svxcnt, tgeo, cnttracks);
 
+  Printf("Fitting zero-field standalone tracks...");
   if (nStdTracks > 0)
-    TrackLoop(pedeBinFileStd, tracks,    ht1, trktree, "fit"); // Fit standalone tracks
-
+  {
+    FitTracks(tracks_nocut);
+    FilterTracks(tracks_nocut, tracks, 0.2);
+    TrackLoop(pedeBinFileStd, tracks, ht1, trktree);
+  }
   if (nCntTracks > 0)
-    TrackLoop(pedeBinFileCnt, cnttracks, ht1, trktree, ""); // Don't fit SvxCnt tracks
+    TrackLoop(pedeBinFileCnt, cnttracks, ht1, trktree, "ext");
 
   // Shell out to pede executable
   gSystem->Exec(Form("pede %s", pedeSteerFile));
@@ -186,7 +199,7 @@ void VtxAlign(int iter = 0)
   }
   for (unsigned int i=0; i<cnttracks.size(); i++)
   {
-    UpdateResiduals(cnttracks[i]);
+    // UpdateResiduals(cnttracks[i]);
     FillNTuple(cnttracks[i], ht2);
   }
 
@@ -232,7 +245,12 @@ void
 TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
           TString opt)
 {
-  Printf("Track loop: fit, compute residuals, write to file...");
+  // Options:
+  // - "fit": Do a straight-line fit to tracks in this function.
+  // - "ext": Assume residuals were computed from external information.
+  // The "fit" and "ext" options are mutually exclusive--don't pass both.
+
+  Printf("Calling mille() in TrackLoop(). Write to %s...", binfile.c_str());
   Mille m(binfile.c_str());
   for (unsigned int i=0; i<tracks.size(); i++)
   {
@@ -240,14 +258,20 @@ TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
     double pars[4] = {0}; /* y0, z0, phi, theta */
 
     if (opt.Contains("fit"))
+    {
       ZeroFieldResiduals(tracks[i], pars);
+      tracks[i].vy   = pars[0];
+      tracks[i].vz   = pars[1];
+      tracks[i].phi0 = pars[2];
+      tracks[i].the0 = pars[3];
+    }
     else
     {
       pars[0] = tracks[i].vy;
       pars[1] = tracks[i].vz;
       pars[2] = tracks[i].phi0;
       pars[3] = tracks[i].the0;
-      UpdateResiduals(tracks[i]);
+      // UpdateResiduals(tracks[i]);
     }
 
     if (hitTree)
@@ -277,15 +301,28 @@ TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
       sigma_z[j] *= 1./TMath::Sqrt(12);
     }
 
-    for (int j=0; j<tracks[i].nhits; j++)
-    {
-      SvxGeoHit hit = tracks[i].GetHit(j);
-      slabel[0] = Label(hit.layer, hit.ladder, "s");
-      zlabel[0] = Label(hit.layer, hit.ladder, "z");
-
-      if (opt.Contains("fit"))
+    if (opt.Contains("ext"))
+      for (int j=0; j<tracks[i].nhits; j++)
       {
-        // if (i<1000) Printf("ds %f dz %f", hit.ds, hit.dz);
+        SvxGeoHit hit = tracks[i].GetHit(j);
+        slabel[0] = Label(hit.layer, hit.ladder, "s");
+        zlabel[0] = Label(hit.layer, hit.ladder, "z");
+        float sigs = hit.xsigma * sigma_s[hit.layer];
+        float sigz = hit.zsigma * sigma_z[hit.layer];
+        m.mille(1, derlc, 1, dergl, slabel, hit.ds, sigs);
+        m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
+        m.end();
+        m.mille(1, derlc, 1, dergl, zlabel, hit.dz, sigz);
+        m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
+        m.end();
+      }
+    else
+    {
+      for (int j=0; j<tracks[i].nhits; j++)
+      {
+        SvxGeoHit hit = tracks[i].GetHit(j);
+        slabel[0] = Label(hit.layer, hit.ladder, "s");
+        zlabel[0] = Label(hit.layer, hit.ladder, "z");
         float r = hit.x*hit.x + hit.y*hit.y;
         float sderlc[4] = {1.0,   r, 0.0, 0.0};
         float zderlc[4] = {0.0, 0.0, 1.0,   r};
@@ -294,30 +331,9 @@ TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
         m.mille(4, sderlc, 1, dergl, slabel, hit.ds, sigs);
         m.mille(4, zderlc, 1, dergl, zlabel, hit.dz, sigz);
       }
-      else
-      {
-        static int cnt = 0;
-        if (cnt < 10)
-        {
-          Printf("CNT: %d ds %f dz %f : %f %f %f ",
-                 slabel[0], hit.ds, hit.dz,
-                 derlc[0], dergl[0], sigma_s[j]
-                );
-          cnt ++;
-        }
-        float sigs = hit.xsigma * sigma_s[hit.layer];
-        float sigz = hit.zsigma * sigma_z[hit.layer];
-        m.mille(1, derlc, 1, dergl, slabel, hit.ds, sigs);
-        m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
-        m.end(); // Write residuals for this track & reset for next one
-        m.mille(1, derlc, 1, dergl, zlabel, hit.dz, sigz);
-        m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
-        m.end(); // Write residuals for this track & reset for next one
-      }
-    }
-    if (opt.Contains("fit"))
       m.end(); // Write residuals for this track & reset for next one
-  }
+    }
+  } // track loop
 
   // Mille object must go out of scope for output file to close properly.
   return;
@@ -561,6 +577,7 @@ DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2)
     double x = x1[i], y = y1[i];
     double dx = x2[i] - x;
     double dy = y2[i] - y;
+    double ds = TMath::Sqrt(dx*dx + dy*dy);
     double dz = z2[i] - z1[i];
 
     // Draw points showing displacement in z coordinate
@@ -585,15 +602,15 @@ DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2)
     }
 
     // Draw arrows showing (significant) displacements in xy plane
-    if (dx*dx + dy*dy > 5e-4) // Only label changes > 5 um
+    if (ds > 5e-4) // Only label changes > 5 um
     {
       TArrow a;
       a.SetLineWidth(2);
       a.DrawArrow(x, y, x + f*dx, y + f*dy, 0.005);
 
       TLatex ltx;
-      ltx.SetTextSize(0.01);
-      ltx.DrawLatex(x + f*dx, y + f*dy, Form("(%.0f, %.0f)", 1e4*dx, 1e4*dy));
+      ltx.SetTextSize(0.015);
+      ltx.DrawLatex(x + f*dx, y + f*dy, Form("%.0f", 1e4*ds));
     }
   }
 
@@ -622,28 +639,28 @@ GetCorrections(const char *resFile, std::map<int, double> &mpc)
   return (int)mpc.size();
 }
 
-void
-UpdateResiduals(SvxGeoTrack &track)
-{
-  static TRandom3 ran;
+// void
+// UpdateResiduals(SvxGeoTrack &track)
+// {
+//   static TRandom3 ran;
 
-  for (int i=0; i<track.nhits; i++)
-  {
-    SvxGeoHit hit = track.GetHit(i);
-    double r = TMath::Sqrt(hit.x*hit.x + hit.y*hit.y);
-    double xproj = track.vx + r*TMath::Cos(track.phi0);
-    double yproj = track.vy + r*TMath::Sin(track.phi0);
-    double zproj = track.vz + r/TMath::Tan(track.the0);
+//   for (int i=0; i<track.nhits; i++)
+//   {
+//     SvxGeoHit hit = track.GetHit(i);
+//     double r = TMath::Sqrt(hit.x*hit.x + hit.y*hit.y);
+//     double xproj = track.vx + r*TMath::Cos(track.phi0);
+//     double yproj = track.vy + r*TMath::Sin(track.phi0);
+//     double zproj = track.vz + r/TMath::Tan(track.the0);
 
-    double phiproj = TMath::ATan2(yproj, xproj);
-    double phihit = TMath::ATan2(hit.y, hit.x);
+//     double phiproj = TMath::ATan2(yproj, xproj);
+//     double phihit = TMath::ATan2(hit.y, hit.x);
 
-    track.hits[i].dz = zproj - hit.z ;
-    track.hits[i].ds = r*fmod(phiproj - phihit, TMath::TwoPi()) ;
-  }
+//     track.hits[i].dz = zproj - hit.z ;
+//     track.hits[i].ds = r*fmod(phiproj - phihit, TMath::TwoPi()) ;
+//   }
 
-  return;
-}
+//   return;
+// }
 
 void
 GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks)
@@ -817,6 +834,108 @@ AddConstraint(veci &labels, vecd &coords, ofstream &fs, string comment, double s
   fs << "Constraint " << sumto << "  ! " << comment << endl;
   for (unsigned int i=0; i<labels.size(); i++)
     fs << labels[i] << " " << coords[i] << endl;
+
+  return;
+}
+
+TVectorD
+BeamCenter(geoTracks &tracks, int ntrk, TString arm)
+{
+  // Compute least-squares beam center from ntrk tracks.
+  // Warning: TrackFitSResid() overwrites tracks[i].ds as a side effect.
+
+  int n = TMath::Min(ntrk, (int)tracks.size());
+  TMatrixD M(n,2);   // "Design matrix" containing track slopes
+  TVectorD y0(n);    // Vector of track y-intercept values
+  TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
+  L.UnitMatrix();
+  L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
+  TMatrixD cov(2,2); // Assigned in SolveGLS()
+
+  for (int i=0; i<n; i++)
+  {
+    // Perform straight-line fit --> residuals, track parameters
+    double pars[2] = {0}; /* y0, phi */
+    TrackFitSResid(tracks[i], pars);
+    double yint = pars[0], phi = pars[1];
+    bool east = (phi > 0.5*TMath::Pi() && phi < 1.5*TMath::Pi());
+    if ((arm=="east" && east) || (arm=="west" && !east))
+    {
+      M(i, 0) = -TMath::Tan(phi);
+      M(i, 1) = 1;
+      y0(i) = yint;
+      i++;
+    }
+  }
+
+  TVectorD bc = SolveGLS(M, y0, L, cov);
+  Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
+         arm.Data(),
+         bc(0), TMath::Sqrt(cov(0,0)),
+         bc(1), TMath::Sqrt(cov(1,1)));
+  cov.Print();
+  return bc;
+}
+
+TVectorD
+IPVec(TVectorD &a, TVectorD &n, TVectorD &p)
+{
+  // Compute impact parameter vector from point p to line x = a + tn
+  // where
+  // - x is a straight-line track trajectory
+  // - a is a point on vector x (e.g. y-intercept point (0, y0))
+  // - n is a unit vector directing x (e.g. (cos(phi), sin(phi)).
+  return a - p - ((a - p)*n)*n;
+}
+
+TVectorD
+IPVec(SvxGeoTrack &t, TVectorD &p)
+{
+  TVectorD a(2); a(1) = t.vy;
+  TVectorD n(2);
+  n(0) = TMath::Cos(t.phi0);
+  n(1) = TMath::Sin(t.phi0);
+  return IPVec(a,n,p);
+}
+
+void
+FitTracks(geoTracks &tracks)
+{
+  for (unsigned int i=0; i<tracks.size(); i++)
+  {
+    // Perform straight-line fit --> residuals, track parameters
+    double pars[4] = {0}; /* y0, z0, phi, theta */
+    ZeroFieldResiduals(tracks[i], pars);
+    tracks[i].vy   = pars[0];
+    tracks[i].vz   = pars[1];
+    tracks[i].phi0 = pars[2];
+    tracks[i].the0 = pars[3];
+  }
+  return;
+}
+
+void
+FilterTracks(geoTracks &a, geoTracks &b, double maxdca)
+{
+  // Copy the subset of a tracks to b that pass within maxdca of the beam center.
+
+  Printf("Computing east arm beam center...");
+  TVectorD bce = BeamCenter(a, 5000, "east");
+
+  Printf("Computing west arm beam center...");
+  TVectorD bcw = BeamCenter(a, 5000, "west");
+
+  for (unsigned int i=0; i<a.size(); i++)
+  {
+    bool east = (a[i].phi0 > 0.5*TMath::Pi() && a[i].phi0 < 1.5*TMath::Pi());
+    TVectorD d = IPVec(a[i], east ? bce : bcw);
+    if (TMath::Sqrt(d*d) < maxdca)
+      b.push_back(a[i]);
+  }
+
+  double rejectFrac = 1.0 - (float)b.size()/a.size();
+  Printf("%.3f%% of tracks rejected by beam center DCA cut of %.0f um.\n\n",
+         100*rejectFrac, 1e4*maxdca);
 
   return;
 }
