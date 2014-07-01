@@ -47,20 +47,18 @@ string pedeBinFileCnt = "svxcnttrks.bin";
 
 void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0,
                TNtuple *trkTree = 0, TString opt = "");
-bool TrackOk(SvxGeoTrack &t);
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
 int Label(int layer, int ladder, string coord);
 void ParInfo(int label, int &layer, int &ladder, string &coord);
 void GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
-// void UpdateResiduals(SvxGeoTrack &track);
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks);
 TCanvas *DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt);
 void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2);
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple);
 bool Dead(int layer, int ladder);
-
+bool Locked(int layer, int ladder);
 bool In(int val, veci v);
 void Ones(veci &labels, veci &xlabels, vecd &x);
 void Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
@@ -90,7 +88,7 @@ void VtxAlign(int iter = 0)
                         Form("geom/svxPISA-%d.par.%d", run, iter);
   TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
   TString inFileName  = (iter==0) ?
-                        Form("rootfiles/%d_june26_small.root", run) :
+                        Form("rootfiles/%d_june26_all.root", run) :
                         Form("rootfiles/%d_cluster.%d.root", run, iter);
   TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
 
@@ -157,7 +155,7 @@ void VtxAlign(int iter = 0)
   if (nStdTracks > 0)
   {
     FitTracks(tracks_nocut);
-    FilterTracks(tracks_nocut, tracks, 0.2);
+    FilterTracks(tracks_nocut, tracks, 0.10);
     TrackLoop(pedeBinFileStd, tracks, ht1, trktree);
   }
   if (nCntTracks > 0)
@@ -225,22 +223,6 @@ void VtxAlign(int iter = 0)
   return;
 }
 
-bool
-TrackOk(SvxGeoTrack &t)
-{
-  if (t.nhits == 4)
-  {
-    if (t.hits[0].layer==0 &&
-        t.hits[1].layer==1 &&
-        t.hits[2].layer==2 &&
-        t.hits[3].layer==3)
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
 void
 TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
           TString opt)
@@ -292,8 +274,12 @@ TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
     int zlabel[1] = {0};
     float derlc[1] = {1.0}; // Local derivatives
     float dergl[1] = {1.0}; // Global derivatives
-    float sigma_s[4] = {50e-4, 50e-4, 80e-4, 80e-4};
-    float sigma_z[4] = {425e-4, 425e-4, 1000e-4, 1000e-4};
+
+    // float sigma_s[4] = {50e-4, 50e-4, 80e-4, 80e-4};
+    // float sigma_z[4] = {425e-4, 425e-4, 1000e-4, 1000e-4};
+
+    float sigma_s[4] = {100e-4, 100e-4, 160e-4, 160e-4};
+    float sigma_z[4] = {1000e-4, 1000e-4, 2000e-4, 2000e-4};
 
     for (int j=0; j<4; j++)
     {
@@ -360,8 +346,21 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   // label w_label
   // ...
 
-  // Parameter
-  // 104 0.0 -1 !
+  // Fix ladders. Example: 104 0.0 -1
+  double xyz[3] = {0};
+  fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
+     << endl;
+  for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+    for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
+      if (Locked(lyr,ldr))
+      {
+        double presig = 1e-4; // Stronger damping for smaller values
+        fs << Form("%4d 0.0 %g ! B%dL%d(s)",
+                   Label(lyr, ldr, "s"), presig, lyr, ldr) << endl;
+        fs << Form("%4d 0.0 %g ! B%dL%d(z)",
+                   Label(lyr, ldr, "z"), presig, lyr, ldr) << endl;
+      }
+  fs << endl;
 
   // Global parameter labels for z and s coordinates in east and west arms
   veci wz;
@@ -369,8 +368,30 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   veci ez;
   veci es;
 
-  // Labels for global parameters to be excluded from sum constraints
-  veci excl;
+  // Boundary "wedge" units - sequences of 4 edge ladders at top and bottom
+  int wb[4] = {0,0,0,0};
+  int wt[4] = {4,9,7,11};
+  int et[4] = {5,10,8,12};
+  int eb[4] = {9,19,15,23};
+  veci wtz; // west top z
+  veci wts; // west top s
+  veci wbz; // west bottom z
+  veci wbs; // west bottom s
+  veci etz; // east top z
+  veci ets; // east top s
+  veci ebz; // east bottom z
+  veci ebs; // east bottom s
+  for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+  {
+    wtz.push_back(Label(lyr, wt[lyr], "z")); // west top z
+    wts.push_back(Label(lyr, wt[lyr], "s")); // west top s
+    wbz.push_back(Label(lyr, wb[lyr], "z")); // west bottom z
+    wbs.push_back(Label(lyr, wb[lyr], "s")); // west bottom s
+    etz.push_back(Label(lyr, et[lyr], "z")); // east top z
+    ets.push_back(Label(lyr, et[lyr], "s")); // east top s
+    ebz.push_back(Label(lyr, eb[lyr], "z")); // east bottom z
+    ebs.push_back(Label(lyr, eb[lyr], "s")); // east bottom s
+  }
 
   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
   {
@@ -388,16 +409,44 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
     }
   }
 
+  // Labels for global parameters to be excluded from sum constraints
+  veci excl;
+  vecd x;
+  Radii(wtz,excl,geo,x),     AddConstraint(wtz, x, fs, "West top z r shear");
+  Radii(etz,excl,geo,x);     AddConstraint(etz, x, fs, "East top z r shear");
+  Radii(wts,excl,geo,x);     AddConstraint(wts, x, fs, "West top s r shear");
+  Radii(ets,excl,geo,x);     AddConstraint(ets, x, fs, "East top s r shear");
+  // PhiAngles(wtz,excl,geo,x), AddConstraint(wtz, x, fs, "West top z phi shear");
+  // PhiAngles(etz,excl,geo,x); AddConstraint(etz, x, fs, "East top z phi shear");
+  // PhiAngles(wts,excl,geo,x); AddConstraint(wts, x, fs, "West top s phi shear");
+  // PhiAngles(ets,excl,geo,x); AddConstraint(ets, x, fs, "East top s phi shear");
+  // RPhi(wtz,excl,geo,x),      AddConstraint(wtz, x, fs, "West top z rphi shear");
+  // RPhi(etz,excl,geo,x);      AddConstraint(etz, x, fs, "East top z rphi shear");
+  // RPhi(wts,excl,geo,x);      AddConstraint(wts, x, fs, "West top s rphi shear");
+  // RPhi(ets,excl,geo,x);      AddConstraint(ets, x, fs, "East top s rphi shear");
+
+  Radii(wbz,excl,geo,x),     AddConstraint(wbz, x, fs, "West bottom z r shear");
+  Radii(ebz,excl,geo,x);     AddConstraint(ebz, x, fs, "East bottom z r shear");
+  Radii(wbs,excl,geo,x);     AddConstraint(wbs, x, fs, "West bottom s r shear");
+  Radii(ebs,excl,geo,x);     AddConstraint(ebs, x, fs, "East bottom s r shear");
+  // PhiAngles(wbz,excl,geo,x), AddConstraint(wbz, x, fs, "West bottom z phi shear");
+  // PhiAngles(ebz,excl,geo,x); AddConstraint(ebz, x, fs, "East bottom z phi shear");
+  // PhiAngles(wbs,excl,geo,x); AddConstraint(wbs, x, fs, "West bottom s phi shear");
+  // PhiAngles(ebs,excl,geo,x); AddConstraint(ebs, x, fs, "East bottom s phi shear");
+  // RPhi(wbz,excl,geo,x),      AddConstraint(wbz, x, fs, "West bottom z rphi shear");
+  // RPhi(ebz,excl,geo,x);      AddConstraint(ebz, x, fs, "East bottom z rphi shear");
+  // RPhi(wbs,excl,geo,x);      AddConstraint(wbs, x, fs, "West bottom s rphi shear");
+  // RPhi(ebs,excl,geo,x);      AddConstraint(ebs, x, fs, "East bottom s rphi shear");
+
   // Fill vector of excluded ladders
   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
     for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
-      if (Dead(lyr,ldr))
+      if (Dead(lyr,ldr) || Locked(lyr,ldr))
       {
         excl.push_back(Label(lyr, ldr, "z"));
         excl.push_back(Label(lyr, ldr, "s"));
       }
 
-  vecd x;
   Ones(wz,excl,x);          AddConstraint(wz, x, fs, "West z translation");
   Ones(ez,excl,x);          AddConstraint(ez, x, fs, "East z translation");
   Ones(ws,excl,x);          AddConstraint(ws, x, fs, "West s translation");
@@ -412,8 +461,8 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   PhiAngles(es,excl,geo,x); AddConstraint(es, x, fs, "East s phi shear");
   RPhi(wz,excl,geo,x);      AddConstraint(wz, x, fs, "West z r-phi shear");
   RPhi(ez,excl,geo,x);      AddConstraint(ez, x, fs, "East z r-phi shear");
-  RPhi(ws,excl, geo,x);     AddConstraint(ws, x, fs, "West s r-phi shear");
-  RPhi(es,excl, geo,x);     AddConstraint(es, x, fs, "East s r-phi shear");
+  RPhi(ws,excl,geo,x);      AddConstraint(ws, x, fs, "West s r-phi shear");
+  RPhi(es,excl,geo,x);      AddConstraint(es, x, fs, "East s r-phi shear");
 
   fs.close();
   Printf("Done.");
@@ -441,7 +490,7 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
     fs << binfiles[i] << " ! binary data file" << endl;
   fs << endl;
 
-  fs << "method inversion 10 0.0001  ! Gauss. elim., #iterations, tol." << endl;
+  fs << "method inversion 5 0.0001  ! Gauss. elim., #iterations, tol." << endl;
   fs << "end" << endl;
 
   fs.close();
@@ -519,6 +568,13 @@ DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
       TPolyLine *s = geo->LadderOutlineXY(i,j);
       s->SetLineColor(opt.Contains("faint") ? kGray : kGray+2);
       s->SetLineWidth(opt.Contains("faint") ? 1 : 2);
+
+      if (Locked(i,j))
+      {
+        s->SetLineColor(kOrange-3);
+        s->SetLineWidth(2);
+      }
+
       s->Draw("same");
 
       if (opt.Contains("dead") && Dead(i,j)) // Mark dead ladders
@@ -639,29 +695,6 @@ GetCorrections(const char *resFile, std::map<int, double> &mpc)
   return (int)mpc.size();
 }
 
-// void
-// UpdateResiduals(SvxGeoTrack &track)
-// {
-//   static TRandom3 ran;
-
-//   for (int i=0; i<track.nhits; i++)
-//   {
-//     SvxGeoHit hit = track.GetHit(i);
-//     double r = TMath::Sqrt(hit.x*hit.x + hit.y*hit.y);
-//     double xproj = track.vx + r*TMath::Cos(track.phi0);
-//     double yproj = track.vy + r*TMath::Sin(track.phi0);
-//     double zproj = track.vz + r/TMath::Tan(track.the0);
-
-//     double phiproj = TMath::ATan2(yproj, xproj);
-//     double phihit = TMath::ATan2(hit.y, hit.x);
-
-//     track.hits[i].dz = zproj - hit.z ;
-//     track.hits[i].ds = r*fmod(phiproj - phihit, TMath::TwoPi()) ;
-//   }
-
-//   return;
-// }
-
 void
 GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks)
 {
@@ -764,6 +797,22 @@ Dead(int layer, int ladder)
   return false;
 }
 
+bool
+Locked(int layer, int ladder)
+{
+  if (layer==2 && ladder==15) return true; // 50%
+  if (layer==3 && ladder==2)  return true; // 65%
+  //if (layer==3 && ladder==12) return true; // 70%
+  if (layer==3 && ladder==13) return true; // 66%
+  if (layer==3 && ladder==22) return true; // Not dead, but problematic
+
+  // if (layer==3 && ladder==9)  return true; // 66%
+  // if (layer==3 && ladder==15) return true; // 66%
+  // if (layer==3 && ladder==19) return true; // 68%
+  if (layer==3 && ladder==21) return true; // 50%
+  return false;
+}
+
 bool In(int val, veci v)
 {
   for (unsigned int j=0; j<v.size(); j++)
@@ -833,7 +882,14 @@ AddConstraint(veci &labels, vecd &coords, ofstream &fs, string comment, double s
 {
   fs << "Constraint " << sumto << "  ! " << comment << endl;
   for (unsigned int i=0; i<labels.size(); i++)
-    fs << labels[i] << " " << coords[i] << endl;
+  {
+    int lyr, ldr;
+    string s;
+    ParInfo(labels[i], lyr, ldr, s);
+    fs << labels[i] << " " << coords[i]
+       << " ! B" << lyr << "L" << ldr << "(" << s << ")" << endl;
+  }
+  fs << endl;
 
   return;
 }
@@ -920,22 +976,43 @@ FilterTracks(geoTracks &a, geoTracks &b, double maxdca)
   // Copy the subset of a tracks to b that pass within maxdca of the beam center.
 
   Printf("Computing east arm beam center...");
-  TVectorD bce = BeamCenter(a, 5000, "east");
+  TVectorD bce = BeamCenter(a, 8000, "east");
 
   Printf("Computing west arm beam center...");
-  TVectorD bcw = BeamCenter(a, 5000, "west");
+  TVectorD bcw = BeamCenter(a, 8000, "west");
+
+  // Residual outlier cut [cm]
+  double resCut = 0.10;
 
   for (unsigned int i=0; i<a.size(); i++)
   {
     bool east = (a[i].phi0 > 0.5*TMath::Pi() && a[i].phi0 < 1.5*TMath::Pi());
     TVectorD d = IPVec(a[i], east ? bce : bcw);
-    if (TMath::Sqrt(d*d) < maxdca)
-      b.push_back(a[i]);
+
+    // DCA outlier cut
+    if (TMath::Sqrt(d*d) > maxdca)
+      continue;
+
+    // Hit-level cuts
+    bool reject = false;
+    for (int j=0; j<a[i].nhits; j++)
+    {
+      SvxGeoHit hit = a[i].GetHit(j);
+      // if (Dead(hit.layer, hit.ladder) || Locked(hit.layer, hit.ladder))
+      //   reject = true;
+      if (hit.ds > resCut || hit.dz > resCut)
+        reject = true;
+    }
+    if (reject)
+      continue;
+
+    b.push_back(a[i]);
   }
 
   double rejectFrac = 1.0 - (float)b.size()/a.size();
-  Printf("%.3f%% of tracks rejected by beam center DCA cut of %.0f um.\n\n",
-         100*rejectFrac, 1e4*maxdca);
+  Printf("%.3f%% of tracks rejected by beam center DCA cut of %.0f um"
+         " and residual outlier cut of %.0f um.\n\n",
+         100*rejectFrac, 1e4*maxdca, 1e4*resCut);
 
   return;
 }
