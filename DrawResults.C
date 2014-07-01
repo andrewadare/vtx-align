@@ -17,6 +17,7 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
                TH1D *hz[nlayers][nladders][ntrees],
                TFile *f, const char *treename, int stage);
 void SetupHist(TH1D *h, int stage);
+void SetYMax(TH1 *h1, TH1 *h2);
 
 void DrawResults()
 {
@@ -42,7 +43,7 @@ void DrawResults()
     {
       double dx = Dead(lyr,ldr) ? 0.5 : 0.0;
       double dy = Dead(lyr,ldr) ? 0.089 : 0.0;
-      gdead[lyr]->SetPoint(ldr, ldr + 0.5, 0.0);
+      gdead[lyr]->SetPoint(ldr, ldr, 0.0);
       gdead[lyr]->SetPointError(ldr, dx, dy);
     }
   }
@@ -97,6 +98,8 @@ void DrawResults()
     for (int ldr=0; ldr<nl; ldr++)
     {
       cs->cd(ldr+1);
+
+      SetYMax(hs[lyr][ldr][0], hs[lyr][ldr][1]);
       for (int stage=0; stage<ntrees; stage++)
         hs[lyr][ldr][stage]->Draw(stage==0?"":"same");
 
@@ -115,6 +118,7 @@ void DrawResults()
                                     1e4*hs[lyr][ldr][1]->GetMean(),
                                     1e4*hs[lyr][ldr][1]->GetRMS()));
       cz->cd(ldr+1);
+      SetYMax(hz[lyr][ldr][0], hz[lyr][ldr][1]);
       for (int stage=0; stage<ntrees; stage++)
         hz[lyr][ldr][stage]->Draw(stage==0?"":"same");
 
@@ -154,8 +158,12 @@ void DrawResults()
   {
     for (int stage=0; stage<ntrees; stage++)
     {
-      hdz[lyr][stage] = new TH1D(Form("hdz%d_%d",lyr, stage), Form("z-resid layer %d", lyr), nLadders[lyr], 0, float(nLadders[lyr]));
-      hds[lyr][stage] = new TH1D(Form("hds%d_%d",lyr, stage), Form("s-resid layer %d", lyr), nLadders[lyr], 0, float(nLadders[lyr]));
+      hdz[lyr][stage] = new TH1D(Form("hdz%d_%d",lyr, stage), 
+                                 Form("z-resid layer %d", lyr), 
+                                 nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
+      hds[lyr][stage] = new TH1D(Form("hds%d_%d",lyr, stage), 
+                                 Form("s-resid layer %d", lyr), 
+                                 nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
       SetHistProps(hds[lyr][stage], kRed, kNone, kRed, kFullCircle, 1.5);
       SetHistProps(hdz[lyr][stage], kBlue, kNone, kBlue, kFullCircle, 1.5);
       if (stage==0)
@@ -279,4 +287,13 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
   }
 
   return;
+}
+
+void
+SetYMax(TH1 *h1, TH1 *h2)
+{
+  double a = h1->GetBinContent(h1->GetMaximumBin());
+  double b = h2->GetBinContent(h2->GetMaximumBin());
+  h1->GetYaxis()->SetRangeUser(0, 1.2*TMath::Max(a,b));
+  h2->GetYaxis()->SetRangeUser(0, 1.2*TMath::Max(a,b));
 }
