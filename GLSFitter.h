@@ -1,3 +1,5 @@
+#ifndef __GLSFITTER_H__
+#define __GLSFITTER_H__
 
 #include "SvxGeoTrack.h"
 #include <TDecompSVD.h>
@@ -204,3 +206,4 @@ TrackFitSResid(SvxGeoTrack &gt, double *pars)
 
   return;
 }
+#endif
