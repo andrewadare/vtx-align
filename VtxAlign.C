@@ -3,6 +3,9 @@
 #include "SvxGeoTrack.h"
 #include "SvxProj.h"
 #include "GLSFitter.h"
+#include "BeamCenterFuncs.h"
+#include "ParameterDefs.h"
+#include "ConstraintBuilder.h"
 #include "Mille.h"
 
 #include <TFile.h>
@@ -49,8 +52,6 @@ void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0,
                TNtuple *trkTree = 0, TString opt = "");
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
-int Label(int layer, int ladder, string coord);
-void ParInfo(int label, int &layer, int &ladder, string &coord);
 void GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks);
@@ -59,16 +60,13 @@ void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2);
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple);
 bool Dead(int layer, int ladder);
 bool Locked(int layer, int ladder);
-bool In(int val, veci v);
-void Ones(veci &labels, veci &xlabels, vecd &x);
-void Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-void PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-void RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
-                   string comment = "", double sumto=0.0);
-TVectorD BeamCenter(geoTracks &tracks, int ntrk, TString arm);
-TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
-TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
+// bool In(int val, veci v);
+// void Ones(veci &labels, veci &xlabels, vecd &x);
+// void Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
+// void PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
+// void RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
+// void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
+//                    string comment = "", double sumto=0.0);
 void FitTracks(geoTracks &tracks);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
@@ -88,7 +86,7 @@ void VtxAlign(int iter = 0)
                         Form("geom/svxPISA-%d.par.%d", run, iter);
   TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
   TString inFileName  = (iter==0) ?
-                        Form("rootfiles/%d_june26_all.root", run) :
+                        Form("rootfiles/%d_june26_small.root", run) :
                         Form("rootfiles/%d_cluster.%d.root", run, iter);
   TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
 
@@ -500,55 +498,6 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
   return;
 }
 
-int
-Label(int layer, int ladder, string coord)
-{
-  // Return a global parameter label for this layer, ladder, and coordinate.
-  // In Millepede II, any unique integer > 0 will do.
-  // Labels are not required to be sequential.
-  int start[4] = {0,10,30,46}; // # ladders within & excluding layer 0,1,2,3
-  int ic = 99;
-
-  if (coord.compare("s") == 0)
-    ic = 0;
-  if (coord.compare("z") == 0)
-    ic = 1;
-  // Add other coordinates / degrees of freedom here as needed
-  // Then ParInfo() would need corresponding modification.
-
-  return 70*ic + start[layer] + ladder + 1;
-}
-
-void
-ParInfo(int label, int &layer, int &ladder, string &coord)
-{
-  // Get layer, ladder, and coordinate string from global parameter label.
-  // Inverse of Label() function.
-
-  int start[4] = {0,10,30,46}; // # ladders within & excluding layer 0,1,2,3
-  int l = 0;
-
-  if (label > 70)
-  {
-    coord = "z";
-    l = label - 70;
-  }
-  else
-  {
-    coord = "s";
-    l = label;
-  }
-
-  layer = 3;
-  for (int i=3; i>=0; i--)
-    if (l < start[i] + 1)
-      layer = i - 1;
-
-  ladder = l - start[layer] - 1;
-
-  return;
-}
-
 TCanvas *
 DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
 {
@@ -811,147 +760,6 @@ Locked(int layer, int ladder)
   // if (layer==3 && ladder==19) return true; // 68%
   if (layer==3 && ladder==21) return true; // 50%
   return false;
-}
-
-bool In(int val, veci v)
-{
-  for (unsigned int j=0; j<v.size(); j++)
-    if (val==v[j])
-      return true;
-  return false;
-}
-
-void
-Ones(veci &labels, veci &xlabels, vecd &x)
-{
-  x.clear();
-  x.resize(labels.size(), 0.0);
-  for (unsigned int i=0; i<labels.size(); i++)
-    x[i] = In(labels[i], xlabels) ? 0.0 : 1.0;
-}
-
-void
-Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
-{
-  x.clear();
-  x.resize(labels.size(), 0.0);
-  int lyr, ldr;
-  string s;
-  for (unsigned int i=0; i<labels.size(); i++)
-  {
-    ParInfo(labels[i], lyr, ldr, s);
-    x[i] = In(labels[i], xlabels) ? 0.0 : geo->SensorRadius(lyr, ldr, 0);
-  }
-}
-
-void
-PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
-{
-  x.clear();
-  x.resize(labels.size(), 0.0);
-  int lyr, ldr;
-  string s;
-  for (unsigned int i=0; i<labels.size(); i++)
-  {
-    ParInfo(labels[i], lyr, ldr, s);
-    float phi = TMath::PiOver2() + fmod(geo->SensorPhiRad(lyr, ldr, 0),
-                                        TMath::TwoPi());
-    x[i] = In(labels[i], xlabels) ? 0.0 : phi;
-  }
-}
-
-void
-RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
-{
-  x.clear();
-  x.resize(labels.size(), 0.0);
-  int lyr, ldr;
-  string s;
-  for (unsigned int i=0; i<labels.size(); i++)
-  {
-    ParInfo(labels[i], lyr, ldr, s);
-    float phi = TMath::PiOver2() + fmod(geo->SensorPhiRad(lyr, ldr, 0),
-                                        TMath::TwoPi());
-    float rphi = phi*geo->SensorRadius(lyr, ldr, 0);
-    x[i] = In(labels[i], xlabels) ? 0.0 : rphi;
-  }
-}
-
-void
-AddConstraint(veci &labels, vecd &coords, ofstream &fs, string comment, double sumto)
-{
-  fs << "Constraint " << sumto << "  ! " << comment << endl;
-  for (unsigned int i=0; i<labels.size(); i++)
-  {
-    int lyr, ldr;
-    string s;
-    ParInfo(labels[i], lyr, ldr, s);
-    fs << labels[i] << " " << coords[i]
-       << " ! B" << lyr << "L" << ldr << "(" << s << ")" << endl;
-  }
-  fs << endl;
-
-  return;
-}
-
-TVectorD
-BeamCenter(geoTracks &tracks, int ntrk, TString arm)
-{
-  // Compute least-squares beam center from ntrk tracks.
-  // Warning: TrackFitSResid() overwrites tracks[i].ds as a side effect.
-
-  int n = TMath::Min(ntrk, (int)tracks.size());
-  TMatrixD M(n,2);   // "Design matrix" containing track slopes
-  TVectorD y0(n);    // Vector of track y-intercept values
-  TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
-  L.UnitMatrix();
-  L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
-  TMatrixD cov(2,2); // Assigned in SolveGLS()
-
-  for (int i=0; i<n; i++)
-  {
-    // Perform straight-line fit --> residuals, track parameters
-    double pars[2] = {0}; /* y0, phi */
-    TrackFitSResid(tracks[i], pars);
-    double yint = pars[0], phi = pars[1];
-    bool east = (phi > 0.5*TMath::Pi() && phi < 1.5*TMath::Pi());
-    if ((arm=="east" && east) || (arm=="west" && !east))
-    {
-      M(i, 0) = -TMath::Tan(phi);
-      M(i, 1) = 1;
-      y0(i) = yint;
-      i++;
-    }
-  }
-
-  TVectorD bc = SolveGLS(M, y0, L, cov);
-  Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
-         arm.Data(),
-         bc(0), TMath::Sqrt(cov(0,0)),
-         bc(1), TMath::Sqrt(cov(1,1)));
-  cov.Print();
-  return bc;
-}
-
-TVectorD
-IPVec(TVectorD &a, TVectorD &n, TVectorD &p)
-{
-  // Compute impact parameter vector from point p to line x = a + tn
-  // where
-  // - x is a straight-line track trajectory
-  // - a is a point on vector x (e.g. y-intercept point (0, y0))
-  // - n is a unit vector directing x (e.g. (cos(phi), sin(phi)).
-  return a - p - ((a - p)*n)*n;
-}
-
-TVectorD
-IPVec(SvxGeoTrack &t, TVectorD &p)
-{
-  TVectorD a(2); a(1) = t.vy;
-  TVectorD n(2);
-  n(0) = TMath::Cos(t.phi0);
-  n(1) = TMath::Sin(t.phi0);
-  return IPVec(a,n,p);
 }
 
 void
