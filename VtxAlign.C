@@ -43,7 +43,6 @@ void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0,
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
-void FitTracks(geoTracks &tracks);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 void VtxAlign(int iter = 1)
@@ -483,22 +482,6 @@ GetCorrections(const char *resFile, std::map<int, double> &mpc)
     }
 
   return (int)mpc.size();
-}
-
-void
-FitTracks(geoTracks &tracks)
-{
-  for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    // Perform straight-line fit --> residuals, track parameters
-    double pars[4] = {0}; /* y0, z0, phi, theta */
-    ZeroFieldResiduals(tracks[i], pars);
-    tracks[i].vy   = pars[0];
-    tracks[i].vz   = pars[1];
-    tracks[i].phi0 = pars[2];
-    tracks[i].the0 = pars[3];
-  }
-  return;
 }
 
 void

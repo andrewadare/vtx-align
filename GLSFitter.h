@@ -11,6 +11,7 @@
 #include <TNtuple.h>
 
 using namespace std;
+typedef vector<SvxGeoTrack> geoTracks;
 
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L);
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov);
@@ -18,6 +19,7 @@ void TrackFitZResid(SvxGeoTrack &gt, double *pars = 0);
 void TrackFitSResid(SvxGeoTrack &gt, double *pars = 0);
 void ZeroFieldResiduals(SvxGeoTrack &gt, double *pars /* y0, z0, phi, theta */);
 void Residuals(SvxGeoTrack &tt, SvxGeoTrack &mt, TNtuple *t);
+void FitTracks(geoTracks &tracks);
 
 TVectorD
 SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov)
@@ -206,4 +208,21 @@ TrackFitSResid(SvxGeoTrack &gt, double *pars)
 
   return;
 }
+
+void
+FitTracks(geoTracks &tracks)
+{
+  for (unsigned int i=0; i<tracks.size(); i++)
+  {
+    // Perform straight-line fit --> residuals, track parameters
+    double pars[4] = {0}; /* y0, z0, phi, theta */
+    ZeroFieldResiduals(tracks[i], pars);
+    tracks[i].vy   = pars[0];
+    tracks[i].vz   = pars[1];
+    tracks[i].phi0 = pars[2];
+    tracks[i].the0 = pars[3];
+  }
+  return;
+}
+
 #endif
