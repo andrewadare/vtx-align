@@ -133,7 +133,7 @@ void DrawResults()
       ltx.DrawLatex(0.62,0.93, Form("%.0f (%.0f) #mum",
                                     1e4*hz[lyr][ldr][0]->GetMean(),
                                     1e4*hz[lyr][ldr][0]->GetRMS()));
-      ltx.DrawLatex(0.62,0.87, Form("#color[419]{%.0f (%.0f) #mum}",
+      ltx.DrawLatex(0.62,0.87, Form("#color[862]{%.0f (%.0f) #mum}",
                                     1e4*hz[lyr][ldr][1]->GetMean(),
                                     1e4*hz[lyr][ldr][1]->GetRMS()));
       if (Dead(lyr,ldr))
@@ -180,8 +180,8 @@ void DrawResults()
       hds[lyr][stage]->SetYTitle("#Deltas [cm]");
       hdz[lyr][stage]->SetYTitle("#Deltaz [cm]");
 
-      hds[lyr][stage]->GetYaxis()->SetRangeUser(-0.09, 0.09);
-      hdz[lyr][stage]->GetYaxis()->SetRangeUser(-0.09, 0.09);
+      hds[lyr][stage]->GetYaxis()->SetRangeUser(-0.07, 0.07);
+      hdz[lyr][stage]->GetYaxis()->SetRangeUser(-0.07, 0.07);
 
       hds[lyr][stage]->GetXaxis()->SetNdivisions(210);
       hdz[lyr][stage]->GetXaxis()->SetNdivisions(210);
