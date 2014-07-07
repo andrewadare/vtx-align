@@ -1,4 +1,5 @@
 #include "UtilFns.h"
+#include "BadLadders.h"
 #include "TFile.h"
 #include "TCanvas.h"
 #include "TH1.h"
@@ -12,7 +13,6 @@ const int nlayers = 4;
 const int nladders = 24;
 const int ntrees = 2;
 
-bool Dead(int layer, int ladder);
 void FillHists(TH1D *hs[nlayers][nladders][ntrees],
                TH1D *hz[nlayers][nladders][ntrees],
                TFile *f, const char *treename, int stage);
@@ -25,7 +25,7 @@ void DrawResults()
   gStyle->SetOptTitle(0);
   int nLadders[4] = {10,20,16,24}; // ladders/layer
 
-  TFile *inFile = new TFile("rootfiles/411768_cluster.1.root", "read");
+  TFile *inFile = new TFile("rootfiles/411768_cluster.2.root", "read");
   TObjArray *cList = new TObjArray();
 
   TNtuple *ht[ntrees] = {0};
@@ -209,8 +209,8 @@ void DrawResults()
   ltx.SetTextSize(0.06);
   ltx.SetTextFont(42);
 
-  const int nxyp = 2;
-  const char *xyplots[nxyp] = {"vtx_xy","millepede_dp"};
+  const int nxyp = 3;
+  const char *xyplots[nxyp] = {"vtx_xy","millepede_ds","millepede_dz"};
   for (int i=0; i<nxyp; i++)
   {
     TCanvas *c = (TCanvas *) inFile->Get(xyplots[i]);
@@ -246,17 +246,6 @@ SetupHist(TH1D *h, int stage)
   ay->SetLabelSize(0.05);
   ax->SetTitleSize(0);
   return;
-}
-
-bool
-Dead(int layer, int ladder)
-{
-  if (layer==1 &&
-      ladder==11) return true;
-  if (layer==3 && ladder==10) return true;
-  if (layer==3 && ladder==16) return true;
-  if (layer==3 && ladder==23) return true;
-  return false;
 }
 
 void
