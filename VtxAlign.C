@@ -6,26 +6,16 @@
 #include "BeamCenterFuncs.h"
 #include "ParameterDefs.h"
 #include "ConstraintBuilder.h"
+#include "BadLadders.h"
+#include "VtxIO.h"
+#include "VtxVis.h"
 #include "Mille.h"
 
 #include <TFile.h>
-#include <TCanvas.h>
-#include <TArrow.h>
-#include <TRandom3.h>
-#include <TGeoManager.h>
-#include <TGeoTrack.h>
-#include <TNtuple.h>
-#include <TLatex.h>
-#include <TArrow.h>
-#include <TMarker.h>
-#include <TGeoNode.h>
-#include <TGeoMatrix.h>
-#include <TCanvas.h>
-#include <TH1.h>
-#include <TPolyLine.h>
-#include <TLeaf.h>
-#include <TString.h>
 #include <TSystem.h>
+#include <TGeoManager.h>
+#include <TRandom3.h>
+#include <TNtuple.h>
 
 #include <iostream>
 #include <fstream>
@@ -52,25 +42,11 @@ void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0,
                TNtuple *trkTree = 0, TString opt = "");
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
-void GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
-void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks);
-TCanvas *DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt);
-void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2);
-void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple);
-bool Dead(int layer, int ladder);
-bool Locked(int layer, int ladder);
-// bool In(int val, veci v);
-// void Ones(veci &labels, veci &xlabels, vecd &x);
-// void Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-// void PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-// void RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-// void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
-//                    string comment = "", double sumto=0.0);
 void FitTracks(geoTracks &tracks);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
-void VtxAlign(int iter = 0)
+void VtxAlign(int iter = 1)
 {
   int run = 411768;
 
@@ -86,7 +62,9 @@ void VtxAlign(int iter = 0)
                         Form("geom/svxPISA-%d.par.%d", run, iter);
   TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
   TString inFileName  = (iter==0) ?
-                        Form("rootfiles/%d_june26_small.root", run) :
+                        // Form("rootfiles/%d_june26_small.root", run) :
+                        Form("rootfiles/%d_july3_parv1_small.root", run) :
+                        // Form("rootfiles/%d_july7_parv2_500kevents.root", run) :
                         Form("rootfiles/%d_cluster.%d.root", run, iter);
   TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
 
@@ -100,7 +78,9 @@ void VtxAlign(int iter = 0)
     binfiles.push_back(pedeBinFileCnt);
 
   TFile *inFile  = new TFile(inFileName.Data(), "read");
+  assert(inFile);
   TFile *outFile = new TFile(outFileName.Data(), "recreate");
+  
   const char *hitvars =
     "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid";
 
@@ -110,7 +90,6 @@ void VtxAlign(int iter = 0)
                              hitvars);
   TNtuple *trktree = new TNtuple("trktree", "Tracks from VtxAlign.C",
                                  "id:y0:z0:phi:theta");
-  assert(inFile);
   TNtuple *svxseg = (TNtuple *)inFile->Get("seg_clusntuple");
   TNtuple *svxcnt = (TNtuple *)inFile->Get("cnt_clusntuple");
   if (!svxseg)
@@ -200,11 +179,13 @@ void VtxAlign(int iter = 0)
   }
 
   // Draw changes in ladder positions
-  const int NC = 2;
+  const int NC = 3;
   TCanvas *c[NC];
   c[0] = DrawXY(tgeo, "vtx_xy", "VTX ladders", "L, dead");
-  c[1] = DrawXY(tgeo, "millepede_dp", "Alignment corrections", "L, dead, faint");
-  DrawDiffs(x0,y0,z0,x1,y1,z1);
+  c[1] = DrawXY(tgeo, "millepede_ds", "#Deltas corrections", "L, dead, faint");
+  DrawDiffs(x0,y0,z0,x1,y1,z1,"s");
+  c[2] = DrawXY(tgeo, "millepede_dz", "#Deltaz corrections", "L, dead, faint");
+  DrawDiffs(x0,y0,z0,x1,y1,z1,"z");
 
   Printf("Writing %s", pisaFileOut.Data());
   tgeo->WriteParFile(pisaFileOut.Data());
@@ -414,27 +395,11 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   Radii(etz,excl,geo,x);     AddConstraint(etz, x, fs, "East top z r shear");
   Radii(wts,excl,geo,x);     AddConstraint(wts, x, fs, "West top s r shear");
   Radii(ets,excl,geo,x);     AddConstraint(ets, x, fs, "East top s r shear");
-  // PhiAngles(wtz,excl,geo,x), AddConstraint(wtz, x, fs, "West top z phi shear");
-  // PhiAngles(etz,excl,geo,x); AddConstraint(etz, x, fs, "East top z phi shear");
-  // PhiAngles(wts,excl,geo,x); AddConstraint(wts, x, fs, "West top s phi shear");
-  // PhiAngles(ets,excl,geo,x); AddConstraint(ets, x, fs, "East top s phi shear");
-  // RPhi(wtz,excl,geo,x),      AddConstraint(wtz, x, fs, "West top z rphi shear");
-  // RPhi(etz,excl,geo,x);      AddConstraint(etz, x, fs, "East top z rphi shear");
-  // RPhi(wts,excl,geo,x);      AddConstraint(wts, x, fs, "West top s rphi shear");
-  // RPhi(ets,excl,geo,x);      AddConstraint(ets, x, fs, "East top s rphi shear");
 
   Radii(wbz,excl,geo,x),     AddConstraint(wbz, x, fs, "West bottom z r shear");
   Radii(ebz,excl,geo,x);     AddConstraint(ebz, x, fs, "East bottom z r shear");
   Radii(wbs,excl,geo,x);     AddConstraint(wbs, x, fs, "West bottom s r shear");
   Radii(ebs,excl,geo,x);     AddConstraint(ebs, x, fs, "East bottom s r shear");
-  // PhiAngles(wbz,excl,geo,x), AddConstraint(wbz, x, fs, "West bottom z phi shear");
-  // PhiAngles(ebz,excl,geo,x); AddConstraint(ebz, x, fs, "East bottom z phi shear");
-  // PhiAngles(wbs,excl,geo,x); AddConstraint(wbs, x, fs, "West bottom s phi shear");
-  // PhiAngles(ebs,excl,geo,x); AddConstraint(ebs, x, fs, "East bottom s phi shear");
-  // RPhi(wbz,excl,geo,x),      AddConstraint(wbz, x, fs, "West bottom z rphi shear");
-  // RPhi(ebz,excl,geo,x);      AddConstraint(ebz, x, fs, "East bottom z rphi shear");
-  // RPhi(wbs,excl,geo,x);      AddConstraint(wbs, x, fs, "West bottom s rphi shear");
-  // RPhi(ebs,excl,geo,x);      AddConstraint(ebs, x, fs, "East bottom s rphi shear");
 
   // Fill vector of excluded ladders
   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
@@ -498,130 +463,6 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
   return;
 }
 
-TCanvas *
-DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
-{
-  TCanvas *c = new TCanvas(name, title, 900, 900);
-  TH1F *hf = c->DrawFrame(-20, -20, 20, 20, title);
-  hf->SetXTitle("East                 x [cm]                 West");
-  hf->GetXaxis()->CenterTitle();
-  hf->SetYTitle("y [cm]");
-  hf->GetYaxis()->CenterTitle();
-
-  TLatex label;
-  label.SetTextSize(0.02);
-  double xyz[3] = {0};
-  for (int i=0; i<geo->GetNLayers(); i++)
-    for (int j=0; j<geo->GetNLadders(i); j++)
-    {
-      TPolyLine *s = geo->LadderOutlineXY(i,j);
-      s->SetLineColor(opt.Contains("faint") ? kGray : kGray+2);
-      s->SetLineWidth(opt.Contains("faint") ? 1 : 2);
-
-      if (Locked(i,j))
-      {
-        s->SetLineColor(kOrange-3);
-        s->SetLineWidth(2);
-      }
-
-      s->Draw("same");
-
-      if (opt.Contains("dead") && Dead(i,j)) // Mark dead ladders
-      {
-        double xyz[3] = {0};
-        geo->GetSensorXYZ(i,j,0,xyz);
-
-        TLatex ltx;
-        ltx.SetTextSize(0.04);
-        ltx.SetTextAlign(22);
-        ltx.SetTextColor(kRed-4);
-        ltx.DrawLatex(xyz[0], xyz[1], "#times");
-      }
-      if (opt.Contains("faint"))
-        continue;
-
-      geo->GetSensorXYZ(i, j, 0, xyz);
-      int horz = xyz[0] > 0 ? 1 : 3;
-      int vert = xyz[1] > 0 ? 1 : 3;
-      label.SetTextAlign(10*horz + vert);
-      label.DrawLatex(xyz[0], xyz[1], Form(" %d ", j));
-    }
-  return c;
-}
-
-void
-GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z)
-{
-  int ipt = 0;
-  for (int i=0; i<tgeo->GetNLayers(); i++)
-    for (int j=0; j<tgeo->GetNLadders(i); j++)
-    {
-      double xyz[3] = {0};
-      tgeo->GetSensorXYZ(i,j,0,xyz);
-      x.push_back(xyz[0]);
-      y.push_back(xyz[1]);
-      z.push_back(xyz[2]);
-
-      if (false)
-        Printf("xyz %f %f %f", x[ipt], y[ipt], z[ipt]);
-
-      ipt++;
-    }
-
-  return;
-}
-
-void
-DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2)
-{
-  int n = (int)x1.size();
-
-  for (int i=0; i<n; i++)
-  {
-    double f = 20;
-    double x = x1[i], y = y1[i];
-    double dx = x2[i] - x;
-    double dy = y2[i] - y;
-    double ds = TMath::Sqrt(dx*dx + dy*dy);
-    double dz = z2[i] - z1[i];
-
-    // Draw points showing displacement in z coordinate
-    TMarker mkr;
-    mkr.SetMarkerStyle(kOpenCircle);
-    mkr.SetMarkerColor(kGray+1);
-    mkr.SetMarkerSize(0.5);
-    //    mkr.DrawMarker(x,y);
-
-    if (TMath::Abs(dz) > 5e-4) // Only label changes > 5 um
-    {
-      mkr.SetMarkerStyle(kOpenCircle);
-      mkr.SetMarkerColor(dz>0 ? kRed-4 : kAzure-4); // Red/blue shift mnemonic
-      mkr.SetMarkerSize(100*TMath::Abs(dz)); // 1 = 8px diam, 2 = 16px, ...
-      mkr.DrawMarker(x,y);
-
-      TLatex ltx;
-      ltx.SetTextSize(0.018);
-      ltx.SetTextAlign(22);
-      ltx.SetTextColor(dz>0 ? kRed+2 : kAzure+3);
-      ltx.DrawLatex(x, y, Form("%.0f", 1e4*dz));
-    }
-
-    // Draw arrows showing (significant) displacements in xy plane
-    if (ds > 5e-4) // Only label changes > 5 um
-    {
-      TArrow a;
-      a.SetLineWidth(2);
-      a.DrawArrow(x, y, x + f*dx, y + f*dy, 0.005);
-
-      TLatex ltx;
-      ltx.SetTextSize(0.015);
-      ltx.DrawLatex(x + f*dx, y + f*dy, Form("%.0f", 1e4*ds));
-    }
-  }
-
-  return;
-}
-
 int
 GetCorrections(const char *resFile, std::map<int, double> &mpc)
 {
@@ -642,124 +483,6 @@ GetCorrections(const char *resFile, std::map<int, double> &mpc)
     }
 
   return (int)mpc.size();
-}
-
-void
-GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks)
-{
-  // This function reads hit ntuple variables of the form
-  // "layer:ladder:sensor:xs:ys:zs:x:y:z:xsigma:zsigma:dz:ds:trkid"
-  // into the tracks vector.
-
-  assert(t);
-  assert(geo);
-
-  long nentries = t->GetEntries();
-  int previd = -1;
-
-  Printf("Reading tracks from NTuple (%d entries)...", (int)nentries);
-  for (int i=0; i<nentries; i++)
-  {
-    t->GetEntry(i);
-    int id = t->GetLeaf("trkid")->GetValue();
-    if (id != previd) // New track
-    {
-      SvxGeoTrack t;
-      // Track info is not stored in tree. If it were, it would go here.
-      tracks.push_back(t);
-    }
-
-    SvxGeoHit hit;
-    hit.layer  = t->GetLeaf("layer")->GetValue();
-    hit.ladder = t->GetLeaf("ladder")->GetValue();
-    hit.sensor = t->GetLeaf("sensor")->GetValue();
-    hit.xs     = t->GetLeaf("lx")->GetValue();
-    hit.ys     = t->GetLeaf("ly")->GetValue();
-    hit.zs     = t->GetLeaf("lz")->GetValue();
-    hit.x      = t->GetLeaf("gx")->GetValue();
-    hit.y      = t->GetLeaf("gy")->GetValue();
-    hit.z      = t->GetLeaf("gz")->GetValue();
-    hit.xsigma = t->GetLeaf("x_size")->GetValue();
-    hit.zsigma = t->GetLeaf("z_size")->GetValue();
-    hit.dz     = t->GetLeaf("res_z")->GetValue();
-    hit.ds     = t->GetLeaf("res_s")->GetValue();
-    hit.trkid  = t->GetLeaf("trkid")->GetValue();
-    hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
-    tracks.back().nhits++;
-    tracks.back().hits.push_back(hit);
-    previd = id;
-  }
-
-  Printf("%d tracks imported.", (int)tracks.size());
-  return;
-}
-
-void
-FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple)
-{
-  // TNtuple *ntuple = new TNtuple("t", "SvxGeoHit variables",
-  // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid"
-
-
-  assert(ntuple);
-
-  if (false)
-    Printf("ds (%8.4f,%8.4f,%8.4f,%8.4f),  "
-           "dz (%8.4f,%8.4f,%8.4f,%8.4f)",
-           gt.hits[0].ds, gt.hits[1].ds, gt.hits[2].ds, gt.hits[3].ds,
-           gt.hits[0].dz, gt.hits[1].dz, gt.hits[2].dz, gt.hits[3].dz);
-
-  for (int ihit=0; ihit<gt.nhits; ihit++)
-  {
-    int nj = 14;
-    std::vector<float> vars(nj, 0.);
-    int j = 0;
-    SvxGeoHit hit = gt.GetHit(ihit);
-
-    vars[j++] = hit.layer  ;
-    vars[j++] = hit.ladder ;
-    vars[j++] = hit.sensor ;
-    vars[j++] = hit.xs     ;
-    vars[j++] = hit.ys     ;
-    vars[j++] = hit.zs     ;
-    vars[j++] = hit.x      ;
-    vars[j++] = hit.y      ;
-    vars[j++] = hit.z      ;
-    vars[j++] = hit.xsigma ;
-    vars[j++] = hit.zsigma ;
-    vars[j++] = hit.dz     ;
-    vars[j++] = hit.ds     ;
-    vars[j++] = hit.trkid  ;
-    ntuple->Fill(&vars[0]);
-  }
-
-  return;
-}
-
-bool
-Dead(int layer, int ladder)
-{
-  if (layer==1 && ladder==11) return true;
-  if (layer==3 && ladder==10) return true;
-  if (layer==3 && ladder==16) return true;
-  if (layer==3 && ladder==23) return true;
-  return false;
-}
-
-bool
-Locked(int layer, int ladder)
-{
-  if (layer==2 && ladder==15) return true; // 50%
-  if (layer==3 && ladder==2)  return true; // 65%
-  //if (layer==3 && ladder==12) return true; // 70%
-  if (layer==3 && ladder==13) return true; // 66%
-  if (layer==3 && ladder==22) return true; // Not dead, but problematic
-
-  // if (layer==3 && ladder==9)  return true; // 66%
-  // if (layer==3 && ladder==15) return true; // 66%
-  // if (layer==3 && ladder==19) return true; // 68%
-  if (layer==3 && ladder==21) return true; // 50%
-  return false;
 }
 
 void
@@ -784,10 +507,10 @@ FilterTracks(geoTracks &a, geoTracks &b, double maxdca)
   // Copy the subset of a tracks to b that pass within maxdca of the beam center.
 
   Printf("Computing east arm beam center...");
-  TVectorD bce = BeamCenter(a, 8000, "east");
+  TVectorD bce = BeamCenter(a, 15000, "east");
 
   Printf("Computing west arm beam center...");
-  TVectorD bcw = BeamCenter(a, 8000, "west");
+  TVectorD bcw = BeamCenter(a, 15000, "west");
 
   // Residual outlier cut [cm]
   double resCut = 0.10;
