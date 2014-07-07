@@ -12,8 +12,33 @@
 #include <TPolyLine.h>
 #include <TString.h>
 
+typedef vector<double> vecd;
+
+void GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z);
 TCanvas *DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt);
-void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2);
+void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2, TString opt = "sz");
+
+void
+GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z)
+{
+  int ipt = 0;
+  for (int i=0; i<tgeo->GetNLayers(); i++)
+    for (int j=0; j<tgeo->GetNLadders(i); j++)
+    {
+      double xyz[3] = {0};
+      tgeo->GetSensorXYZ(i,j,0,xyz);
+      x.push_back(xyz[0]);
+      y.push_back(xyz[1]);
+      z.push_back(xyz[2]);
+
+      if (false)
+        Printf("xyz %f %f %f", x[ipt], y[ipt], z[ipt]);
+
+      ipt++;
+    }
+
+  return;
+}
 
 TCanvas *
 DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
@@ -67,7 +92,7 @@ DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
 }
 
 void
-DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2)
+DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2, TString opt)
 {
   int n = (int)x1.size();
 
@@ -87,7 +112,8 @@ DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2)
     mkr.SetMarkerSize(0.5);
     //    mkr.DrawMarker(x,y);
 
-    if (TMath::Abs(dz) > 5e-4) // Only label changes > 5 um
+    // Draw z displacements
+    if (opt.Contains("z") && TMath::Abs(dz) > 5e-4) // Only label changes > 5 um
     {
       mkr.SetMarkerStyle(kOpenCircle);
       mkr.SetMarkerColor(dz>0 ? kRed-4 : kAzure-4); // Red/blue shift mnemonic
@@ -101,8 +127,8 @@ DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2)
       ltx.DrawLatex(x, y, Form("%.0f", 1e4*dz));
     }
 
-    // Draw arrows showing (significant) displacements in xy plane
-    if (ds > 5e-4) // Only label changes > 5 um
+    // Draw arrows showing s displacements
+    if (opt.Contains("s") && ds > 5e-4) // Only label changes > 5 um
     {
       TArrow a;
       a.SetLineWidth(2);
