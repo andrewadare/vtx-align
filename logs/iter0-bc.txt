@@ -1,0 +1,21 @@
+Computing east arm beam center...
+east x,y (0.268 +- 0.091, 0.061 +- 0.029)
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |   0.008339    0.001788 
+   1 |   0.001788     0.00087 
+
+Computing west arm beam center...
+west x,y (0.416 +- 0.061, 0.069 +- 0.023)
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |   0.003727   0.0002001 
+   1 |  0.0002001   0.0005493 
+
+12.652% of tracks rejected by beam center DCA cut of 1000 um and residual outlier cut of 1000 um.

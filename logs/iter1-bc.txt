@@ -1,0 +1,24 @@
+Reading tracks from NTuple (4627687 entries)...
+1412372 tracks imported.
+Fitting zero-field standalone tracks...
+Computing east arm beam center...
+east x,y (0.349 +- 0.087, 0.096 +- 0.032)
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |   0.007649    0.001198 
+   1 |   0.001198    0.001016 
+
+Computing west arm beam center...
+west x,y (0.392 +- 0.043, 0.065 +- 0.022)
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |   0.001843   0.0001616 
+   1 |  0.0001616   0.0004813 
+
+6.171% of tracks rejected by beam center DCA cut of 1000 um and residual outlier cut of 1000 um.
