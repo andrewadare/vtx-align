@@ -19,13 +19,18 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
 void SetupHist(TH1D *h, int stage);
 void SetYMax(TH1 *h1, TH1 *h2);
 
-void DrawResults()
+// In VtxAlign.C, iter \equiv # times millepede has already been run.
+// Here, millepede will have been run at least once, but the same indexing 
+// is used for consistency. 
+// In other words: to draw output from VtxAlign(run,0), use iter=0 here too.
+void DrawResults(int run = 411768, int iter = 1)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
   int nLadders[4] = {10,20,16,24}; // ladders/layer
 
-  TFile *inFile = new TFile("rootfiles/411768_cluster.2.root", "read");
+  TFile *inFile = new TFile(Form("rootfiles/%d_cluster.%d.root", run, iter+1),
+                            "read");
   TObjArray *cList = new TObjArray();
 
   TNtuple *ht[ntrees] = {0};
@@ -158,11 +163,11 @@ void DrawResults()
   {
     for (int stage=0; stage<ntrees; stage++)
     {
-      hdz[lyr][stage] = new TH1D(Form("hdz%d_%d",lyr, stage), 
-                                 Form("z-resid layer %d", lyr), 
+      hdz[lyr][stage] = new TH1D(Form("hdz%d_%d",lyr, stage),
+                                 Form("z-resid layer %d", lyr),
                                  nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
-      hds[lyr][stage] = new TH1D(Form("hds%d_%d",lyr, stage), 
-                                 Form("s-resid layer %d", lyr), 
+      hds[lyr][stage] = new TH1D(Form("hds%d_%d",lyr, stage),
+                                 Form("s-resid layer %d", lyr),
                                  nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
       SetHistProps(hds[lyr][stage], kRed, kNone, kRed, kFullCircle, 1.5);
       SetHistProps(hdz[lyr][stage], kBlue, kNone, kBlue, kFullCircle, 1.5);
@@ -220,8 +225,8 @@ void DrawResults()
     cList->Add(c);
   }
 
-  PrintPDFs(cList, "pdfs", "");
-  PrintPDF(cList, "pdfs/self-align");
+  PrintPDFs(cList, Form("pdfs/iter%d", iter), "");
+  PrintPDF(cList, Form("pdfs/self-align-iter%d", iter));
 }
 
 void
