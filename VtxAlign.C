@@ -45,10 +45,10 @@ void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
-void VtxAlign(int iter = 1)
+// The iter parameter {0,1,2,...} is defined as the number of times millepede 
+// has previously been run.
+void VtxAlign(int run = 411768, int iter = 1)
 {
-  int run = 411768;
-
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
   {
@@ -60,11 +60,15 @@ void VtxAlign(int iter = 1)
                         Form("geom/svxPISA-%d.par", run) :
                         Form("geom/svxPISA-%d.par.%d", run, iter);
   TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
-  TString inFileName  = (iter==0) ?
-                        // Form("rootfiles/%d_june26_small.root", run) :
-                        Form("rootfiles/%d_july3_parv1_small.root", run) :
-                        // Form("rootfiles/%d_july7_parv2_500kevents.root", run) :
-                        Form("rootfiles/%d_cluster.%d.root", run, iter);
+
+  TString rfiles[] = {"june26_small", "july3_parv1_small"};
+
+  TString inFileName  = Form("rootfiles/%d_%s.root", run, rfiles[iter].Data());
+  // TString inFileName  = (iter==0) ?
+  //                       Form("rootfiles/%d_june26_small.root", run) :
+  //                       // Form("rootfiles/%d_july3_parv1_small.root", run) :
+  //                       // Form("rootfiles/%d_july7_parv2_500kevents.root", run) :
+  //                       Form("rootfiles/%d_cluster.%d.root", run, iter);
   TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
 
   vecs constfiles;
@@ -79,7 +83,7 @@ void VtxAlign(int iter = 1)
   TFile *inFile  = new TFile(inFileName.Data(), "read");
   assert(inFile);
   TFile *outFile = new TFile(outFileName.Data(), "recreate");
-  
+
   const char *hitvars =
     "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid";
 
