@@ -5,7 +5,7 @@
 
 void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z);
 
-void DiffGeometry(const char *pfa = "geom/svxPISA-411768.par.1",
+void DiffGeometry(const char *pfa = "geom/svxPISA-411768.par",
                   const char *pfb = "geom/svxPISA-411768.par.2")
 {
   TLatex ltx;
@@ -27,10 +27,12 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-411768.par.1",
   DrawXY(geo, "s_diff", "#Deltas_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "s");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  gPad->Print("pdfs/geom_ds.pdf");
 
   DrawXY(geo, "z_diff", "#Deltaz_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "z");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  gPad->Print("pdfs/geom_dz.pdf");
 
   return;
 }
