@@ -9,9 +9,11 @@
 #include <TGeoNode.h>
 #include <TGeoMatrix.h>
 #include <TNtuple.h>
+#include <iostream>
 
 using namespace std;
 typedef vector<SvxGeoTrack> geoTracks;
+typedef vector<geoTracks> geoEvents;
 
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L);
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov);
@@ -19,7 +21,9 @@ void TrackFitZResid(SvxGeoTrack &gt, double *pars = 0);
 void TrackFitSResid(SvxGeoTrack &gt, double *pars = 0);
 void ZeroFieldResiduals(SvxGeoTrack &gt, double *pars /* y0, z0, phi, theta */);
 void Residuals(SvxGeoTrack &tt, SvxGeoTrack &mt, TNtuple *t);
+void FitTrack(SvxGeoTrack &track);
 void FitTracks(geoTracks &tracks);
+void FitTracks(geoEvents &events);
 
 TVectorD
 SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov)
@@ -48,7 +52,7 @@ SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov)
 
   // Result
   TVectorD beta = V * Sd * UT * b;
-  
+
   // and covariance matrix
   V *= Sd;
   TMatrixD C(V,TMatrixD::kMultTranspose,V);
@@ -210,18 +214,38 @@ TrackFitSResid(SvxGeoTrack &gt, double *pars)
 }
 
 void
+FitTrack(SvxGeoTrack &track)
+{
+  // Perform straight-line fit --> residuals, track parameters
+  double pars[4] = {0}; /* y0, z0, phi, theta */
+  ZeroFieldResiduals(track, pars);
+  track.vy   = pars[0];
+  track.vz   = pars[1];
+  track.phi0 = pars[2];
+  track.the0 = pars[3];
+  return;
+}
+
+void
 FitTracks(geoTracks &tracks)
 {
+  cout << Form("Fitting %lu tracks...", tracks.size()) << flush;
   for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    // Perform straight-line fit --> residuals, track parameters
-    double pars[4] = {0}; /* y0, z0, phi, theta */
-    ZeroFieldResiduals(tracks[i], pars);
-    tracks[i].vy   = pars[0];
-    tracks[i].vz   = pars[1];
-    tracks[i].phi0 = pars[2];
-    tracks[i].the0 = pars[3];
-  }
+    FitTrack(tracks[i]);
+
+  Printf("done.");
+  return;
+}
+
+void
+FitTracks(geoEvents &events)
+{
+  cout << Form("Fitting tracks in %lu events...", events.size()) << flush;
+  for (unsigned int ev=0; ev<events.size(); ev++)
+    for (unsigned int t=0; t<events[ev].size(); t++)
+      FitTrack(events[ev][t]);
+
+  Printf("done.");
   return;
 }
 

@@ -8,12 +8,14 @@
 #include <vector>
 
 typedef vector<SvxGeoTrack> geoTracks;
+typedef vector<geoTracks> geoEvents;
 
-void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks);
+void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax=-1);
+void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1);
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple);
 
 void
-GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks)
+GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
 {
   // This function reads hit ntuple variables of the form
   // "layer:ladder:sensor:xs:ys:zs:x:y:z:xsigma:zsigma:dz:ds:trkid"
@@ -24,14 +26,21 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks)
 
   long nentries = t->GetEntries();
   int previd = -1;
+  int nhits  = 0;
 
-  Printf("Reading tracks from NTuple (%d entries)...", (int)nentries);
+  Printf("Reading tracks from NTuple (%d available hits)...", (int)nentries);
   for (int i=0; i<nentries; i++)
   {
     t->GetEntry(i);
     int id = t->GetLeaf("trkid")->GetValue();
     if (id != previd) // New track
     {
+      if (nmax > 0 && (int)tracks.size() == nmax)
+      {
+        Printf("%d tracks imported (%d hits).",
+               (int)tracks.size(), nhits);
+        return;
+      }
       SvxGeoTrack t;
       // Track info is not stored in tree. If it were, it would go here.
       tracks.push_back(t);
@@ -56,9 +65,92 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks)
     tracks.back().nhits++;
     tracks.back().hits.push_back(hit);
     previd = id;
+    nhits++;
   }
 
-  Printf("%d tracks imported.", (int)tracks.size());
+  Printf("%d tracks imported (%d hits).",
+         (int)tracks.size(), nhits);
+
+  return;
+}
+
+void
+GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax)
+{
+  // This function reads hit ntuple variables of the form
+  // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:event"
+  // into the tracks vector.
+  assert(t);
+  assert(geo);
+
+  long nentries = t->GetEntries();
+  int previd  = -1;
+  int prevev  = -1;
+  int ntracks = 0;
+  int nhits   = 0;
+
+  Printf("Reading events from NTuple (%d available hits)...", (int)nentries);
+  for (int i=0; i<nentries; i++)
+  {
+    t->GetEntry(i);
+
+    int ev = t->GetLeaf("event")->GetValue();
+    int id = t->GetLeaf("trkid")->GetValue();
+
+    bool newevent = (ev != prevev); // New event
+    bool newtrack = (id != previd); // New track
+
+    if (newevent && !newtrack)
+      Printf("!!! Event/track ID problem !!! event %d track %d", ev, id);
+
+    if (ev != prevev) // New event
+    {
+      if (nmax > 0 && (int)events.size() == nmax)
+      {
+        Printf("%d events imported (%d tracks, %d hits).",
+               (int)events.size(), ntracks, nhits);
+        return;
+      }
+
+      //      printf("\nevent %d: ", ev);
+      geoTracks tracks;
+      events.push_back(tracks);
+    }
+    if (id != previd) // New track
+    {
+      //    printf(" %d", id);
+      SvxGeoTrack t;
+      events.back().push_back(t);
+      ntracks++;
+    }
+
+    SvxGeoHit hit;
+    hit.layer  = t->GetLeaf("layer")->GetValue();
+    hit.ladder = t->GetLeaf("ladder")->GetValue();
+    hit.sensor = t->GetLeaf("sensor")->GetValue();
+    hit.xs     = t->GetLeaf("lx")->GetValue();
+    hit.ys     = t->GetLeaf("ly")->GetValue();
+    hit.zs     = t->GetLeaf("lz")->GetValue();
+    hit.x      = t->GetLeaf("gx")->GetValue();
+    hit.y      = t->GetLeaf("gy")->GetValue();
+    hit.z      = t->GetLeaf("gz")->GetValue();
+    hit.xsigma = t->GetLeaf("x_size")->GetValue();
+    hit.zsigma = t->GetLeaf("z_size")->GetValue();
+    hit.dz     = t->GetLeaf("res_z")->GetValue();
+    hit.ds     = t->GetLeaf("res_s")->GetValue();
+    hit.trkid  = t->GetLeaf("trkid")->GetValue();
+    hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
+
+    events.back().back().nhits++;
+    events.back().back().hits.push_back(hit);
+    previd = id;
+    prevev = ev;
+    nhits++;
+  }
+
+  Printf("%d events imported (%d tracks, %d hits).",
+         (int)events.size(), ntracks, nhits);
+
   return;
 }
 

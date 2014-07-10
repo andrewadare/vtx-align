@@ -1,6 +1,6 @@
+#include "UtilFns.h"
 #include "SvxTGeo.h"
 #include "SvxGeoTrack.h"
-#include "UtilFns.h"
 #include "BeamCenterFuncs.h"
 #include "ParameterDefs.h"
 #include "GLSFitter.h"
@@ -17,16 +17,21 @@
 
 TGraph *DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm,
                 TH1D *hr=0, int ntracks=50000);
-TGraph *DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, 
+TGraph *DcaDist(geoTracks &tracks, TVectorD &bc, TString arm,
                 TH1D *hr=0, int ntracks=50000);
+TGraph *DcaDist(geoEvents &events, TVectorD &bc, TString arm,
+                TH1D *hr, int ntracks=50000);
+TH2D *DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
+               const char *name, const char *title);
+TH2D *DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
+               const char *name, const char *title);
 
 void CalcBeamCenter()
 {
-  // Initial declarations & assignments
-  TFile *f = new TFile("rootfiles/411768_cluster.root");
+  TFile *f = new TFile("rootfiles/411768_july3_parv1_small.root");
   TNtuple *t = (TNtuple *)f->Get("seg_clusntuple");
   gStyle->SetOptStat(0);
-  int ntrk = 5000;
+  int nbc = 10000;
 
   SvxTGeo *geo = new SvxTGeo;
   geo->ReadParFile("geom/svxPISA-411768.par");
@@ -34,26 +39,78 @@ void CalcBeamCenter()
   geo->AddSensors();
   geo->GeoManager()->CloseGeometry();
 
+#if 0
+  TH1D *hne = new TH1D("hne", "East;tracks/event", 100, 0, 100);
+  TH1D *hnw = new TH1D("hnw", "West;tracks/event", 100, 0, 100);
+  geoEvents events;
+  GetEventsFromTree(t, geo, events);
+  FitTracks(events);
+
+  // for (unsigned int ev=0; ev<events.size(); ev++)
+  // {
+  //   int ntrk = events[ev].size();
+  //   int ne=0, nw=0;
+  //   for (int t=0; t<ntrk; t++)
+  //   {
+  //     FitTrack(events[ev][t]);
+  //     SvxGeoTrack trk = events[ev][t];
+  //     if (East(trk.phi0)) ne++;
+  //     else nw++;
+
+  //     // Printf("%d %f %f %f %f",
+  //     //        trk.nhits,
+  //     //        trk.phi0,
+  //     //        trk.the0,
+  //     //        trk.vy,
+  //     //        trk.vz);
+  //   }
+  //   hne->Fill(ne);
+  //   hnw->Fill(nw);
+  // }
+  // DrawObject(hne); gPad->SetLogx(); gPad->SetLogy();
+  // DrawObject(hnw); gPad->SetLogx(); gPad->SetLogy();
+
+  Printf("Computing east arm beam center...");
+  TVectorD bce = BeamCenter(events, nbc, "east");
+  TH1D *he = new TH1D("he", "he", 100, 0, 0.5);
+  TGraph *ge = DcaDist(events,bce,"east",he);
+
+  Printf("Computing west arm beam center...");
+  TVectorD bcw = BeamCenter(events, nbc, "west");
+  TH1D *hw = new TH1D("hw", "hw", 100, 0, 0.5);
+  TGraph *gw = DcaDist(events,bcw,"west",hw);
+
+  TH2D *hbp = DcaVsPhi(events, bce, bcw, "hbp", "DCA to beam center vs  #phi");
+  DrawObject(hbp, "colz", "dcavsphi");
+  gPad->Print("pdfs/dcavsphi.pdf");
+#endif
+  
+#if 1
   geoTracks tracks;
   GetTracksFromTree(t, geo, tracks);
   FitTracks(tracks);
 
   Printf("Computing east arm beam center...");
-  TVectorD bce = BeamCenter(tracks, 15000, "east");
-  TH1D *he = new TH1D("he", "he", 100,0,0.5);
+  TVectorD bce = BeamCenter(tracks, nbc, "east");
+  TH1D *he = new TH1D("he", "he", 100, 0, 0.5);
   TGraph *ge = DcaDist(tracks,bce,"east",he);
 
   Printf("Computing west arm beam center...");
-  TVectorD bcw = BeamCenter(tracks, 15000, "west");
-  TH1D *hw = new TH1D("hw", "hw", 100,0,0.5);
+  TVectorD bcw = BeamCenter(tracks, nbc, "west");
+  TH1D *hw = new TH1D("hw", "hw", 100, 0, 0.5);
   TGraph *gw = DcaDist(tracks,bcw,"west",hw);
+
+  TH2D *hbp = DcaVsPhi(tracks, bce, bcw, "hbp", "DCA to beam center vs  #phi");
+  DrawObject(hbp, "colz", "dcavsphi");
+  gPad->Print("pdfs/dcavsphi.pdf");
+#endif
 
   // ---- ---- ---- ---- ---- ---- ----
   //                Plot
   // ---- ---- ---- ---- ---- ---- ----
   TCanvas *c = new TCanvas("c", "dca2d", 500, 500);
   TH1F *h = c->DrawFrame(-0.3, -0.3, 0.3, 0.3,
-                         "Beam center DCA #color[861]{east}, #color[800]{west}");
+                         "Beam center DCA #color[861]{ east}, #color[800]{ west}");
   h->GetXaxis()->SetTitle("x [cm]");
   h->GetYaxis()->SetTitle("y [cm]");
   TEllipse ell(0,0,0.1,0.1);
@@ -69,11 +126,12 @@ void CalcBeamCenter()
   SetHistProps(hw,kOrange,kNone,kOrange);
   he->SetLineWidth(2);
   hw->SetLineWidth(2);
-  hw->SetTitle("Beam center DCA #color[861]{east}, #color[800]{west};DCA [cm];");
+  hw->SetTitle("Beam center DCA #color[861]{ east}, #color[800]{ west};DCA [cm];");
   hw->Draw("");
   he->Draw("same");
   cr->SetLogy();
   cr->Print("pdfs/dcar.pdf");
+
 
   Printf("Fraction outside 1000um: %.3f (e) %.3f (w)",
          1.0 - he->Integral(1,he->FindBin(0.099))/he->Integral(),
@@ -95,8 +153,7 @@ DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
   while (r.Next())
   {
     double m = TMath::Tan(*phi);
-    bool east = (*phi > 0.5*TMath::Pi() && *phi < 1.5*TMath::Pi());
-    if ((arm=="east" && east) || (arm=="west" && !east))
+    if ((arm=="east" && East(*phi)) || (arm=="west" && !East(*phi)))
     {
       TVectorD a(2); a(1) = *ty0;
       TVectorD n(2); n(0) = TMath::Cos(*phi); n(1) = TMath::Sin(*phi);
@@ -121,9 +178,7 @@ DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
   for (unsigned int i=0; i<tracks.size(); i++)
   {
     double phi = tracks[i].phi0;
-    double m = TMath::Tan(phi);
-    bool east = (phi > 0.5*TMath::Pi() && phi < 1.5*TMath::Pi());
-    if ((arm=="east" && east) || (arm=="west" && !east))
+    if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
     {
       TVectorD a(2); a(1) = tracks[i].vy;
       TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
@@ -138,3 +193,72 @@ DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
   return g;
 }
 
+TGraph *
+DcaDist(geoEvents &events, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
+{
+  int i = 0;
+  TGraph *g = new TGraph(ntracks);
+  g->SetMarkerStyle(kFullDotMedium);
+
+  for (unsigned int ev=0; ev<events.size(); ev++)
+    for (unsigned int t=0; t<events[ev].size(); t++)
+    {
+      SvxGeoTrack trk = events[ev][t];
+      double phi = trk.phi0;
+      if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
+      {
+        TVectorD a(2); a(1) = trk.vy;
+        TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
+        TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
+
+        if (i<ntracks)
+        {
+          g->SetPoint(i, d(0), d(1));
+          i++;
+        }
+
+        if (hr)
+          hr->Fill(TMath::Sqrt(d*d));
+      }
+    }
+
+  return g;
+}
+
+TH2D *
+DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
+         const char *name, const char *title)
+{
+  TH2D *h = new TH2D(name, title, 100, 0, TMath::TwoPi(), 100, -0.0, 0.1);
+
+  for (unsigned int i=0; i<tracks.size(); i++)
+  {
+    double phi = tracks[i].phi0;
+    TVectorD a(2); a(1) = tracks[i].vy;
+    TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
+    TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
+    h->Fill(fmod(TMath::PiOver2()+phi,TMath::TwoPi()), TMath::Sqrt(d*d));
+  }
+
+  return h;
+}
+
+TH2D *
+DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
+         const char *name, const char *title)
+{
+  TH2D *h = new TH2D(name, title, 100, 0, TMath::TwoPi(), 100, -0.0, 0.1);
+
+  for (unsigned int ev=0; ev<events.size(); ev++)
+    for (unsigned int t=0; t<events[ev].size(); t++)
+    {
+      SvxGeoTrack trk = events[ev][t];
+      double phi = trk.phi0;
+      TVectorD a(2); a(1) = trk.vy;
+      TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
+      TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
+      h->Fill(fmod(TMath::PiOver2()+phi,TMath::TwoPi()), TMath::Sqrt(d*d));
+    }
+
+  return h;
+}
