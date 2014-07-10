@@ -1,0 +1,334 @@
+   ----------------------------------------------------------------
+  | Welcome to ROOT 6.00/00                    http://root.cern.ch |
+  |                                   (c) 1995-2014, The ROOT Team |
+  | Built for macosx64                                             |
+  | From heads/master@v5-99-06-967-gdd4636e, Jun 04 2014, 08:24:00 |
+  | Try '.help', '.demo', '.license', '.credits', '.quit'/'.q'     |
+   ----------------------------------------------------------------
+
+Starting ROOT version 6.00/00.
+Running /Users/adare/phenix/alignment/vtx-align/rootlogon.C on rl1-1-156-208-dhcp.int.colorado.edu.
+
+Processing VtxAlign.C+(411768,1)...
+Info in <TMacOSXSystem::ACLiC>: creating shared library /Users/adare/phenix/alignment/vtx-align/./VtxAlign_C.so
+Info in <TGeoManager::TGeoManager>: Geometry fGeoMgr, PHENIX VTX Geometry created
+Info in <TGeoManager::SetTopVolume>: Top volume is fTopVolume. Master volume is fTopVolume
+Info in <TGeoNavigator::BuildCache>: --- Maximum geometry depth set to 100
+Info in <TGeoManager::CheckGeometry>: Fixing runtime shapes...
+Info in <TGeoManager::CheckGeometry>: ...Nothing to fix
+Info in <TGeoManager::CloseGeometry>: Counting nodes...
+Info in <TGeoManager::Voxelize>: Voxelizing...
+Info in <TGeoManager::CloseGeometry>: Building cache...
+Info in <TGeoManager::CountLevels>: max level = 1, max placements = 344
+Info in <TGeoManager::CloseGeometry>: 345 nodes/ 345 volume UID's in PHENIX VTX Geometry
+Info in <TGeoManager::CloseGeometry>: ----------------modeler ready----------------
+Writing pede-const.txt
+Done.
+Writing pede-steer.txt
+Done.
+Reading tracks from NTuple (4627687 available hits)...
+1412372 tracks imported (4627687 hits).
+Fitting zero-field standalone tracks...
+Fitting 1412372 tracks...done.
+Computing east arm beam center...
+east x,y (0.348 +- 0.022, 0.093 +- 0.008)
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |  0.0004677   0.0001027 
+   1 |  0.0001027   6.578e-05 
+
+Computing west arm beam center...
+west x,y (0.367 +- 0.015, 0.062 +- 0.007)
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |  0.0002233   3.433e-05 
+   1 |  3.433e-05   4.922e-05 
+
+5.763% of tracks rejected by beam center DCA cut of 1000 um and residual outlier cut of 1000 um.
+
+
+Calling mille() in TrackLoop(). Write to standalone.bin...
+ ($Rev: 123 $)
+ using OpenMP (TM)
+ compiled with gcc 4.8.1
+  
+   <  Millepede II-P starting ... Thu Jul 10 16:37:56 2014
+                                                          
+  
+ initC: using zlib version 1.2.5
+  
+ ________________________________FILETC/X__________________________________
+  
+  
+ Command line options: 
+ --------------------- 
+  1  pede-steer.txt
+ --------------------- 
+  
+ Listing of steering file: pede-steer.txt
+ -------------------------
+  1  * This is pede-steer.txt created by SimVtxAlign.C
+  2  * Pass this file to pede: pede pede-steer.txt
+  3  
+  4  Fortranfiles  ! Fortran/text inputs listed here:
+  5  pede-const.txt ! constraints file
+  6  
+  7  Cfiles  ! c/c++ binary input files listed here:
+  8  standalone.bin ! binary data file
+  9  
+ 10  method inversion 5 0.0001  ! Gauss. elim., #iterations, tol.
+ 11  end
+     end-statement after          11  text lines
+ -------------------------
+  
+ Opening C file            1 : standalone.bin
+           1  binary files opened
+  
+ Processing text files ...
+  
+ File pede-steer.txt
+     end-statement after          11  text lines
+  
+ File pede-const.txt
+     end-of-file after         652  text lines
+  
+ ... end of text file processing.
+  
+  
+ Solution method and matrix-storage mode:
+      METSOL = 1:  matrix inversion
+                   with           5  iterations
+      MATSTO = 1:  symmetric matrix, (n*n+n)/2 elements
+ Iterations (solutions) with line search:
+  All
+  
+ ______________________________FILETC/X-end________________________________
+  
+
+ Number of processors available:              8
+ Maximum number of OpenMP threads:            1
+ Number of threads for processing:            1
+ Number of threads for reading:               1
+  
+ _________________________________LOOP1____________________________________
+  
+ Read all binary data files:
+  Record            1
+  Record           10
+  Record          100
+  Record         1000
+  Record        10000
+  Record       100000
+  Record       200000
+  Record       300000
+  Record       400000
+  Record       500000
+  Record       600000
+  Record       700000
+  Record       800000
+  Record       900000
+  Record      1000000
+  Record      1100000
+ PEREAD: file            1 read the first time, found     1330981  records
+  Record      1200000
+  Record      1300000
+ PEREAD: file            1 with max record size           82
+
+ Read  cache usage (#blocks, #records, min,max records/block
+                          6   1330981    203373    225571
+ SORT2K (quicksort): maxlevel used/available =          10 /64
+ LOOP1:          10  is number of pre-sigmas
+ Default pre-sigma = 0.00E+00 (if no individual pre-sigma defined)
+ Pre-sigma factor is   1.00000000    
+ No regularization will be done
+   NTGB =       134 = total number of parameters
+   NVGB =       132 = number of variable parameters
+  
+   NREC =   1330981 = number of records
+ MREQEN =        10 = required number of entries
+   NTGB =       134 = total number of parameters
+   NVGB =       132 = number of variable parameters
+  
+  
+  
+ _______________________________LOOP1-end__________________________________
+   0 h  0 min  0.6 sec total                  elapsed   0 h  0 min  0.6 sec
+  
+  
+ _________________________________LOOP2____________________________________
+  
+ LOOP2:          24  constraints
+  Record            1
+  Record           10
+  Record          100
+  Record         1000
+  Record        10000
+  Record       100000
+  Record       200000
+  Record       300000
+  Record       400000
+  Record       500000
+  Record       600000
+  Record       700000
+  Record       800000
+  Record       900000
+  Record      1000000
+  Record      1100000
+  Record      1200000
+  Record      1300000
+
+ Read  cache usage (#blocks, #records, min,max records/block
+                          6   1330981    203373    225571
+  
+   NTGB =       134 = total number of parameters
+                      (all parameters, appearing in binary files)
+   NVGB =       132 = number of variable parameters
+                      (appearing in fit matrix/vectors)
+   NAGB =       156 = number of fit parameters
+                      (including Lagrange multiplier or reduced)
+ MBANDW =         0 = band width of band matrix
+                      (if =0, no band matrix)
+   NOFF =     12090 = max number of off-diagonal elements
+   NCGB =        24 = number of constraints
+  NAGBN =         8 = max number of global parameters in an event
+  NALCN =         4 = max number of local parameters in an event
+  NAEQN =         8 = max number of equations in an event
+ NCACHE =  25000000 = number of words for caching
+                      cache splitting   49.3 %   7.4 %  43.3 %
+  
+  
+ Solution method and matrix-storage mode:
+      METSOL = 1:  matrix inversion
+                   with           5  iterations
+      MATSTO = 1:  symmetric matrix, (n*n+n)/2 elements
+ Convergence assumed, if expected dF <  0.1000E-03
+  
+  
+ Rank of product matrix of constraints is          24  for          24  constraint equations
+  
+ Size of global matrix: < 1 MB
+  
+ _______________________________LOOP2-end__________________________________
+   0 h  0 min  1.2 sec total                  elapsed   0 h  0 min  0.6 sec
+  
+  
+ _______________________________Iteration__________________________________
+  
+  
+ Solution algorithm: 
+ ========================================
+                         solution method:   matrix inversion
+            convergence limit at Delta F=   0.10E-03
+            maximum number of iterations=   5
+                   pre-sigmas defined for     7.6 % of variable parameters
+                       default pre-sigma=   0.00E+00
+                          regularization:   no
+  
+ Checking feasibility of parameters:
+    parameters are feasible  (i.e. satisfy constraints)
+  
+ Reading files and accumulating vectors/matrices ...
+  
+ Record      100000  ... still reading
+ Record      200000  ... still reading
+ Record      300000  ... still reading
+ Record      400000  ... still reading
+ Record      500000  ... still reading
+ Record      600000  ... still reading
+ Record      700000  ... still reading
+ Record      800000  ... still reading
+ Record      900000  ... still reading
+ Record     1000000  ... still reading
+ Record     1100000  ... still reading
+ Record     1200000  ... still reading
+
+ Read  cache usage (#blocks, #records, min,max records/block
+                         12   1330981    107829    111242
+ Record     1300000  ... still reading
+ Write cache usage (#flush,#overrun,<levels>,peak(levels))
+     12      0,  51.5%  51.5%  51.6%  51.6%
+  
+ Data rejected in initial loop:
+               0  (rank deficit/NaN)            0  (Ndf=0)            346  (huge)              0  (large)
+  
+ it fc   fcn_value dfcn_exp  slpr costh  iit st ls  step cutf rejects hmmsec FMS
+ -- -- ----------- --------  ---- -----  --- -- -- ----- ---- ------- ------ ---
+  0  1 0.26075E+08                                        0.0     346 0 0  5 FMS
+  1  2 0.17815E+08 0.82E+07 0.001 0.310    0  0  1 1.000  0.0     407 0 0  5 F  
+                                                                      0 0  0   S
+  2  3 0.17813E+08 0.12E+04 0.794 0.443    0  0 -1 1.000  0.0     407 0 0  5 F  
+     4 0.17804E+08          0.004                1 4.855          415 0 0  5 F  
+                                                                      0 0  0   S
+  3  5 0.17806E+08 0.11E+04 0.080 0.318    0  0 -1 1.000  0.0     410 0 0  5 F  
+     6 0.17807E+08          0.001                1 1.087          409 0 0  5 F  
+                                                                      0 0  0   S
+  4  7 0.17806E+08 0.63E+02 0.801 0.136    0  0 -1 1.000  0.0     410 0 0  5 F  
+     8 0.17807E+08          0.000                1 5.019          409 0 0  5 F  
+                                                                      0 0  0   S
+  5  9 0.17807E+08 0.93E+02 0.118 0.157    0  0 -1 1.000  0.0     409 0 0  5 F  
+    10 0.17806E+08          0.004                1 1.134          410 0 0  5 F  
+  
+ Data rejected in last loop:   
+               0  (rank deficit/NaN)            0  (Ndf=0)            410  (huge)              0  (large)
+  
+ Sum(Chi^2)/Sum(Ndf) =   17805711.766225249     
+                     / (     3396142 -         156 )
+                     =   5.2431640667026453     
+  
+        
+        
+       WarningWarningWarningWarningWarningWarningWarningWarningWar
+       arningWarningWarningWarningWarningWarningWarningWarningWarn
+       rningWarningWarningWarningWarningWarningWarningWarningWarni
+       ningWarningWarningWarningWarningWarningWarningWarningWarnin
+       ingWarningWarningWarningWarningWarningWarningWarningWarning
+       ngWarningWarningWarningWarningWarningWarningWarningWarningW
+       gWarningWarningWarningWarningWarningWarningWarningWarningWa
+        
+         Chi^2/Ndf =    5.2400000000000002        (should be close to 1)
+         => multiply all input standard deviations by factor   2.2900000000000000     
+        
+       WarningWarningWarningWarningWarningWarningWarningWarningWar
+       arningWarningWarningWarningWarningWarningWarningWarningWarn
+       rningWarningWarningWarningWarningWarningWarningWarningWarni
+       ningWarningWarningWarningWarningWarningWarningWarningWarnin
+       ingWarningWarningWarningWarningWarningWarningWarningWarning
+       ngWarningWarningWarningWarningWarningWarningWarningWarningW
+       gWarningWarningWarningWarningWarningWarningWarningWarningWa
+        
+  
+ _____________________________Iteration-end________________________________
+   0 h  0 min 48.2 sec total                  elapsed   0 h  0 min 47.0 sec
+  
+  
+          Result of fit for global parameters
+          ===================================
+  
+     label       parameter      presigma        differ         error
+ -----------    ----------------------------------------------------
+         1    -0.54847E-02    0.0000      -0.54847E-02   0.95803E-04
+         2    -0.18560E-01    0.0000      -0.18560E-01   0.61770E-04
+         3     0.31264E-03    0.0000       0.31264E-03   0.60083E-04
+         4     0.94782E-02    0.0000       0.94782E-02   0.42251E-04
+         5     0.79618E-02    0.0000       0.79618E-02   0.47168E-04
+         6     0.85125E-02    0.0000       0.85125E-02   0.82600E-04
+         7     0.99974E-02    0.0000       0.99974E-02   0.51436E-04
+         8     0.26913E-02    0.0000       0.26913E-02   0.62896E-04
+         9    -0.53829E-04    0.0000      -0.53829E-04   0.33040E-04
+        10    -0.48664E-02    0.0000      -0.48664E-02   0.34415E-04
+ ... (further printout suppressed, but see log file)
+  
+   <  Millepede II-P ending   ... Thu Jul 10 16:38:45 2014
+  
+      Peak dynamic memory allocation:    0.100281 GB
+  
+Post-alignment refit...
+Writing geom/svxPISA-411768.par.2
+Writing rootfiles/411768_cluster.2.root
+Done.
