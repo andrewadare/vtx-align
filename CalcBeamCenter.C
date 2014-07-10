@@ -10,6 +10,7 @@
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
 #include <TGeoManager.h>
+#include <TProfile.h>
 
 // Solve the linear system y0[i] = -m[i]*bc0 + bc1 for i..ntrk-1 tracks.
 // m[i] is the slope (tan(phi)), y0[i] is the y-intercept, and (bc0,bc1)
@@ -25,13 +26,20 @@ TH2D *DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
                const char *name, const char *title);
 TH2D *DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
                const char *name, const char *title);
+void DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
+              TH2D *hist, TProfile *prof);
 
-void CalcBeamCenter()
+void CalcBeamCenter(int run = 411768, int iter = 1)
 {
-  TFile *f = new TFile("rootfiles/411768_july3_parv1_small.root");
+
+  TString fnames[] = {"", "july3_parv1_small"};
+
+  int nbc = 10000;
+  TFile *f = new TFile(Form("rootfiles/%d_%s.root", run, fnames[iter].Data()));
   TNtuple *t = (TNtuple *)f->Get("seg_clusntuple");
   gStyle->SetOptStat(0);
-  int nbc = 10000;
+  gStyle->SetPalette(56, 0, 0.5); // Inverted "radiator", 50% transparency
+  TObjArray* cList = new TObjArray();
 
   SvxTGeo *geo = new SvxTGeo;
   geo->ReadParFile("geom/svxPISA-411768.par");
@@ -39,36 +47,28 @@ void CalcBeamCenter()
   geo->AddSensors();
   geo->GeoManager()->CloseGeometry();
 
-#if 0
-  TH1D *hne = new TH1D("hne", "East;tracks/event", 100, 0, 100);
-  TH1D *hnw = new TH1D("hnw", "West;tracks/event", 100, 0, 100);
+#if 1
   geoEvents events;
   GetEventsFromTree(t, geo, events);
   FitTracks(events);
 
-  // for (unsigned int ev=0; ev<events.size(); ev++)
-  // {
-  //   int ntrk = events[ev].size();
-  //   int ne=0, nw=0;
-  //   for (int t=0; t<ntrk; t++)
-  //   {
-  //     FitTrack(events[ev][t]);
-  //     SvxGeoTrack trk = events[ev][t];
-  //     if (East(trk.phi0)) ne++;
-  //     else nw++;
-
-  //     // Printf("%d %f %f %f %f",
-  //     //        trk.nhits,
-  //     //        trk.phi0,
-  //     //        trk.the0,
-  //     //        trk.vy,
-  //     //        trk.vz);
-  //   }
-  //   hne->Fill(ne);
-  //   hnw->Fill(nw);
-  // }
-  // DrawObject(hne); gPad->SetLogx(); gPad->SetLogy();
-  // DrawObject(hnw); gPad->SetLogx(); gPad->SetLogy();
+  // Fill event multiplicity histograms
+  TH1D *hne = new TH1D("hne", "East;tracks/event", 100, 0, 100);
+  TH1D *hnw = new TH1D("hnw", "West;tracks/event", 100, 0, 100);
+  for (unsigned int ev=0; ev<events.size(); ev++)
+  {
+    int ne=0, nw=0;
+    for (unsigned int t=0; t<events[ev].size(); t++)
+    {
+      SvxGeoTrack trk = events[ev][t];
+      if (East(trk.phi0)) ne++;
+      else nw++;
+      if (false)
+        Printf("%d %f %f %f %f", trk.nhits, trk.phi0, trk.the0, trk.vy, trk.vz);
+    }
+    hne->Fill(ne);
+    hnw->Fill(nw);
+  }
 
   Printf("Computing east arm beam center...");
   TVectorD bce = BeamCenter(events, nbc, "east");
@@ -80,12 +80,21 @@ void CalcBeamCenter()
   TH1D *hw = new TH1D("hw", "hw", 100, 0, 0.5);
   TGraph *gw = DcaDist(events,bcw,"west",hw);
 
-  TH2D *hbp = DcaVsPhi(events, bce, bcw, "hbp", "DCA to beam center vs  #phi");
-  DrawObject(hbp, "colz", "dcavsphi");
-  gPad->Print("pdfs/dcavsphi.pdf");
+  // "DCA to beam center vs  #phi",
+  double dmin = 0.0, dmax = 0.1;
+  TH2D *hbp = new TH2D("hbp", "", 100, 0, TMath::TwoPi(), 100, dmin, dmax);
+  TProfile *prof = new TProfile("prof", "", 100, 0, TMath::TwoPi(), dmin, dmax);
+  prof->SetMarkerStyle(kFullCircle);
+
+  // Error calculation options:
+  // "" : error = sigma/sqrt(N) = std. dev of mean.
+  // "s": error = sigma = std. dev of distribution in dmin, dmax.
+  // "g": error = 1/sqrt(sum(w)) where w is (weighted) sum of entries.
+  prof->BuildOptions(dmin, dmax, "g");
+  DcaVsPhi(events, bce, bcw, hbp, prof);
 #endif
-  
-#if 1
+
+#if 0
   geoTracks tracks;
   GetTracksFromTree(t, geo, tracks);
   FitTracks(tracks);
@@ -108,6 +117,13 @@ void CalcBeamCenter()
   // ---- ---- ---- ---- ---- ---- ----
   //                Plot
   // ---- ---- ---- ---- ---- ---- ----
+  DrawObject(hne, "", "east_mult", cList);
+  gPad->SetLogx(); 
+  gPad->SetLogy();
+  DrawObject(hnw, "", "west_mult", cList);
+  gPad->SetLogx();
+  gPad->SetLogy();
+
   TCanvas *c = new TCanvas("c", "dca2d", 500, 500);
   TH1F *h = c->DrawFrame(-0.3, -0.3, 0.3, 0.3,
                          "Beam center DCA #color[861]{ east}, #color[800]{ west}");
@@ -119,8 +135,8 @@ void CalcBeamCenter()
   SetGraphProps(gw,kNone,kNone,kOrange,kFullDotMedium);
   ge->Draw("psame");
   gw->Draw("psame");
+  cList->Add(c);
 
-  c->Print("pdfs/dca.pdf");
   TCanvas *cr = new TCanvas("cr", "dcar", 500, 500);
   SetHistProps(he,kAzure+1,kNone,kAzure+1);
   SetHistProps(hw,kOrange,kNone,kOrange);
@@ -130,12 +146,28 @@ void CalcBeamCenter()
   hw->Draw("");
   he->Draw("same");
   cr->SetLogy();
-  cr->Print("pdfs/dcar.pdf");
+  cList->Add(cr);
 
+  DrawObject(hbp, "colz", "dcavsphi", cList, 900, 500);
+  hbp->SetTitle("DCA to beam center");
+  TAxis* ax = hbp->GetXaxis();
+  TAxis* ay = hbp->GetYaxis();
+  ax->SetTitle("#Leftarrow west      #phi + #pi/2      east  #Rightarrow");
+  ay->SetTitle("DCA [cm]");
+  ax->CenterTitle();
+  ay->CenterTitle();
+  ax->SetNdivisions(408);
+  ay->SetNdivisions(205);
+  gPad->SetGridy();
+  prof->Draw("same");
 
   Printf("Fraction outside 1000um: %.3f (e) %.3f (w)",
          1.0 - he->Integral(1,he->FindBin(0.099))/he->Integral(),
          1.0 - hw->Integral(1,hw->FindBin(0.099))/hw->Integral());
+
+  PrintPDFs(cList, Form("pdfs/iter%d", iter), "");
+  PrintPDF(cList, Form("pdfs/beam-center-iter%d", iter));
+
   return;
 }
 
@@ -261,4 +293,25 @@ DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
     }
 
   return h;
+}
+
+void
+DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
+         TH2D *hist, TProfile *prof)
+{
+  for (unsigned int ev=0; ev<events.size(); ev++)
+    for (unsigned int t=0; t<events[ev].size(); t++)
+    {
+      SvxGeoTrack trk = events[ev][t];
+      double phi = trk.phi0;
+      TVectorD a(2); a(1) = trk.vy;
+      TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
+      TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
+      double dmag = TMath::Sqrt(d*d);
+      double phir = fmod(TMath::PiOver2()+phi,TMath::TwoPi());
+      hist->Fill(phir, dmag);
+      prof->Fill(phir, dmag);
+    }
+
+  return;
 }
