@@ -45,7 +45,7 @@ void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
-// The iter parameter {0,1,2,...} is defined as the number of times millepede 
+// The iter parameter {0,1,2,...} is defined as the number of times millepede
 // has previously been run.
 void VtxAlign(int run = 411768, int iter = 1)
 {
@@ -56,24 +56,17 @@ void VtxAlign(int run = 411768, int iter = 1)
     gSystem->Exit(-1);
   }
 
-  TString pisaFileIn  = (iter==0) ?
-                        Form("geom/svxPISA-%d.par", run) :
-                        Form("geom/svxPISA-%d.par.%d", run, iter);
-  TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
-
-  TString rfiles[] = {"june26_small", "july3_parv1_small"};
-
-  TString inFileName  = Form("rootfiles/%d_%s.root", run, rfiles[iter].Data());
-  // TString inFileName  = (iter==0) ?
-  //                       Form("rootfiles/%d_june26_small.root", run) :
-  //                       // Form("rootfiles/%d_july3_parv1_small.root", run) :
-  //                       // Form("rootfiles/%d_july7_parv2_500kevents.root", run) :
-  //                       Form("rootfiles/%d_cluster.%d.root", run, iter);
+  assert(iter>=0 && iter<2);
+  TString fext[] = {"june26_small", "july3_parv1_small"};
+  TString inFileName  = Form("rootfiles/%d_%s.root", run, fext[iter].Data());
   TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
+  TString pisaFileIn  = Form("geom/svxPISA-%d.par", run);
+  if (iter > 0)
+    pisaFileIn += "." + iter;
+  TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
 
   vecs constfiles;
   vecs binfiles;
-
   constfiles.push_back(pedeConstFile);
   if (nStdTracks > 0)
     binfiles.push_back(pedeBinFileStd);
