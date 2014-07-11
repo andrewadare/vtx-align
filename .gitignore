@@ -2,7 +2,6 @@
 
 # Auto-generated Millepede files
 *.end
-*.log
 *.res
 *.his
 *.bin
