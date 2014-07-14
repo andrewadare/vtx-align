@@ -276,9 +276,10 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
     n = nsub;
   }
 
-  if (n < 1)
+  if (n < 2)
   {
-    xy -= 9999;
+    xy(0) = -9999;
+    xy(1) = -9999;
     return xy;
   }
 
@@ -311,10 +312,7 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
       y0(row) = yint;
       row++;
     }
-    // else
-    //   Printf("GLSFitter.h XYCenter(): Unknown option %s", arm.Data());
   }
-
   xy = SolveGLS(M, y0, L, cov);
 
   if (opt.Contains("print"))
