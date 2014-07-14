@@ -12,84 +12,49 @@ TVectorD BeamCenter(geoTracks &tracks, int ntrk, TString arm, TString opt="");
 TVectorD BeamCenter(geoEvents &events, int ntrk, TString arm, TString opt="");
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
-bool East(double phi);
 void FillSystem(geoEvents &events, TMatrixD &M, TVectorD &y, TString arm);
-
-TVectorD
-Vertex(geoTracks &event, TString arm)
-{
-  // Compute least-squares vertex from tracks.
-  int n = (int)event.size();
-  TMatrixD M(n,3);   // "Design matrix" containing track slopes
-  TVectorD y0(n);    // Vector of track y-intercept values
-  TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
-  L.UnitMatrix();
-  L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
-  TMatrixD cov(3,3); // Assigned in SolveGLS()
-
-  for (int i=0; i<n; i++)
-  {
-    SvxGeoTrack track = event.at(i);
-    bool east = East(track.phi0);
-    if (arm=="" || (arm=="east" && east) || (arm=="west" && !east))
-    {
-      // TODO: code this
-      // M(i, 0) = -TMath::Tan(phi);
-      // M(i, 1) = 1;
-      // y0(i) = yint;
-      // i++;
-    }
-  }
-
-  TVectorD bc = SolveGLS(M, y0, L, cov);
-  Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
-         arm.Data(),
-         bc(0), TMath::Sqrt(cov(0,0)),
-         bc(1), TMath::Sqrt(cov(1,1)));
-  cov.Print();
-  return bc;
-}
 
 TVectorD
 BeamCenter(geoTracks &tracks, int ntrk, TString arm, TString opt)
 {
-  // Compute least-squares beam center from ntrk tracks.
-  if (0) Printf("%s", opt.Data());
+  return XYCenter(tracks, arm, ntrk, opt);
+  // // Compute least-squares beam center from ntrk tracks.
+  // if (0) Printf("%s", opt.Data());
 
-  assert(ntrk <= (int)tracks.size());
+  // assert(ntrk <= (int)tracks.size());
 
-  int n = ntrk; 
-  TMatrixD M(n,2);   // "Design matrix" containing track slopes
-  TVectorD y0(n);    // Vector of track y-intercept values
-  TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
-  L.UnitMatrix();
-  L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
-  TMatrixD cov(2,2); // Assigned in SolveGLS()
+  // int n = ntrk;
+  // TMatrixD M(n,2);   // "Design matrix" containing track slopes
+  // TVectorD y0(n);    // Vector of track y-intercept values
+  // TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
+  // L.UnitMatrix();
+  // L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
+  // TMatrixD cov(2,2); // Assigned in SolveGLS()
 
-  int row=0;
-  for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    if (row==n)
-      break;
-    double yint = tracks[i].vy;
-    double phi = tracks[i].phi0;
-    bool east = East(phi);
-    if ((arm=="east" && east) || (arm=="west" && !east))
-    {
-      M(row, 0) = -TMath::Tan(phi);
-      M(row, 1) = 1;
-      y0(row) = yint;
-      row++;
-    }
-  }
+  // int row=0;
+  // for (unsigned int i=0; i<tracks.size(); i++)
+  // {
+  //   if (row==n)
+  //     break;
+  //   double yint = tracks[i].vy;
+  //   double phi = tracks[i].phi0;
+  //   bool east = East(phi);
+  //   if ((arm=="east" && east) || (arm=="west" && !east))
+  //   {
+  //     M(row, 0) = -TMath::Tan(phi);
+  //     M(row, 1) = 1;
+  //     y0(row) = yint;
+  //     row++;
+  //   }
+  // }
 
-  TVectorD bc = SolveGLS(M, y0, L, cov);
-  Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
-         arm.Data(),
-         bc(0), TMath::Sqrt(cov(0,0)),
-         bc(1), TMath::Sqrt(cov(1,1)));
-  cov.Print();
-  return bc;
+  // TVectorD bc = SolveGLS(M, y0, L, cov);
+  // Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
+  //        arm.Data(),
+  //        bc(0), TMath::Sqrt(cov(0,0)),
+  //        bc(1), TMath::Sqrt(cov(1,1)));
+  // cov.Print();
+  // return bc;
 }
 
 
@@ -121,6 +86,8 @@ BeamCenter(geoEvents &events, int ntrk, TString arm, TString opt)
 void
 FillSystem(geoEvents &events, TMatrixD &M, TVectorD &y0, TString arm)
 {
+  // TODO: Add logic to allow filling from both arms (arm=="")
+  //       See GLSFitter.h XYCenter().
   int row = 0;
   int nrows = M.GetNrows();
   assert(y0.GetNrows()==nrows);
@@ -142,9 +109,14 @@ FillSystem(geoEvents &events, TMatrixD &M, TVectorD &y0, TString arm)
       }
     }
 
-  // Function shouldn't reach this point....
+  // Function shouldn't reach this point.
+  // If it does, either decrease ntrk or provide larger tracks vector.
+  // Or, (TODO) Consider providing option to on-the-fly resize M and y0,
+  //       e.g. M.ResizeTo(row, M.GetNcols());
+  //            y0.ResizeTo(row);
   if (row < nrows)
-    Printf("Warning! Linear system dimensions too large; not enough tracks.");
+    Printf("BeamCenterFuncs.h FillSystem(): Warning!! "
+           "Not enough tracks: %d requested, %d available.", nrows, row);
 
   return;
 }
@@ -168,12 +140,6 @@ IPVec(SvxGeoTrack &t, TVectorD &p)
   n(0) = TMath::Cos(t.phi0);
   n(1) = TMath::Sin(t.phi0);
   return IPVec(a,n,p);
-}
-
-bool
-East(double phi)
-{
-  return (phi > TMath::PiOver2() && phi < 3*TMath::PiOver2());
 }
 
 #endif
