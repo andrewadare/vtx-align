@@ -47,7 +47,7 @@ void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 // The iter parameter {0,1,2,...} is defined as the number of times millepede
 // has previously been run.
-void VtxAlign(int run = 411768, int iter = 1)
+void VtxAlign(int run = 411768, int iter = 2)
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -56,13 +56,16 @@ void VtxAlign(int run = 411768, int iter = 1)
     gSystem->Exit(-1);
   }
 
-  assert(iter>=0 && iter<2);
-  TString fext[] = {"june26_small", "july3_parv1_small"};
+  assert(iter>=0 && iter<3);
+  TString fext[] = {"june26_small",
+                    "july3_parv1_small",
+                    "july11_v3_500kevents"
+                   };
   TString inFileName  = Form("rootfiles/%d_%s.root", run, fext[iter].Data());
   TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
   TString pisaFileIn  = Form("geom/svxPISA-%d.par", run);
   if (iter > 0)
-    pisaFileIn += "." + iter;
+    pisaFileIn += Form(".%d", iter);
   TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
 
   vecs constfiles;
@@ -487,10 +490,10 @@ FilterTracks(geoTracks &a, geoTracks &b, double maxdca)
   // Copy the subset of a tracks to b that pass within maxdca of the beam center.
 
   Printf("Computing east arm beam center...");
-  TVectorD bce = BeamCenter(a, 15000, "east");
+  TVectorD bce = BeamCenter(a, 15000, "east", "print");
 
   Printf("Computing west arm beam center...");
-  TVectorD bcw = BeamCenter(a, 15000, "west");
+  TVectorD bcw = BeamCenter(a, 15000, "west", "print");
 
   // Residual outlier cut [cm]
   double resCut = 0.10;
