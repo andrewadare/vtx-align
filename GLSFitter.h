@@ -21,9 +21,11 @@ void TrackFitZResid(SvxGeoTrack &gt, double *pars = 0);
 void TrackFitSResid(SvxGeoTrack &gt, double *pars = 0);
 void ZeroFieldResiduals(SvxGeoTrack &gt, double *pars /* y0, z0, phi, theta */);
 void Residuals(SvxGeoTrack &tt, SvxGeoTrack &mt, TNtuple *t);
+TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 void FitTrack(SvxGeoTrack &track);
 void FitTracks(geoTracks &tracks);
 void FitTracks(geoEvents &events);
+bool East(double phi);
 
 TVectorD
 SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov)
@@ -247,6 +249,90 @@ FitTracks(geoEvents &events)
 
   Printf("done.");
   return;
+}
+
+TVectorD
+XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
+{
+  // Compute least-squares (x,y) center from ntrk tracks.
+  // - arm can be "east", "west" or "" for both.
+  // - ntrk is an optional upper limit on the number of tracks to use
+  //   (to limit cpu time).
+  // - opt can currently be either empty (default) or "print".
+
+  assert(ntrk <= (int)tracks.size());
+  int n = ntrk > 0 ? ntrk : (int)tracks.size();
+  TVectorD xy(2);
+
+  if ((arm=="east" || arm=="west") && ntrk <= 0)
+  {
+    int nsub = 0;
+    for (int i=0; i<n; i++)
+    {
+      bool east = East(tracks[i].phi0);
+      if ((arm=="east" && east) || (arm=="west" && !east))
+        nsub++;
+    }
+    n = nsub;
+  }
+
+  if (n < 1)
+  {
+    xy -= 9999;
+    return xy;
+  }
+
+  TMatrixD M(n,2);   // "Design matrix" containing track slopes
+  TVectorD y0(n);    // Vector of track y-intercept values
+  TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
+  L.UnitMatrix();
+  L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
+  TMatrixD cov(2,2); // Assigned in SolveGLS()
+
+  int row=0;
+  for (unsigned int i=0; i<tracks.size(); i++)
+  {
+    if (row==n)
+      break;
+    double yint = tracks[i].vy;
+    double phi = tracks[i].phi0;
+    bool east = East(phi);
+    if (arm=="")
+    {
+      M(row, 0) = -TMath::Tan(phi);
+      M(row, 1) = 1;
+      y0(row) = yint;
+      row++;
+    }
+    else if ((arm=="east" && east) || (arm=="west" && !east))
+    {
+      M(row, 0) = -TMath::Tan(phi);
+      M(row, 1) = 1;
+      y0(row) = yint;
+      row++;
+    }
+    // else
+    //   Printf("GLSFitter.h XYCenter(): Unknown option %s", arm.Data());
+  }
+
+  xy = SolveGLS(M, y0, L, cov);
+
+  if (opt.Contains("print"))
+  {
+    Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
+           arm.Data(),
+           xy(0), TMath::Sqrt(cov(0,0)),
+           xy(1), TMath::Sqrt(cov(1,1)));
+    cov.Print();
+  }
+
+  return xy;
+}
+
+bool
+East(double phi)
+{
+  return (phi > TMath::PiOver2() && phi < 3*TMath::PiOver2());
 }
 
 #endif
