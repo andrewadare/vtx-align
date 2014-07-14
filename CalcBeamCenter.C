@@ -1,35 +1,19 @@
 #include "UtilFns.h"
 #include "SvxTGeo.h"
 #include "SvxGeoTrack.h"
+#include "DcaFunctions.h"
 #include "BeamCenterFuncs.h"
 #include "ParameterDefs.h"
 #include "GLSFitter.h"
 #include "VtxIO.h"
 
 #include <TEllipse.h>
-#include <TTreeReader.h>
-#include <TTreeReaderValue.h>
-#include <TGeoManager.h>
-#include <TProfile.h>
 
 // Solve the linear system y0[i] = -m[i]*bc0 + bc1 for i..ntrk-1 tracks.
 // m[i] is the slope (tan(phi)), y0[i] is the y-intercept, and (bc0,bc1)
 // is the least-squares beam (x,y) position.
 
-TGraph *DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm,
-                TH1D *hr=0, int ntracks=10000);
-TGraph *DcaDist(geoTracks &tracks, TVectorD &bc, TString arm,
-                TH1D *hr=0, int ntracks=10000);
-TGraph *DcaDist(geoEvents &events, TVectorD &bc, TString arm,
-                TH1D *hr, int ntracks=10000);
-TH2D *DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
-               const char *name, const char *title);
-TH2D *DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
-               const char *name, const char *title);
-void DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
-              TH2D *hist, TProfile *prof);
-
-void CalcBeamCenter(int run = 411768, int iter = 2)
+void CalcBeamCenter(int run = 411768, int iter = 1)
 {
   int nbc = 10000;
   TString pisaFileIn = Form("geom/svxPISA-%d.par", run);
@@ -85,7 +69,7 @@ void CalcBeamCenter(int run = 411768, int iter = 2)
   TH1D *hw = new TH1D("hw", "hw", 100, 0, 0.5);
   TGraph *gw = DcaDist(events,bcw,"west",hw);
 
-  // "DCA to beam center vs  #phi",
+  // DCA to beam center vs phi
   double dmin = 0.0, dmax = 0.1;
   TH2D *hbp = new TH2D("hbp", "", 100, 0, TMath::TwoPi(), 100, dmin, dmax);
   TProfile *prof = new TProfile("prof", "", 100, 0, TMath::TwoPi(), dmin, dmax);
@@ -153,7 +137,7 @@ void CalcBeamCenter(int run = 411768, int iter = 2)
   cr->SetLogy();
   cList->Add(cr);
 
-  DrawObject(hbp, "colz", "dcavsphi", cList, 900, 500);
+  DrawObject(hbp, "colz", "bcdcavsphi", cList, 900, 500);
   hbp->SetTitle("DCA to beam center");
   TAxis *ax = hbp->GetXaxis();
   TAxis *ay = hbp->GetYaxis();
@@ -172,151 +156,6 @@ void CalcBeamCenter(int run = 411768, int iter = 2)
 
   PrintPDFs(cList, Form("pdfs/iter%d", iter), "");
   PrintPDF(cList, Form("pdfs/beam-center-iter%d", iter));
-
-  return;
-}
-
-TGraph *
-DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
-{
-  // This function is no longer being used.
-  TTreeReader r(t->GetName(), f);
-  TTreeReaderValue<float> ty0(r, "y0");
-  TTreeReaderValue<float> phi(r, "phi");
-  TGraph *g = new TGraph();
-  g->SetMarkerStyle(kFullDotMedium);
-
-  int i=0;
-  while (r.Next())
-  {
-    double m = TMath::Tan(*phi);
-    if ((arm=="east" && East(*phi)) || (arm=="west" && !East(*phi)))
-    {
-      TVectorD a(2); a(1) = *ty0;
-      TVectorD n(2); n(0) = TMath::Cos(*phi); n(1) = TMath::Sin(*phi);
-      TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
-
-      if (i<ntracks)
-        g->SetPoint(i, d(0), d(1));
-      if (hr)
-        hr->Fill(TMath::Sqrt(d*d));
-
-      i++;
-    }
-  }
-  return g;
-}
-
-TGraph *
-DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
-{
-  TGraph *g = new TGraph();
-  g->SetMarkerStyle(kFullDotMedium);
-  for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    double phi = tracks[i].phi0;
-    if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
-    {
-      TVectorD a(2); a(1) = tracks[i].vy;
-      TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-      TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
-
-      if (i<(unsigned int)ntracks)
-        g->SetPoint(i, d(0), d(1));
-      if (hr)
-        hr->Fill(TMath::Sqrt(d*d));
-    }
-  }
-  return g;
-}
-
-TGraph *
-DcaDist(geoEvents &events, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
-{
-  int i = 0;
-  TGraph *g = new TGraph(ntracks);
-  g->SetMarkerStyle(kFullDotMedium);
-
-  for (unsigned int ev=0; ev<events.size(); ev++)
-    for (unsigned int t=0; t<events[ev].size(); t++)
-    {
-      SvxGeoTrack trk = events[ev][t];
-      double phi = trk.phi0;
-      if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
-      {
-        TVectorD a(2); a(1) = trk.vy;
-        TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-        TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
-
-        if (i<ntracks)
-        {
-          g->SetPoint(i, d(0), d(1));
-          i++;
-        }
-
-        if (hr)
-          hr->Fill(TMath::Sqrt(d*d));
-      }
-    }
-
-  return g;
-}
-
-TH2D *
-DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
-         const char *name, const char *title)
-{
-  TH2D *h = new TH2D(name, title, 100, 0, TMath::TwoPi(), 100, -0.0, 0.1);
-
-  for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    double phi = tracks[i].phi0;
-    TVectorD a(2); a(1) = tracks[i].vy;
-    TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-    TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
-    h->Fill(fmod(TMath::PiOver2()+phi,TMath::TwoPi()), TMath::Sqrt(d*d));
-  }
-
-  return h;
-}
-
-TH2D *
-DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
-         const char *name, const char *title)
-{
-  TH2D *h = new TH2D(name, title, 100, 0, TMath::TwoPi(), 100, -0.0, 0.1);
-
-  for (unsigned int ev=0; ev<events.size(); ev++)
-    for (unsigned int t=0; t<events[ev].size(); t++)
-    {
-      SvxGeoTrack trk = events[ev][t];
-      double phi = trk.phi0;
-      TVectorD a(2); a(1) = trk.vy;
-      TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-      TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
-      h->Fill(fmod(TMath::PiOver2()+phi,TMath::TwoPi()), TMath::Sqrt(d*d));
-    }
-
-  return h;
-}
-
-void
-DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
-         TH2D *hist, TProfile *prof)
-{
-  for (unsigned int ev=0; ev<events.size(); ev++)
-    for (unsigned int t=0; t<events[ev].size(); t++)
-    {
-      SvxGeoTrack trk = events[ev][t];
-      double phi = trk.phi0;
-      TVectorD a(2); a(1) = trk.vy;
-      TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-      TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
-      double dmag = TMath::Sqrt(d*d);
-      double phir = fmod(TMath::PiOver2()+phi,TMath::TwoPi());
-      hist->Fill(phir, dmag);
-      prof->Fill(phir, dmag);
-    }
 
   return;
 }
