@@ -4,59 +4,20 @@
 #include "GLSFitter.h"
 #include "SvxTGeo.h"
 #include "SvxGeoTrack.h"
+#include "DcaFunctions.h"
 
 typedef vector<SvxGeoTrack> geoTracks;
 typedef vector<geoTracks> geoEvents;
 
 TVectorD BeamCenter(geoTracks &tracks, int ntrk, TString arm, TString opt="");
 TVectorD BeamCenter(geoEvents &events, int ntrk, TString arm, TString opt="");
-TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
-TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
 void FillSystem(geoEvents &events, TMatrixD &M, TVectorD &y, TString arm);
 
 TVectorD
 BeamCenter(geoTracks &tracks, int ntrk, TString arm, TString opt)
 {
   return XYCenter(tracks, arm, ntrk, opt);
-  // // Compute least-squares beam center from ntrk tracks.
-  // if (0) Printf("%s", opt.Data());
-
-  // assert(ntrk <= (int)tracks.size());
-
-  // int n = ntrk;
-  // TMatrixD M(n,2);   // "Design matrix" containing track slopes
-  // TVectorD y0(n);    // Vector of track y-intercept values
-  // TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
-  // L.UnitMatrix();
-  // L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
-  // TMatrixD cov(2,2); // Assigned in SolveGLS()
-
-  // int row=0;
-  // for (unsigned int i=0; i<tracks.size(); i++)
-  // {
-  //   if (row==n)
-  //     break;
-  //   double yint = tracks[i].vy;
-  //   double phi = tracks[i].phi0;
-  //   bool east = East(phi);
-  //   if ((arm=="east" && east) || (arm=="west" && !east))
-  //   {
-  //     M(row, 0) = -TMath::Tan(phi);
-  //     M(row, 1) = 1;
-  //     y0(row) = yint;
-  //     row++;
-  //   }
-  // }
-
-  // TVectorD bc = SolveGLS(M, y0, L, cov);
-  // Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
-  //        arm.Data(),
-  //        bc(0), TMath::Sqrt(cov(0,0)),
-  //        bc(1), TMath::Sqrt(cov(1,1)));
-  // cov.Print();
-  // return bc;
 }
-
 
 TVectorD
 BeamCenter(geoEvents &events, int ntrk, TString arm, TString opt)
@@ -119,27 +80,6 @@ FillSystem(geoEvents &events, TMatrixD &M, TVectorD &y0, TString arm)
            "Not enough tracks: %d requested, %d available.", nrows, row);
 
   return;
-}
-
-TVectorD
-IPVec(TVectorD &a, TVectorD &n, TVectorD &p)
-{
-  // Compute impact parameter vector from point p to line x = a + tn
-  // where
-  // - x is a straight-line track trajectory
-  // - a is a point on vector x (e.g. y-intercept point (0, y0))
-  // - n is a unit vector directing x (e.g. (cos(phi), sin(phi)).
-  return a - p - ((a - p)*n)*n;
-}
-
-TVectorD
-IPVec(SvxGeoTrack &t, TVectorD &p)
-{
-  TVectorD a(2); a(1) = t.vy;
-  TVectorD n(2);
-  n(0) = TMath::Cos(t.phi0);
-  n(1) = TMath::Sin(t.phi0);
-  return IPVec(a,n,p);
 }
 
 #endif
