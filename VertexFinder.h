@@ -35,8 +35,6 @@ ZVertex(geoTracks &tracks, TString arm)
       zs[nz++] = tracks[i].vz;
     else if ((arm=="east" && east) || (arm=="west" && !east))
       zs[nz++] = tracks[i].vz;
-    // else
-    //   Printf("VertexFinder.h ZVertex(): Unknown option %s", arm.Data());
   }
   TMath::Quantiles(nz, 1, zs, quantiles, probs, false);
 
