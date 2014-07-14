@@ -17,11 +17,11 @@
 // is the least-squares beam (x,y) position.
 
 TGraph *DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm,
-                TH1D *hr=0, int ntracks=50000);
+                TH1D *hr=0, int ntracks=10000);
 TGraph *DcaDist(geoTracks &tracks, TVectorD &bc, TString arm,
-                TH1D *hr=0, int ntracks=50000);
+                TH1D *hr=0, int ntracks=10000);
 TGraph *DcaDist(geoEvents &events, TVectorD &bc, TString arm,
-                TH1D *hr, int ntracks=50000);
+                TH1D *hr, int ntracks=10000);
 TH2D *DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
                const char *name, const char *title);
 TH2D *DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
@@ -29,20 +29,25 @@ TH2D *DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
 void DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
               TH2D *hist, TProfile *prof);
 
-void CalcBeamCenter(int run = 411768, int iter = 1)
+void CalcBeamCenter(int run = 411768, int iter = 2)
 {
-
-  TString fnames[] = {"", "july3_parv1_small"};
-
   int nbc = 10000;
+  TString pisaFileIn = Form("geom/svxPISA-%d.par", run);
+  if (iter > 0)
+    pisaFileIn += Form(".%d", iter);
+
+  TString fnames[] = {"",
+                      "july3_parv1_small",
+                      "july11_v3_500kevents"
+                     };
   TFile *f = new TFile(Form("rootfiles/%d_%s.root", run, fnames[iter].Data()));
   TNtuple *t = (TNtuple *)f->Get("seg_clusntuple");
   gStyle->SetOptStat(0);
   gStyle->SetPalette(56, 0, 0.5); // Inverted "radiator", 50% transparency
-  TObjArray* cList = new TObjArray();
+  TObjArray *cList = new TObjArray();
 
   SvxTGeo *geo = new SvxTGeo;
-  geo->ReadParFile("geom/svxPISA-411768.par");
+  geo->ReadParFile(pisaFileIn.Data());
   geo->MakeTopVolume(100, 100, 100);
   geo->AddSensors();
   geo->GeoManager()->CloseGeometry();
@@ -71,12 +76,12 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
   }
 
   Printf("Computing east arm beam center...");
-  TVectorD bce = BeamCenter(events, nbc, "east");
+  TVectorD bce = BeamCenter(events, nbc, "east", "print");
   TH1D *he = new TH1D("he", "he", 100, 0, 0.5);
   TGraph *ge = DcaDist(events,bce,"east",he);
 
   Printf("Computing west arm beam center...");
-  TVectorD bcw = BeamCenter(events, nbc, "west");
+  TVectorD bcw = BeamCenter(events, nbc, "west", "print");
   TH1D *hw = new TH1D("hw", "hw", 100, 0, 0.5);
   TGraph *gw = DcaDist(events,bcw,"west",hw);
 
@@ -118,7 +123,7 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
   //                Plot
   // ---- ---- ---- ---- ---- ---- ----
   DrawObject(hne, "", "east_mult", cList);
-  gPad->SetLogx(); 
+  gPad->SetLogx();
   gPad->SetLogy();
   DrawObject(hnw, "", "west_mult", cList);
   gPad->SetLogx();
@@ -150,9 +155,9 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
 
   DrawObject(hbp, "colz", "dcavsphi", cList, 900, 500);
   hbp->SetTitle("DCA to beam center");
-  TAxis* ax = hbp->GetXaxis();
-  TAxis* ay = hbp->GetYaxis();
-  ax->SetTitle("#Leftarrow west      #phi + #pi/2      east  #Rightarrow");
+  TAxis *ax = hbp->GetXaxis();
+  TAxis *ay = hbp->GetYaxis();
+  ax->SetTitle("#Leftarrow  west      #phi + #pi/2      east  #Rightarrow");
   ay->SetTitle("DCA [cm]");
   ax->CenterTitle();
   ay->CenterTitle();
