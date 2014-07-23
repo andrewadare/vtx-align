@@ -5,25 +5,28 @@
 
 using namespace std;
 
-void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
-                           const char *inputfile = "./PRDF/EVENTDATA_P00-0000372412-0121.PRDFF")
+void Fun4All_VTX_ZeroField( const char *inputfile = "/phenix/u/theok/hhj2/PRDF/ZEROFDATA_P00-0000411768-0000.PRDFF")
 {
     //Tell root to really crash when something goes wrong not start it's
     //signal handling.
-    for (int i = 0; i < kMAXSIGNALS; i++)
+  int nEvents = 0;
+  for (int i = 0; i < kMAXSIGNALS; i++)
     {
-        gSystem->IgnoreSignal((ESignals)i);
+      gSystem->IgnoreSignal((ESignals)i);
     }
-
+  
     gSystem->Exec("/bin/env");
 
     char ifile[5000];
     strcpy(ifile, inputfile);
     strtok(ifile, "-");
-    int runnumber = atoi(strtok(0, "-"));
-    int segnumber = atoi(strtok(strtok(0, "-"), "."));
+    int runnumber =atoi(strtok(0, "-"));
+    int segnumber =atoi(strtok(strtok(0, "-"), "."));
+    cout<<"run num: "<<runnumber<<" seg num: "<<segnumber<<endl;
+    //gSystem->Load("libjprof.so");
+    //prof *Pr = new prof;
 
-    ///////////////////////////////////////////
+     ///////////////////////////////////////////
     // Load Libraries
     //////////////////////////////////////////
     gSystem->Load("libfun4all.so");
@@ -31,6 +34,7 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     gSystem->Load("libcompactCNT.so");
     //  gSystem->Load("librecal");
     gSystem->Load("libSvxDstQA.so");
+    //gSystem->Load("libSvxAlignment.so");
 
     gROOT->ProcessLine(".L OutputManager.C");
     gROOT->ProcessLine(".L rawdatacheck.C");
@@ -58,6 +62,12 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     //////////////////////////////////////////
     Fun4AllServer *se = Fun4AllServer::instance();
     se->Verbosity(0);
+
+    ///////////////////////////////////////////
+    // limit insert time for calibrations
+    //////////////////////////////////////////
+    PdbBankManager *bankManager = PdbBankManager::instance();
+    //bankManager->SetMaxInsertTime(1390820000) ; // Mon Jan 27 05:53:20 2014
 
     ///////////////////////////////////////////
     // Make and register the Raw Data Checker
@@ -115,34 +125,30 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     //  SubsysReco *mpc     = new MpcReco();
 
     SvxParManager *svxpar = new SvxParManager();
+    svxpar->set_BeamCenter((0.364+0.118)/2.0,(0.066+0.000)/2.0);
+
+    svxpar->set_OffsetVtxToCnt(0.0,0.0,0.0);
+    svxpar->set_OffsetEastToWest((0.364-0.118),(0.066-0.000),0.0);
+    svxpar->set_ReadGeoParFromFile(1);
+    //svxpar->set_GeometryFileName("svxPISA-411768.par.1");
+    svxpar->set_GeometryFileName("svxPISA-ideal.par.411768.1");
     //svxpar->set_BeamCenterFromDB(0);
     //svxpar->set_OffsetFromDB(0);
-    /*
-    //from TaeBongs 7/9/2014 presentation
-    svxpar->set_ReadGeoParFromFile(1);
-    svxpar->set_GeometryFileName("par_files/svxPISA.par_v18-4");
-    svxpar->set_OffsetVtxToCnt(-0.409232, 0.0168409, 0.0);
-    svxpar->set_OffsetEastToWest(0.059848, -0.0163941, -0.034206);
-    svxpar->set_BeamCenter(-0.117045, 0.075906);
-    */
-
-    // Ideal geometry (baseline)
-    svxpar->set_ReadGeoParFromFile(1);
-    svxpar->set_GeometryFileName("/direct/phenix+u/dcm07e/work/vtx-align/geom/svxPISA-ideal.par");
-    svxpar->set_OffsetVtxToCnt(0.0, 0.0, 0.0);
-    svxpar->set_OffsetEastToWest(0.0, 0.0, 0.0);
-    svxpar->set_BeamCenter(0.0, 0.0);
-
+    //svxpar->set_BeamCenter(0.0,0.0);
+    //svxpar->set_ReadGeoParFromFile(1);
+    //svxpar->set_GeometryFileName("svxPISA-411768.par");
+    /*  svxpar->set_OffsetVtxToCnt(0.0,0.0,0.0);
+    svxpar->set_OffsetEastToWest(0.0,0.0,0.0);
+*/
 
     svxpar->set_UseRefDiffPixelMap(1);
     svxpar->set_ReadRefDiffPixelMapFromFile(1);
-    svxpar->set_RefDiffPixelMapFiles("blank_pixel_refmap.txt",
-                                     "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/pixel_deadmap_run14auau200_run407951.dat",
-                                     "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/chip_deadmap_run14auau200_run407951.dat");
+    svxpar->set_RefDiffPixelMapFiles("refmap_run14auau200_run411768.dat","pixel_deadmap_run14auau200_run411768.dat","chip_deadmap_run14auau200_run411768.dat");
 
     svxpar->set_ReadStripHotDeadFromFile(1);
-    svxpar->set_StripHotDeadFileName("/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run407951_strip_hotdeadChannels.txt");
-    svxpar->set_StripHotDeadReadoutsFileName("/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run407951_strip_hotdeadReadouts.txt");
+    svxpar->set_StripHotDeadFileName("run411768_strip_hotdeadChannels.txt");
+    svxpar->set_StripHotDeadReadoutsFileName("run411768_strip_hotdeadReadouts.txt");
+
 
     SvxDecode *svxdecode = new SvxDecode();
     svxdecode->includePixel(true);
@@ -155,21 +161,16 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     SvxPriVertexSeedFinder *svxvtxseedfinder = new SvxPriVertexSeedFinder();
 
     SvxStandAloneReco *svxstandalone         = new SvxStandAloneReco();
-    svxstandalone->setVertexRecoFlag(2);
+    //svxstandalone->setProjectionFlag(false);
+    svxstandalone->setZerofieldFlag(true);
+    //svxstandalone->setVertexRecoFlag(2);
     //svxstandalone->setPPFlag(true);
 
     SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
 
     SubsysReco *svxprimvtxfinder_west = new SvxPrimVertexFinder("SVXPRIMVTXFINDERW", 1);
-    SubsysReco *svxprimvtxfinder_east = new SvxPrimVertexFinder("SVXPRIMVTXFINDERE", 2);
 
-    /*
-    //re-find standalone tracks now that we have a vertex
-    SvxStandAloneReco *svxstandalonere         = new SvxStandAloneReco("SVXSTANDALONERECOREDO");
-    svxstandalonere->setVertexRecoFlag(2);
-    //svxstandalonere->setPPFlag(true);
-    svxstandalonere->setClearSegmentFlag(true);
-    */
+    SubsysReco *svxprimvtxfinder_east = new SvxPrimVertexFinder("SVXPRIMVTXFINDERE", 2);
 
     //////////////////////////////////
     // Register SubSystems
@@ -217,9 +218,8 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     se->registerSubsystem(svxvtxseedfinder);
     se->registerSubsystem(svxstandalone);
     se->registerSubsystem(svxprimvtxfinder);
-    se->registerSubsystem(svxprimvtxfinder_east);
-    se->registerSubsystem(svxprimvtxfinder_west);
-    //se->registerSubsystem(svxstandalonere);
+    //se->registerSubsystem(svxprimvtxfinder_east);
+    //se->registerSubsystem(svxprimvtxfinder_west);
 
     //=========================================
     // These fill the compactCNT storage nodes
@@ -289,30 +289,29 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     se->registerSubsystem(new FillCNT_EmcHits());
 
     /// SvxCentralTrackReco should be called after PHCentralTrack is reconstructed.
-    SubsysReco *svxcentraltrack = new SvxCentralTrackReco();
+    SvxCentralTrackReco *svxcentraltrack = new SvxCentralTrackReco();
+    svxcentraltrack->setZeroFieldFlag(true);
+    //svxcentraltrack->setPrintLinkInfo(true);
     se->registerSubsystem(svxcentraltrack);
 
-    /*
-    SubsysReco *svxcentraltrackbg = new SvxCentralTrackReco("SVXCENTRALTRACKRECOBACK");
-    (dynamic_cast<SvxCentralTrackReco *>svxcentraltrackbg)->RndmAssocDchFlag(1);
-    svxcentraltrackbg->Verbosity(0);
-    se->registerSubsystem(svxcentraltrackbg);
-    */
+    //SubsysReco *svxcentraltrackbg = new SvxCentralTrackReco("SVXCENTRALTRACKRECOBACK");
+    //(dynamic_cast<SvxCentralTrackReco *>svxcentraltrackbg)->RndmAssocDchFlag(1);
+    //svxcentraltrackbg->Verbosity(0);
+    //se->registerSubsystem(svxcentraltrackbg);
 
-    SvxSelectClusters *svxselect = new SvxSelectClusters();
-    se->registerSubsystem(svxselect);
+    //In this macro we want ALL clusters
+    //SvxSelectClusters* svxselect = new SvxSelectClusters();
+    //se->registerSubsystem(svxselect);
 
-    /*
     // svx compactCNTs
-    FillSvxHits *fillsvxhits = new FillSvxHits();
-    fillsvxhits->Verbosity(0);
-    fillsvxhits->setSaveOnlySelectedHits(true);
-    se->registerSubsystem(fillsvxhits);
-    */
+    //FillSvxHits *fillsvxhits = new FillSvxHits();
+    //fillsvxhits->Verbosity(0);
+    //fillsvxhits->setSaveOnlySelectedHits(true);
+    //se->registerSubsystem(fillsvxhits);
 
     // Reaction Plane
-    SubsysReco *svxrp   = new SvxRpSumXYReco();
-    se->registerSubsystem(svxrp);
+    //SubsysReco *svxrp   = new SvxRpSumXYReco();
+    //se->registerSubsystem(svxrp);
 
     //////////////////////////////////
     // Central arm output
@@ -323,11 +322,11 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     char dstname[100];
     for (int i = 0; i < trgsel.size(); i++)
     {
-        sprintf(dstname, "CNT_%s", trgsel[i].c_str());
+        sprintf(dstname, "ideal_v1_CNT_%s", trgsel[i].c_str());
         CNT_Compact(runnumber, segnumber, dstname, trgsel[i].c_str());
-        sprintf(dstname, "DST_EVE_%s", trgsel[i].c_str());
+        sprintf(dstname, "ideal_v1_DST_EVE_%s", trgsel[i].c_str());
         DST_EVE(runnumber, segnumber, dstname, trgsel[i].c_str());
-        sprintf(dstname, "DST_SVX_%s", trgsel[i].c_str());
+        sprintf(dstname, "ideal_v1_DST_SVX_%s", trgsel[i].c_str());
         DST_SVX(runnumber, segnumber, dstname, trgsel[i].c_str());
         //      sprintf(dstname, "DST_MPC_%s", trgsel[i].c_str());
         //      DST_MPC(runnumber, segnumber, dstname, trgsel[i].c_str());
@@ -335,11 +334,17 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
 
     //  MakeOutput(runnumber,segnumber,"Histos");
 
+    //SvxAlignment *svxalign = new SvxAlignment(MakeOutput(runnumber, segnumber, "SvxAlignment"));
+    //svxalign->set_bbccharge_cut_low(10);
+    // svxalign->set_bbccharge_cut_up(400);//based on maya's setup
+    //svxalign->set_bbccharge_cut_up(700);//based on maya's setup
+    //se->registerSubsystem(svxalign);
+
     SubsysReco *svxproductionqa  = new SvxQAForProduction();
-    se->registerSubsystem(svxproductionqa);
+    //    se->registerSubsystem(svxproductionqa);
 
     SubsysReco *svxalignmentqa  = new SvxAlignment_QA();
-    se->registerSubsystem(svxalignmentqa);
+    //    se->registerSubsystem(svxalignmentqa);
 
     ///////////////////////////////////////////
     // Analyze the Data.
@@ -370,14 +375,14 @@ void Fun4All_RUN14AuAu_VTX(int nEvents = 100,
     PHTimeServer::get()->print_stat();
 
     delete se;
-    /*
+/*
     char sql[1000];
     sprintf(sql, "echo \"update %s set nevents=%d,time='now' where runnumber=%d and sequence=%d and prodtag = \'%s\';\" | isql phnxreco_odbc", gSystem->Getenv("PRODDBTABLE"), evts, runnumber, segnumber, gSystem->Getenv("PRODTAG"));
     std::cout << "Update DB statement: " << sql << std::endl;
     gSystem->Exec(sql);
 
     gSystem->Exec("ps -o sid,ppid,pid,user,comm,vsize,rssize,time");
-    */
+*/
     cout << "Fun4All successfully completed " << endl;
     gSystem->Exit(0);
 
