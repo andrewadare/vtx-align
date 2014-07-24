@@ -259,6 +259,9 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
   // - ntrk is an optional upper limit on the number of tracks to use
   //   (to limit cpu time).
   // - opt can currently be either empty (default) or "print".
+  // Solves the linear system y0[i] = -m[i]*bc0 + bc1 for i..ntrk-1 tracks.
+  // m[i] is the slope (tan(phi)), y0[i] is the y-intercept, and (bc0,bc1)
+  // is the least-squares beam (x,y) position.
 
   assert(ntrk <= (int)tracks.size());
   int n = ntrk > 0 ? ntrk : (int)tracks.size();
