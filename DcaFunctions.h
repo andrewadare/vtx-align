@@ -9,14 +9,17 @@
 #include <TTreeReaderValue.h>
 #include <TGeoManager.h>
 #include <TProfile.h>
+#include <TGraph.h>
+#include <TH1.h>
+#include <TH2.h>
 
 typedef vector<SvxGeoTrack> geoTracks;
 typedef vector<geoTracks> geoEvents;
 
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
-TGraph *DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm,
-                TH1D *hr=0, int ntracks=10000);
+// TGraph *DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm,
+//                 TH1D *hr=0, int ntracks=10000);
 TGraph *DcaDist(geoTracks &tracks, TVectorD &bc, TString arm,
                 TH1D *hr=0, int ntracks=10000);
 TGraph *DcaDist(geoEvents &events, TVectorD &bc, TString arm,
@@ -51,6 +54,7 @@ IPVec(SvxGeoTrack &t, TVectorD &p)
   return IPVec(a,n,p);
 }
 
+#if 0
 TGraph *
 DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
 {
@@ -81,6 +85,7 @@ DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
   }
   return g;
 }
+#endif
 
 TGraph *
 DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
