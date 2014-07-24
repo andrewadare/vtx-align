@@ -9,6 +9,11 @@ typedef vector<SvxGeoTrack> geoTracks;
 typedef vector<geoTracks> geoEvents;
 TVectorD Vertex(geoTracks &event, TString arm);
 double ZVertex(geoTracks &event, TString arm);
+void FillVertexArrays(geoEvents &events, int minmult,
+                      double *vxe, double *vye, double *vze,
+                      double *vxw, double *vyw, double *vzw,
+                      double *dvx, double *dvy, double *dvz,
+                      int &nfilled);
 
 // Code snippet for median calculation:
 // root [0] double x[] = {1,2,3,4,5,6,7,8,9,10};
@@ -57,5 +62,41 @@ Vertex(geoTracks &event, TString arm)
   return xyz;
 }
 
+void
+FillVertexArrays(geoEvents &events, int minmult,
+                 double *vxe, double *vye, double *vze,
+                 double *vxw, double *vyw, double *vzw,
+                 double *dvx, double *dvy, double *dvz,
+                 int &n)
+{
+  // Fill v{x,y,z}{e,w} arrays with vertex positions.
+  // No checking is done that arrays are pre-allocated.
+
+  n = 0;
+  for (unsigned int ev=0; ev<events.size(); ev++)
+  {
+    int ntrk = events[ev].size();
+    if (ntrk > minmult)
+    {
+      TVectorD ve = Vertex(events.at(ev), "east");
+      TVectorD vw = Vertex(events.at(ev), "west");
+
+      vxe[n] = ve(0);
+      vye[n] = ve(1);
+      vze[n] = ve(2);
+      vxw[n] = vw(0);
+      vyw[n] = vw(1);
+      vzw[n] = vw(2);
+
+      dvx[n] = vxw[n] - vxe[n];
+      dvy[n] = vyw[n] - vye[n];
+      dvz[n] = vzw[n] - vze[n];
+
+      n++;
+    }
+  }
+
+  return;
+}
 
 #endif
