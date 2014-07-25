@@ -47,7 +47,7 @@ void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 // The iter parameter {0,1,2,...} is defined as the number of times millepede
 // has previously been run.
-void VtxAlign(int run = 411768, int iter = 2)
+void VtxAlign(int run = 411768, int iter = 1)
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -56,17 +56,23 @@ void VtxAlign(int run = 411768, int iter = 2)
     gSystem->Exit(-1);
   }
 
-  assert(iter>=0 && iter<3);
-  TString fext[] = {"june26_small",
-                    "july3_parv1_small",
-                    "july11_v3_500kevents"
+  assert(iter>=0 && iter<2);
+  TString fext[] = {"july17_ideal",
+                    "july23_ideal_v1"
                    };
+
+  // TString fext[] = {"june26_small",
+  //                   "july3_parv1_small",
+  //                   "july11_v3_500kevents"
+  //                  };
   TString inFileName  = Form("rootfiles/%d_%s.root", run, fext[iter].Data());
-  TString outFileName = Form("rootfiles/%d_cluster.%d.root", run, iter + 1);
-  TString pisaFileIn  = Form("geom/svxPISA-%d.par", run);
+  TString outFileName = Form("rootfiles/%d.%d.root", run, iter + 1);
+  // TString pisaFileIn  = Form("geom/svxPISA-%d.par", run);
+  TString pisaFileIn  = Form("geom/svxPISA-ideal.par");
   if (iter > 0)
-    pisaFileIn += Form(".%d", iter);
-  TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
+    pisaFileIn += Form(".%d.%d", run, iter);
+  // TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
+  TString pisaFileOut = Form("geom/svxPISA-ideal.par.%d.%d", run, iter + 1);
 
   vecs constfiles;
   vecs binfiles;
@@ -80,15 +86,15 @@ void VtxAlign(int run = 411768, int iter = 2)
   assert(inFile);
   TFile *outFile = new TFile(outFileName.Data(), "recreate");
 
-  const char *hitvars =
-    "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid";
+  const char *hitvars = "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:"
+                        "x_size:z_size:res_z:res_s:trkid:event";
 
   TNtuple *ht1 = new TNtuple("ht1", "Pre-alignment SvxGeoHit variables",
                              hitvars);
   TNtuple *ht2 = new TNtuple("ht2", "Post-alignment SvxGeoHit variables",
                              hitvars);
-  TNtuple *trktree = new TNtuple("trktree", "Tracks from VtxAlign.C",
-                                 "id:y0:z0:phi:theta");
+  // TNtuple *trktree = new TNtuple("trktree", "Tracks from VtxAlign.C",
+  //                                "id:y0:z0:phi:theta");
   TNtuple *svxseg = (TNtuple *)inFile->Get("seg_clusntuple");
   TNtuple *svxcnt = (TNtuple *)inFile->Get("cnt_clusntuple");
   if (!svxseg)
@@ -132,10 +138,10 @@ void VtxAlign(int run = 411768, int iter = 2)
   {
     FitTracks(tracks_nocut);
     FilterTracks(tracks_nocut, tracks, 0.10);
-    TrackLoop(pedeBinFileStd, tracks, ht1, trktree);
+    TrackLoop(pedeBinFileStd, tracks, ht1, 0);
   }
   if (nCntTracks > 0)
-    TrackLoop(pedeBinFileCnt, cnttracks, ht1, trktree, "ext");
+    TrackLoop(pedeBinFileCnt, cnttracks, ht1, 0, "ext");
 
   // Shell out to pede executable
   gSystem->Exec(Form("pede %s", pedeSteerFile));
@@ -193,7 +199,7 @@ void VtxAlign(int run = 411768, int iter = 2)
   outFile->cd();
   ht1->Write("ht1");
   ht2->Write("ht2");
-  trktree->Write();
+  // trktree->Write();
   for (int i=0; i<NC; i++)
     c[i]->Write();
 
@@ -306,7 +312,7 @@ TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
 void
 WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
 {
-  Printf("Writing %s", filename);
+  cout << "Writing " << filename << "..." << flush;
   ofstream fs(filename);
 
   if (opt.Contains("empty"))
@@ -332,7 +338,7 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
     for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
       if (Locked(lyr,ldr))
       {
-        double presig = 1e-4; // Stronger damping for smaller values
+        double presig = 1e-4; // Smaller values --> stronger regularization
         fs << Form("%4d 0.0 %g ! B%dL%d(s)",
                    Label(lyr, ldr, "s"), presig, lyr, ldr) << endl;
         fs << Form("%4d 0.0 %g ! B%dL%d(z)",
@@ -427,14 +433,14 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   RPhi(es,excl,geo,x);      AddConstraint(es, x, fs, "East s r-phi shear");
 
   fs.close();
-  Printf("Done.");
+  Printf("done.");
   return;
 }
 
 void
 WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
 {
-  Printf("Writing %s", filename);
+  cout << "Writing " << filename << "..." << flush;
 
   ofstream fs(filename);
 
@@ -457,7 +463,7 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
 
   fs.close();
 
-  Printf("Done.");
+  Printf("done.");
 
   return;
 }
@@ -471,7 +477,7 @@ GetCorrections(const char *resFile, std::map<int, double> &mpc)
 
   if (!filein)
   {
-    Printf("Error opening %s", resFile);
+    Error("GetCorrections() in VtxAlign.C", "Problem opening %s", resFile);
     return -1;
   }
   else
