@@ -11,11 +11,7 @@
 #include <TEllipse.h>
 #include <TLatex.h>
 
-// Solve the linear system y0[i] = -m[i]*bc0 + bc1 for i..ntrk-1 tracks.
-// m[i] is the slope (tan(phi)), y0[i] is the y-intercept, and (bc0,bc1)
-// is the least-squares beam (x,y) position.
-
-void CalcBeamCenter(int run = 411768, int iter = 1)
+void CalcBeamCenter(int run = 411768, int iter = 0)
 {
   int nbc = 10000;
   TLatex ltx;
@@ -25,10 +21,15 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
   if (iter > 0)
     pisaFileIn += Form(".%d", iter);
 
-  TString fnames[] = {"",
-                      "july3_parv1_small",
-                      "july11_v3_500kevents"
+  TString fnames[] = {"july17_ideal",
+                      ""
                      };
+
+  // Nonideal:
+  // TString fnames[] = {"",
+  //                     "july3_parv1_small",
+  //                     "july11_v3_500kevents"
+  //                    };
   TFile *f = new TFile(Form("rootfiles/%d_%s.root", run, fnames[iter].Data()));
   TNtuple *t = (TNtuple *)f->Get("seg_clusntuple");
   gStyle->SetOptStat(0);
@@ -43,7 +44,6 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
 
   geoEvents events;
   GetEventsFromTree(t, geo, events, -1);
-  const int N = events.size();
   FitTracks(events);
 
   // Event multiplicity histograms
@@ -51,10 +51,15 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
   TH1D *hnw = new TH1D("hnw", "West;tracks/event", 100, 0, 100);
 
   Printf("Filling multiplicity distributions...");
+  int minmult = 20;
+  int N = 0; // Pre-allocation size
   for (unsigned int ev=0; ev<events.size(); ev++)
   {
     int ne=0, nw=0;
-    for (unsigned int t=0; t<events[ev].size(); t++)
+    int mult = events[ev].size();
+    if (mult >= minmult)
+      N++;
+    for (int t=0; t<mult; t++)
     {
       SvxGeoTrack trk = events[ev][t];
       if (East(trk.phi0)) ne++;
@@ -66,7 +71,7 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
     hnw->Fill(nw);
   }
 
-  int minmult = 20;
+  Printf("Filling vertex arrays...");
   int nfilled = 0;
   double vxe[N], vye[N], vze[N];  // Vertex from east arm
   double vxw[N], vyw[N], vzw[N];  // Vertex from west arm
@@ -233,8 +238,8 @@ void CalcBeamCenter(int run = 411768, int iter = 1)
          1.0 - he->Integral(1,he->FindBin(0.099))/he->Integral(),
          1.0 - hw->Integral(1,hw->FindBin(0.099))/hw->Integral());
 
-  PrintPDFs(cList, Form("pdfs/nonideal/iter%d", iter), "");
-  PrintPDF(cList, Form("pdfs/nonideal/beam-center-iter%d", iter));
+  PrintPDFs(cList, Form("pdfs/iter%d", iter), "");
+  PrintPDF(cList, Form("pdfs/beam-center-iter%d", iter));
 
   return;
 }
