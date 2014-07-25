@@ -1,0 +1,13 @@
+# Example config file for production
+# Other metadata here for record-keeping:
+# - creation date/time
+# - run number used
+# - iteration
+# - input root file
+# - input pisa.par file
+# - current commit SHA `git rev-parse HEAD`
+
+beamcenter: 0 0
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: svxPISA-ideal.par
