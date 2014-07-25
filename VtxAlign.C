@@ -28,6 +28,7 @@ typedef vector<double> vecd;
 typedef vector<int>    veci;
 typedef vector<string> vecs;
 typedef vector<SvxGeoTrack> geoTracks;
+typedef vector<geoTracks> geoEvents;
 
 // Globals
 const double BField = 0.0;
@@ -40,6 +41,7 @@ string pedeBinFileCnt = "svxcnttrks.bin";
 
 void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0,
                TNtuple *trkTree = 0, TString opt = "");
+void EventLoop(string binfile, geoEvents &events, TString opt = "");
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
@@ -93,8 +95,7 @@ void VtxAlign(int run = 411768, int iter = 1)
                              hitvars);
   TNtuple *ht2 = new TNtuple("ht2", "Post-alignment SvxGeoHit variables",
                              hitvars);
-  // TNtuple *trktree = new TNtuple("trktree", "Tracks from VtxAlign.C",
-  //                                "id:y0:z0:phi:theta");
+
   TNtuple *svxseg = (TNtuple *)inFile->Get("seg_clusntuple");
   TNtuple *svxcnt = (TNtuple *)inFile->Get("cnt_clusntuple");
   if (!svxseg)
@@ -125,23 +126,30 @@ void VtxAlign(int run = 411768, int iter = 1)
   // Original ladder positions
   vecd x0; vecd y0; vecd z0;
   GetLadderXYZ(tgeo, x0, y0, z0);
-  geoTracks tracks_nocut;
-  geoTracks tracks;
-  geoTracks cnttracks;
 
-  GetTracksFromTree(svxseg, tgeo, tracks_nocut);
-  if (nCntTracks > 0)
-    GetTracksFromTree(svxcnt, tgeo, cnttracks);
+  // geoTracks tracks_nocut;
+  // geoTracks tracks;
+  // geoTracks cnttracks;
+  // GetTracksFromTree(svxseg, tgeo, tracks_nocut);
+  // if (nCntTracks > 0)
+  //   GetTracksFromTree(svxcnt, tgeo, cnttracks);
 
-  Printf("Fitting zero-field standalone tracks...");
+  geoEvents vtxevents; // Events containing SVX standalone tracks
+  geoEvents cntevents; // Events containing SvxCentralTracks
+
   if (nStdTracks > 0)
   {
-    FitTracks(tracks_nocut);
-    FilterTracks(tracks_nocut, tracks, 0.10);
-    TrackLoop(pedeBinFileStd, tracks, ht1, 0);
+    GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
+    FitTracks(vtxevents);
+    EventLoop(pedeBinFileStd, vtxevents);
+    FillNTuple(vtxevents, ht1);
   }
   if (nCntTracks > 0)
-    TrackLoop(pedeBinFileCnt, cnttracks, ht1, 0, "ext");
+  {
+    GetEventsFromTree(svxcnt, tgeo, cntevents);
+    EventLoop(pedeBinFileCnt, cntevents);
+    FillNTuple(cntevents, ht1); // Eventually: use a different tree
+  }
 
   // Shell out to pede executable
   gSystem->Exec(Form("pede %s", pedeSteerFile));
@@ -160,28 +168,42 @@ void VtxAlign(int run = 411768, int iter = 1)
       tgeo->TranslateLadder(i, j, 0. ,0., mpc[Label(i,j,"z")]);
     }
 
-  for (unsigned int i=0; i<tracks.size(); i++)
-    tracks[i].UpdateHits();
-  for (unsigned int i=0; i<cnttracks.size(); i++)
-    cnttracks[i].UpdateHits();
+  for (unsigned int ev=0; ev<vtxevents.size(); ev++)
+    for (unsigned int t=0; t<vtxevents[ev].size(); t++)
+      vtxevents[ev][t].UpdateHits();
+  for (unsigned int ev=0; ev<cntevents.size(); ev++)
+    for (unsigned int t=0; t<cntevents[ev].size(); t++)
+      cntevents[ev][t].UpdateHits();
+
+  // for (unsigned int i=0; i<tracks.size(); i++)
+  //   tracks[i].UpdateHits();
+  // for (unsigned int i=0; i<cnttracks.size(); i++)
+  //   cnttracks[i].UpdateHits();
 
   // Record positions after alignment
   // Record ladder positions before alignment
   vecd x1; vecd y1; vecd z1;
   GetLadderXYZ(tgeo, x1, y1, z1);
 
-  Printf("Post-alignment refit...");
-  for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    double pars[4] = {0}; /* y0, z0, phi, theta */
-    ZeroFieldResiduals(tracks[i], pars);
-    FillNTuple(tracks[i], ht2);
-  }
-  for (unsigned int i=0; i<cnttracks.size(); i++)
-  {
-    // UpdateResiduals(cnttracks[i]);
-    FillNTuple(cnttracks[i], ht2);
-  }
+  Printf("Refitting in post-alignment geometry to get updated residuals...");
+  FitTracks(vtxevents);
+
+  Printf("Writing output to tree...");
+  FillNTuple(vtxevents, ht2);
+  FillNTuple(cntevents, ht2); // Eventually: use a different tree
+
+  // Printf("Post-alignment refit...");
+  // for (unsigned int i=0; i<tracks.size(); i++)
+  // {
+  //   double pars[4] = {0}; /* y0, z0, phi, theta */
+  //   ZeroFieldResiduals(tracks[i], pars);
+  //   FillNTuple(tracks[i], ht2);
+  // }
+  // for (unsigned int i=0; i<cnttracks.size(); i++)
+  // {
+  //   // UpdateResiduals(cnttracks[i]);
+  //   FillNTuple(cnttracks[i], ht2);
+  // }
 
   // Draw changes in ladder positions
   const int NC = 3;
@@ -199,7 +221,7 @@ void VtxAlign(int run = 411768, int iter = 1)
   outFile->cd();
   ht1->Write("ht1");
   ht2->Write("ht2");
-  // trktree->Write();
+
   for (int i=0; i<NC; i++)
     c[i]->Write();
 
@@ -304,6 +326,73 @@ TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
       m.end(); // Write residuals for this track & reset for next one
     }
   } // track loop
+
+  // Mille object must go out of scope for output file to close properly.
+  return;
+}
+
+void
+EventLoop(string binfile, geoEvents &events, TString opt)
+{
+  // Options:
+  // - "ext": Assume residuals were computed from external information.
+
+  Printf("Calling mille() in EventLoop(). Write to %s...", binfile.c_str());
+  Mille m(binfile.c_str());
+
+  for (unsigned int ev=0; ev<events.size(); ev++)
+    for (unsigned int t=0; t<events[ev].size(); t++)
+    {
+      SvxGeoTrack trk = events[ev][t];
+
+      // Hit loop
+      int slabel[1] = {0};
+      int zlabel[1] = {0};
+      float derlc[1] = {1.0}; // Local derivatives
+      float dergl[1] = {1.0}; // Global derivatives
+
+      float sigma_s[4] = {100e-4, 100e-4, 160e-4, 160e-4};
+      float sigma_z[4] = {1000e-4, 1000e-4, 2000e-4, 2000e-4};
+
+      for (int j=0; j<4; j++)
+      {
+        sigma_s[j] *= 1./TMath::Sqrt(12);
+        sigma_z[j] *= 1./TMath::Sqrt(12);
+      }
+
+      if (opt.Contains("ext"))
+        for (int j=0; j<trk.nhits; j++)
+        {
+          SvxGeoHit hit = trk.GetHit(j);
+          slabel[0] = Label(hit.layer, hit.ladder, "s");
+          zlabel[0] = Label(hit.layer, hit.ladder, "z");
+          float sigs = hit.xsigma * sigma_s[hit.layer];
+          float sigz = hit.zsigma * sigma_z[hit.layer];
+          m.mille(1, derlc, 1, dergl, slabel, hit.ds, sigs);
+          m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
+          m.end();
+          m.mille(1, derlc, 1, dergl, zlabel, hit.dz, sigz);
+          m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
+          m.end();
+        }
+      else
+      {
+        for (int j=0; j<trk.nhits; j++)
+        {
+          SvxGeoHit hit = trk.GetHit(j);
+          slabel[0] = Label(hit.layer, hit.ladder, "s");
+          zlabel[0] = Label(hit.layer, hit.ladder, "z");
+          float r = hit.x*hit.x + hit.y*hit.y;
+          float sderlc[4] = {1.0,   r, 0.0, 0.0};
+          float zderlc[4] = {0.0, 0.0, 1.0,   r};
+          float sigs = hit.xsigma * sigma_s[hit.layer];
+          float sigz = hit.zsigma * sigma_z[hit.layer];
+          m.mille(4, sderlc, 1, dergl, slabel, hit.ds, sigs);
+          m.mille(4, zderlc, 1, dergl, zlabel, hit.dz, sigz);
+        }
+        m.end(); // Write residuals for this track & reset for next one
+      }
+    } // track loop
 
   // Mille object must go out of scope for output file to close properly.
   return;
