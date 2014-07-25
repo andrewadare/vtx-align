@@ -6,13 +6,17 @@
 #include <TNtuple.h>
 #include <TLeaf.h>
 #include <vector>
+#include <iostream>
+
+using namespace std;
 
 typedef vector<SvxGeoTrack> geoTracks;
 typedef vector<geoTracks> geoEvents;
 
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax=-1);
 void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1);
-void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple);
+void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event = -1);
+void FillNTuple(geoEvents &events, TNtuple *ntuple);
 
 void
 GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
@@ -28,7 +32,9 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
   int previd = -1;
   int nhits  = 0;
 
-  Printf("Reading tracks from NTuple (%d available hits)...", (int)nentries);
+  cout << "Reading tracks from NTuple (" << nentries << " available hits)..."
+       << flush;
+
   for (int i=0; i<nentries; i++)
   {
     t->GetEntry(i);
@@ -101,7 +107,8 @@ GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax)
     bool newtrack = (id != previd); // New track
 
     if (newevent && !newtrack)
-      Printf("!!! Event/track ID problem !!! event %d track %d", ev, id);
+      Error("GetEventsFromTree() in VtxIO.h",
+            "Event/track ID problem !!! event %d track %d", ev, id);
 
     if (ev != prevev) // New event
     {
@@ -155,11 +162,11 @@ GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax)
 }
 
 void
-FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple)
+FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event)
 {
   // TNtuple *ntuple = new TNtuple("t", "SvxGeoHit variables",
-  // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid"
-
+  // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:"
+  // "res_z:res_s:trkid:event"
 
   assert(ntuple);
 
@@ -171,7 +178,7 @@ FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple)
 
   for (int ihit=0; ihit<gt.nhits; ihit++)
   {
-    int nj = 14;
+    int nj = 15;
     std::vector<float> vars(nj, 0.);
     int j = 0;
     SvxGeoHit hit = gt.GetHit(ihit);
@@ -190,9 +197,53 @@ FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple)
     vars[j++] = hit.dz     ;
     vars[j++] = hit.ds     ;
     vars[j++] = hit.trkid  ;
+    vars[j++] = event      ;
     ntuple->Fill(&vars[0]);
   }
 
   return;
 }
+
+void
+FillNTuple(geoEvents &events, TNtuple *ntuple)
+{
+  // TNtuple *ntuple = new TNtuple("t", "SvxGeoHit variables",
+  // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:event"
+
+  assert(ntuple);
+  int nj = 15;
+  int j = 0;
+
+  for (unsigned int ev=0; ev<events.size(); ev++)
+    for (unsigned int t=0; t<events[ev].size(); t++)
+    {
+      SvxGeoTrack trk = events[ev][t];
+      for (int ihit=0; ihit<trk.nhits; ihit++)
+      {
+        std::vector<float> vars(nj, 0.);
+        SvxGeoHit hit = trk.GetHit(ihit);
+
+        j = 0;
+        vars[j++] = hit.layer  ;
+        vars[j++] = hit.ladder ;
+        vars[j++] = hit.sensor ;
+        vars[j++] = hit.xs     ;
+        vars[j++] = hit.ys     ;
+        vars[j++] = hit.zs     ;
+        vars[j++] = hit.x      ;
+        vars[j++] = hit.y      ;
+        vars[j++] = hit.z      ;
+        vars[j++] = hit.xsigma ;
+        vars[j++] = hit.zsigma ;
+        vars[j++] = hit.dz     ;
+        vars[j++] = hit.ds     ;
+        vars[j++] = hit.trkid  ;
+        vars[j++] = ev         ;
+        ntuple->Fill(&vars[0]);
+      }
+    }
+
+  return;
+}
+
 #endif
