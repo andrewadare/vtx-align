@@ -18,11 +18,12 @@ outDir = sys.argv[4]
 ##############################################
 # Set some parameters for running
 ##############################################
-nevents = 1000
+nevents = 0
 #condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
 condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
 #outDir = "/phenix/prod01/phnxreco/millepede/ZF_production/"
-vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/production/zerofield/"
+vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"
+productionDir = vtxalignDir + "production/zerofield/"
 
 
 ##############################################
@@ -68,8 +69,8 @@ print(os.getcwd())
 
 runRangeLow = runNumber - runNumber%1000
 runRangeHigh = runRangeLow + 1000
-prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run14/eventdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
-prdfFile = "EVENTDATA_P00-{:0>10}-{:0>4}.PRDFF".format(runNumber,segNumber)
+prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run14/zerofdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
+prdfFile = "ZEROFDATA_P00-{:0>10}-{:0>4}.PRDFF".format(runNumber,segNumber)
 
 print(prdfDir+prdfFile)
 print("size: {}".format(os.stat(prdfDir+prdfFile).st_size))
@@ -86,10 +87,10 @@ os.chdir(condorDir)
 print("production directory: " + os.getcwd())
 
 os.system("LuxorLinker.pl -1 {}".format(runNumber))
-os.system("ln -sf {}Fun4All_VTX_ZeroField.C .".format(vtxalignDir))
-os.system("ln -sf {}TrigSelect.C .".format(vtxalignDir))
-os.system("ln -sf {}OutputManager.C .".format(vtxalignDir))
-os.system("ln -sf {}rawdatacheck.C .".format(vtxalignDir))
+os.system("ln -sf {}Fun4All_VTX_ZeroField.C .".format(productionDir))
+os.system("ln -sf {}TrigSelect.C .".format(productionDir))
+os.system("ln -sf {}OutputManager.C .".format(productionDir))
+os.system("ln -sf {}rawdatacheck.C .".format(productionDir))
 
 # set up the parameters to be passed to the macro
 pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
@@ -134,6 +135,7 @@ os.chdir(outDir)
 os.system("mkdir -p ntuple")
 os.chdir(condorDir)
 print("current directory: " + os.getcwd())
+os.system("ln -sf {}run_anavtxcluster.C .".format(productionDir))
 
 ntupleFile = "{}ntuple/anavtxcluster_{:0>10}-{:0>4}.root".format(outDir,runNumber,segNumber)
 print("Output Ntuple: {}".format(ntupleFile))
