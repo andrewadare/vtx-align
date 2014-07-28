@@ -24,7 +24,7 @@ parser.add_argument("-v", "--verbose",
 parser.set_defaults(filename="condor.job",
 					config="/direct/phenix+u/dcm07e/work/vtx-align/production/config/config-ideal.txt",
 					run='406541',
-					nsegments='50',
+					nsegments='24',
 					outdir="/direct/phenix+prod01/phnxreco/millepede/test/")
 
 args = parser.parse_args()
