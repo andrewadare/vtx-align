@@ -1,46 +1,30 @@
-#include "UtilFns.h"
-#include "SvxTGeo.h"
-#include "SvxGeoTrack.h"
+#include "VtxAlignBase.h"
+
+#include "GLSFitter.h"
+#include "VertexFinder.h"
 #include "DcaFunctions.h"
 #include "BeamCenterFuncs.h"
-#include "VertexFinder.h"
 #include "ParameterDefs.h"
-#include "GLSFitter.h"
 #include "VtxIO.h"
 
-#include <TEllipse.h>
-#include <TLatex.h>
 
-void CalcBeamCenter(int run = 411768, int iter = 0)
+void CalcBeamCenter(int run = 411768, 
+                    int prod = 0,
+                    int subiter = 1)
 {
-  TLatex ltx;
-  ltx.SetNDC();
+  TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
+  TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
 
-  TString pisaFileIn = Form("geom/svxPISA-%d.par", run);
-  if (iter > 0)
-    pisaFileIn += Form(".%d", iter);
+  TFile *f = new TFile(rootFileIn.Data());
+  TNtuple *t = (TNtuple *)f->Get("vtxhits");
 
-  TString fnames[] = {"july17_ideal",
-                      ""
-                     };
-
-  // Nonideal:
-  // TString fnames[] = {"",
-  //                     "july3_parv1_small",
-  //                     "july11_v3_500kevents"
-  //                    };
-  // TFile *f = new TFile(Form("rootfiles/%d_%s.root", run, fnames[iter].Data()));
-  TFile *f = new TFile("rootfiles/test.root");
-  TNtuple *t = (TNtuple *)f->Get("seg_clusntuple");
   gStyle->SetOptStat(0);
   gStyle->SetPalette(56, 0, 0.5); // Inverted "radiator", 50% transparency
   TObjArray *cList = new TObjArray();
+  TLatex ltx;
+  ltx.SetNDC();
 
-  SvxTGeo *geo = new SvxTGeo;
-  geo->ReadParFile(pisaFileIn.Data());
-  geo->MakeTopVolume(100, 100, 100);
-  geo->AddSensors();
-  geo->GeoManager()->CloseGeometry();
+  SvxTGeo *geo = VTXModel(pisaFileIn.Data());
 
   geoEvents events;
   GetEventsFromTree(t, geo, events, -1);
@@ -101,13 +85,15 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
   double y0 = qye[2] - eastrange/2;
   double x1 = qxe[2] + eastrange/2;
   double y1 = qye[2] + eastrange/2;
-  TH2D *hve = new TH2D("hve", Form("East vertex - iteration %d;x [cm];y [cm]",iter),
+  TH2D *hve = new TH2D("hve", Form("East vertex - prod %d sub %d;"
+                       "x [cm];y [cm]", prod, subiter),
                        100, x0, x1, 100, y0, y1);
   x0 = qxw[2] - westrange/2;
   y0 = qyw[2] - westrange/2;
   x1 = qxw[2] + westrange/2;
   y1 = qyw[2] + westrange/2;
-  TH2D *hvw = new TH2D("hvw", Form("West vertex - iteration %d;x [cm];y [cm]",iter),
+  TH2D *hvw = new TH2D("hvw", Form("West vertex - prod %d sub %d;"
+                       "x [cm];y [cm]", prod, subiter),
                        100, x0, x1, 100, y0, y1);
   hve->FillN(nfilled, vxe, vye, NULL, 1);
   hvw->FillN(nfilled, vxw, vyw, NULL, 1);
@@ -117,9 +103,9 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
   const char *xyzstr[3] = {"x", "y", "z"};
   for (int k=0; k<3; k++)
     hdv[k] = new TH1D(Form("hdv%d",k),
-                      Form("West - East vertex difference #Delta%s;"
-                           "#Delta%s [cm];events",
-                           xyzstr[k], xyzstr[k]),
+                      Form("West - East vertex difference #Delta%s "
+                           "- prod %d sub %d; #Delta%s [cm];events", 
+                           xyzstr[k], prod, subiter, xyzstr[k]),
                       200, -1, 1);
   hdv[0]->FillN(nfilled, dvx, NULL, 1);
   hdv[1]->FillN(nfilled, dvy, NULL, 1);
@@ -260,8 +246,8 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
          1.0 - hre->Integral(1,hre->FindBin(0.099))/hre->Integral(),
          1.0 - hrw->Integral(1,hrw->FindBin(0.099))/hrw->Integral());
 
-  PrintPDFs(cList, Form("pdfs/iter%d", iter), "");
-  PrintPDF(cList, Form("pdfs/beam-center-iter%d", iter));
+  PrintPDFs(cList, Form("pdfs/prod%d/subiter%d", prod, subiter), "");
+  PrintPDF(cList, Form("pdfs/beam-center-pro%d-sub%d", prod, subiter));
 
   return;
 }
