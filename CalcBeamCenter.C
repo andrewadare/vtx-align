@@ -6,12 +6,23 @@
 #include "ParameterDefs.h"
 #include "VtxIO.h"
 
-void CalcBeamCenter(int run = 411768, 
+void WriteConfigFile(const char *filename,
+                     int run,
+                     int prod,
+                     int subiter,
+                     TVectorD &bc,
+                     TVectorD &ewdiff,
+                     TVectorD &cntdiff,
+                     TString notes = "");
+
+void CalcBeamCenter(int run = 406541,
                     int prod = 0,
-                    int subiter = 1)
+                    int subiter = 0)
 {
   TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
+  TString configFile = Form("production/config/config-%d-%d-%d.txt", 
+                            run, prod, subiter);
 
   TFile *f = new TFile(rootFileIn.Data());
   TNtuple *t = (TNtuple *)f->Get("vtxhits");
@@ -33,7 +44,7 @@ void CalcBeamCenter(int run = 411768,
   TH1D *hnw = new TH1D("hnw", "West;tracks/event", 100, 0, 100);
 
   Printf("Filling multiplicity distributions...");
-  int minmult = 20;
+  int minmult = 10;
   int N = 0; // Pre-allocation size
   for (unsigned int ev=0; ev<events.size(); ev++)
   {
@@ -78,20 +89,24 @@ void CalcBeamCenter(int run = 411768,
   Printf("East-west offsets...");
   double eastrange = TMath::Max(qxe[nq-1]-qxe[0], qye[nq-1]-qye[0]);
   double westrange = TMath::Max(qxw[nq-1]-qxw[0], qyw[nq-1]-qyw[0]);
+  if (eastrange > 1.)
+    eastrange = 1.;
+  if (westrange > 1.)
+    westrange = 1.;
 
   double x0 = qxe[2] - eastrange/2;
   double y0 = qye[2] - eastrange/2;
   double x1 = qxe[2] + eastrange/2;
   double y1 = qye[2] + eastrange/2;
   TH2D *hve = new TH2D("hve", Form("East vertex - prod %d sub %d;"
-                       "x [cm];y [cm]", prod, subiter),
+                                   "x [cm];y [cm]", prod, subiter),
                        100, x0, x1, 100, y0, y1);
   x0 = qxw[2] - westrange/2;
   y0 = qyw[2] - westrange/2;
   x1 = qxw[2] + westrange/2;
   y1 = qyw[2] + westrange/2;
   TH2D *hvw = new TH2D("hvw", Form("West vertex - prod %d sub %d;"
-                       "x [cm];y [cm]", prod, subiter),
+                                   "x [cm];y [cm]", prod, subiter),
                        100, x0, x1, 100, y0, y1);
   hve->FillN(nfilled, vxe, vye, NULL, 1);
   hvw->FillN(nfilled, vxw, vyw, NULL, 1);
@@ -102,7 +117,7 @@ void CalcBeamCenter(int run = 411768,
   for (int k=0; k<3; k++)
     hdv[k] = new TH1D(Form("hdv%d",k),
                       Form("West - East vertex difference #Delta%s "
-                           "- prod %d sub %d; #Delta%s [cm];events", 
+                           "- prod %d sub %d; #Delta%s [cm];events",
                            xyzstr[k], prod, subiter, xyzstr[k]),
                       200, -1, 1);
   hdv[0]->FillN(nfilled, dvx, NULL, 1);
@@ -154,6 +169,22 @@ void CalcBeamCenter(int run = 411768,
       DcaVsPhi(events[ev], ve, vw, hdp, dprof);
     }
   }
+
+  TVectorD avgbc = 0.5*(bce + bcw);
+  TVectorD ewdiff(3);
+  for (int k=0; k<3; k++)
+    ewdiff(k) = hdv[k]->GetMean();
+  TVectorD cntdiff(3);
+
+  WriteConfigFile(configFile.Data(),
+                  run,
+                  prod,
+                  subiter,
+                  avgbc,
+                  ewdiff,
+                  cntdiff,
+                  "this is a test");
+
 
   // ---- ---- ---- ---- ---- ---- ----
   //                Plot
@@ -244,8 +275,55 @@ void CalcBeamCenter(int run = 411768,
          1.0 - hre->Integral(1,hre->FindBin(0.099))/hre->Integral(),
          1.0 - hrw->Integral(1,hrw->FindBin(0.099))/hrw->Integral());
 
-  PrintPDFs(cList, Form("pdfs/prod%d/subiter%d", prod, subiter), "");
-  PrintPDF(cList, Form("pdfs/beam-center-pro%d-sub%d", prod, subiter));
+  PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
+  PrintPDF(cList, Form("pdfs/beam-center-run%d-pro%d-sub%d", run, prod, subiter));
+
+  return;
+}
+
+void
+WriteConfigFile(const char *filename,
+                int run,
+                int prod,
+                int subiter,
+                TVectorD &bc,
+                TVectorD &ewdiff,
+                TVectorD &cntdiff,
+                TString notes)
+{
+  cout << "Writing " << filename << "..." << flush;
+
+  ofstream fs(filename);
+
+  // Metadata - parsed by humans - start lines with #
+  fs << "# This is " << gSystem->GetFromPipe("pwd").Data()
+     << filename << endl;
+  fs << "# Created by user " << gSystem->GetFromPipe("whoami").Data() << endl;
+  fs << "# On " << gSystem->GetFromPipe("date").Data() << endl;
+  fs << "# At " << gSystem->GetFromPipe("hostname").Data() << endl;
+  fs << "# Run number: " << run << endl;
+  fs << "# Production step: " << prod << endl;
+  fs << "# Sub-iteration step: " << subiter << endl;
+  fs << "# Source: "
+     << gSystem->GetFromPipe("git config --get remote.origin.url").Data()
+     << endl;
+  fs << "# Latest commit: "
+     << gSystem->GetFromPipe("git rev-parse HEAD").Data()
+     << endl;
+  fs << "# Notes: " << notes.Data() << endl;
+  fs << endl;
+
+  // Production configuration data below
+  fs << "beamcenter: " << bc(0) << " " << bc(1) << endl;
+  fs << "east-to-west: " << ewdiff(0) << " " << ewdiff(1) << " " << ewdiff(2)
+     << endl;
+  fs << "vtx-to-cnt: " << cntdiff(0) << " " << cntdiff(1) << " " << cntdiff(2)
+     << endl;
+  fs << "geomfile: " << Form("%d-%d-%d.par", run, prod, subiter) << endl;
+
+  fs.close();
+
+  Printf("done.");
 
   return;
 }
