@@ -13,7 +13,6 @@
 
 void CalcBeamCenter(int run = 411768, int iter = 0)
 {
-  int nbc = 10000;
   TLatex ltx;
   ltx.SetNDC();
 
@@ -30,7 +29,8 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
   //                     "july3_parv1_small",
   //                     "july11_v3_500kevents"
   //                    };
-  TFile *f = new TFile(Form("rootfiles/%d_%s.root", run, fnames[iter].Data()));
+  // TFile *f = new TFile(Form("rootfiles/%d_%s.root", run, fnames[iter].Data()));
+  TFile *f = new TFile("rootfiles/test.root");
   TNtuple *t = (TNtuple *)f->Get("seg_clusntuple");
   gStyle->SetOptStat(0);
   gStyle->SetPalette(56, 0, 0.5); // Inverted "radiator", 50% transparency
@@ -71,7 +71,7 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
     hnw->Fill(nw);
   }
 
-  Printf("Filling vertex arrays...");
+  Printf("Allocating vertex arrays...");
   int nfilled = 0;
   double vxe[N], vye[N], vze[N];  // Vertex from east arm
   double vxw[N], vyw[N], vzw[N];  // Vertex from west arm
@@ -94,11 +94,21 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
   TVectorD bcw(2); bcw(0) = qxw[2]; bcw(1) = qyw[2];
 
   Printf("East-west offsets...");
-  TH2D *hve = new TH2D("hve", Form("East vertex - iteration %d;x [cm];y [cm]",iter),
-                       100, qxe[0], qxe[4], 100, qye[0], qye[4]);
-  TH2D *hvw = new TH2D("hvw", Form("West vertex - iteration %d;x [cm];y [cm]",iter),
-                       100, qxw[0], qxw[4], 100, qyw[0], qyw[4]);
+  double eastrange = TMath::Max(qxe[nq-1]-qxe[0], qye[nq-1]-qye[0]);
+  double westrange = TMath::Max(qxw[nq-1]-qxw[0], qyw[nq-1]-qyw[0]);
 
+  double x0 = qxe[2] - eastrange/2;
+  double y0 = qye[2] - eastrange/2;
+  double x1 = qxe[2] + eastrange/2;
+  double y1 = qye[2] + eastrange/2;
+  TH2D *hve = new TH2D("hve", Form("East vertex - iteration %d;x [cm];y [cm]",iter),
+                       100, x0, x1, 100, y0, y1);
+  x0 = qxw[2] - westrange/2;
+  y0 = qyw[2] - westrange/2;
+  x1 = qxw[2] + westrange/2;
+  y1 = qyw[2] + westrange/2;
+  TH2D *hvw = new TH2D("hvw", Form("West vertex - iteration %d;x [cm];y [cm]",iter),
+                       100, x0, x1, 100, y0, y1);
   hve->FillN(nfilled, vxe, vye, NULL, 1);
   hvw->FillN(nfilled, vxw, vyw, NULL, 1);
 
@@ -115,15 +125,20 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
   hdv[1]->FillN(nfilled, dvy, NULL, 1);
   hdv[2]->FillN(nfilled, dvz, NULL, 1);
 
-  // Printf("Computing east arm beam center...");
-  // TVectorD bce  = BeamCenter(events, nbc, "east", "print");
-  TH1D *he = new TH1D("he", "he", 100, 0, 0.5);
-  TGraph *ge = DcaDist(events,bce,"east",he);
-
-  // Printf("Computing west arm beam center...");
-  // TVectorD bcw = BeamCenter(events, nbc, "west", "print");
-  TH1D *hw = new TH1D("hw", "hw", 100, 0, 0.5);
-  TGraph *gw = DcaDist(events,bcw,"west",hw);
+  x0=-0.05;
+  y0=-0.05;
+  x1=+0.05;
+  y1=+0.05;
+  TH2D *hxye = new TH2D("hxye", "DCA (east);x [cm];y [cm]",
+                        200, x0, x1, 200, y0, y1);
+  TH2D *hxyw = new TH2D("hxyw", "DCA (west);x [cm];y [cm]",
+                        200, x0, x1, 200, y0, y1);
+  TH1D *hre = new TH1D("hre", "hre", 100, 0, 0.5);
+  TH1D *hrw = new TH1D("hrw", "hrw", 100, 0, 0.5);
+  hxye->SetLineColorAlpha(kRed+2, 0.4);
+  hxyw->SetLineColorAlpha(kRed+2, 0.4);
+  DcaDist(events, "east", hxye, hre);
+  DcaDist(events, "west", hxyw, hrw);
 
   Printf("DCA to beam center vs phi");
   double dmin = 0.0, dmax = 0.1;
@@ -183,34 +198,41 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
     ltx.DrawLatex(0.15, 0.80, Form("Std dev %.3f", hdv[k]->GetRMS()));
   }
 
-  TCanvas *c = new TCanvas("c", "dca2d", 500, 500);
-  TH1F *h = c->DrawFrame(-0.3, -0.3, 0.3, 0.3,
-                         "Beam center DCA #color[861]{ east}, #color[800]{ west}");
-  h->GetXaxis()->SetTitle("x [cm]");
-  h->GetYaxis()->SetTitle("y [cm]");
-  TEllipse ell(0,0,0.1,0.1);
-  ell.Draw("same");
-  SetGraphProps(ge,kNone,kNone,kAzure+1,kFullDotMedium);
-  SetGraphProps(gw,kNone,kNone,kOrange,kFullDotMedium);
-  ge->Draw("psame");
-  gw->Draw("psame");
+  TCanvas *c = new TCanvas("c", "dca2d", 1000, 500);
+  c->Divide(2,1,0,0);
+  c->cd(1);
+  TAxis *ax = hxye->GetXaxis();
+  TAxis *ay = hxye->GetYaxis();
+  ax->CenterTitle();
+  ay->CenterTitle();
+  ax->SetNdivisions(208);
+  ay->SetNdivisions(208);
+  hxye->Draw("cont3");
+  c->cd(2);
+  ax = hxyw->GetXaxis();
+  ay = hxyw->GetYaxis();
+  ax->CenterTitle();
+  ay->CenterTitle();
+  ax->SetNdivisions(208);
+  ay->SetNdivisions(208);
+  hxyw->Draw("cont3");
   cList->Add(c);
 
   TCanvas *cr = new TCanvas("cr", "dcar", 500, 500);
-  SetHistProps(he,kAzure+1,kNone,kAzure+1);
-  SetHistProps(hw,kOrange,kNone,kOrange);
-  he->SetLineWidth(2);
-  hw->SetLineWidth(2);
-  hw->SetTitle("Beam center DCA #color[861]{ east}, #color[800]{ west};DCA [cm];");
-  hw->Draw("");
-  he->Draw("same");
+  SetHistProps(hre,kAzure+1,kNone,kAzure+1);
+  SetHistProps(hrw,kOrange,kNone,kOrange);
+  hre->SetLineWidth(2);
+  hrw->SetLineWidth(2);
+  hrw->SetTitle("Beam center DCA #color[861]{ east}, #color[800]{ west};DCA [cm];");
+  hrw->Draw("");
+  hre->Draw("same");
   cr->SetLogy();
   cList->Add(cr);
 
   DrawObject(hbp, "colz", "bcdcavsphi", cList, 900, 500);
   hbp->SetTitle("DCA to beam center");
-  TAxis *ax = hbp->GetXaxis();
-  TAxis *ay = hbp->GetYaxis();
+  ax = hbp->GetXaxis();
+  ay = hbp->GetYaxis();
   ax->SetTitle("#Leftarrow  west      #phi + #pi/2      east  #Rightarrow");
   ay->SetTitle("DCA [cm]");
   ax->CenterTitle();
@@ -235,8 +257,8 @@ void CalcBeamCenter(int run = 411768, int iter = 0)
 
 
   Printf("Fraction outside 1000um: %.3f (e) %.3f (w)",
-         1.0 - he->Integral(1,he->FindBin(0.099))/he->Integral(),
-         1.0 - hw->Integral(1,hw->FindBin(0.099))/hw->Integral());
+         1.0 - hre->Integral(1,hre->FindBin(0.099))/hre->Integral(),
+         1.0 - hrw->Integral(1,hrw->FindBin(0.099))/hrw->Integral());
 
   PrintPDFs(cList, Form("pdfs/iter%d", iter), "");
   PrintPDF(cList, Form("pdfs/beam-center-iter%d", iter));
