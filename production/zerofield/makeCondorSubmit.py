@@ -22,7 +22,7 @@ parser.add_argument("-v", "--verbose",
                   help="print status messages to stdout")
 
 parser.set_defaults(filename="condor.job",
-					config="../config/config-example.txt",
+					config="/direct/phenix+u/dcm07e/work/vtx-align/production/config/config-ideal.txt",
 					run='406541',
 					nsegments='50',
 					outdir="/direct/phenix+prod01/phnxreco/millepede/test/")
@@ -41,7 +41,7 @@ fo = open(args.filename,'w')
 #write the job information
 fo.write("Universe        = vanilla\n")
 fo.write("Executable      = /direct/phenix+u/dcm07e/work/vtx-align/production/zerofield/run_alignment_production.py\n")
-fo.write("Arguments       = \'{}\' {} $(Process) \'{}\' \n".format(args.config,args.run,args.outdir))
+fo.write("Arguments       = {} {} $(Process) {} \n".format(args.config,args.run,args.outdir))
 fo.write("Requirements    = (CPU_Speed >= 1 && CPU_Experiment == \"phenix\")\n")
 fo.write("Rank            = CPU_Speed\n")
 fo.write("Priority        = +1\n")

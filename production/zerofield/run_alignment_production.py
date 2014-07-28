@@ -19,9 +19,8 @@ outDir = sys.argv[4]
 # Set some parameters for running
 ##############################################
 nevents = 0
-#condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
-condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
-#outDir = "/phenix/prod01/phnxreco/millepede/ZF_production/"
+condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
+#condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
 vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"
 productionDir = vtxalignDir + "production/zerofield/"
 
@@ -148,6 +147,17 @@ command += ")\'"
 print(command)
 
 os.system(command)
+
+##############################################
+# cleanup
+##############################################
+print("\n--> Cleaning up.")
+
+os.chdir(condorDir)
+
+#remove the PRDFF
+os.remove(prdfFile)
+
 
 ##############################################
 # DONE!
