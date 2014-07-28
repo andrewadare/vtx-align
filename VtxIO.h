@@ -32,7 +32,8 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
   int previd = -1;
   int nhits  = 0;
 
-  cout << "Reading tracks from NTuple (" << nentries << " available hits)..."
+  cout << "Reading tracks from " << t->GetName()
+       << " (" << nentries << " available hits)..."
        << flush;
 
   for (int i=0; i<nentries; i++)
