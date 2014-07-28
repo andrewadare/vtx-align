@@ -1,3 +1,4 @@
+#!/opt/phenix/bin/python
 '''
 Makes condor submit file for zf alignment production
 '''
@@ -18,7 +19,7 @@ parser.add_argument("-n", "--nsegments", dest="nsegments", help="number of segme
 parser.add_argument("-o", "--output", dest="outdir",
 					help="Write output to DIR", metavar="DIR")
 parser.add_argument("-v", "--verbose",
-                  action="store_false", dest="verbose", default=True,
+                  action="store_true", dest="verbose", default=True,
                   help="print status messages to stdout")
 
 parser.set_defaults(filename="condor.job",
