@@ -36,6 +36,18 @@ if args.verbose :
 	print(" Using run {}".format(args.run))
 	print(" Producing {} segments".format(args.nsegments))
 
+
+#Check whether the output directory specified exists
+# if not, create it
+
+cwd = os.getcwd()
+
+os.system("mkdir -p {}".format(args.outdir))
+os.chdir(args.outdir)
+os.system("mkdir -p condor_logs")
+os.chdir(cwd)
+
+
 #make the file
 fo = open(args.filename,'w')
 
