@@ -1,13 +1,8 @@
-#include "UtilFns.h"
+#include "VtxAlignBase.h"
 #include "BadLadders.h"
-#include "TFile.h"
-#include "TCanvas.h"
-#include "TH1.h"
-#include "TObjArray.h"
-#include "TNtuple.h"
-#include "TTreeReader.h"
-#include "TTreeReaderValue.h"
-#include "TGraphErrors.h"
+
+#include <TTreeReader.h>
+#include <TTreeReaderValue.h>
 
 const int nlayers = 4;
 const int nladders = 24;
@@ -19,23 +14,30 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
 void SetupHist(TH1D *h, int stage);
 void SetYMax(TH1 *h1, TH1 *h2);
 
-// In VtxAlign.C, iter \equiv # times millepede has already been run.
-// Here, millepede will have been run at least once, but the same indexing 
-// is used for consistency. 
-// In other words: to draw output from VtxAlign(run,0), use iter=0 here too.
-void DrawResults(int run = 411768, int iter = 1)
+void DrawResults(int run = 411768,
+                 int prod1 = 0,
+                 int subit1 = 0,
+                 int prod2 = 0,
+                 int subit2 = 1)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
   int nLadders[4] = {10,20,16,24}; // ladders/layer
 
-  TFile *inFile = new TFile(Form("rootfiles/%d_cluster.%d.root", run, iter+1),
-                            "read");
+  TLatex ltx;
+  ltx.SetNDC();
   TObjArray *cList = new TObjArray();
 
-  TNtuple *ht[ntrees] = {0};
-  ht[0] = (TNtuple *) inFile->Get("ht1");
-  ht[1] = (TNtuple *) inFile->Get("ht2");
+  TString rootFileIn1 = Form("rootfiles/%d-%d-%d.root", run, prod1, subit1);
+  TString rootFileIn2 = Form("rootfiles/%d-%d-%d.root", run, prod2, subit2);
+  TFile *inFile1  = new TFile(rootFileIn1.Data(), "read");
+  TFile *inFile2  = new TFile(rootFileIn2.Data(), "read");
+  assert(inFile1);
+  assert(inFile2);
+
+  // TNtuple *ht[ntrees] = {0};
+  // ht[0] = (TNtuple *) inFile1->Get("vtxhits");
+  // ht[1] = (TNtuple *) inFile2->Get("vtxhits");
 
   TGraphErrors *gdead[nlayers];
   for (int lyr=0; lyr<nlayers; lyr++)
@@ -53,8 +55,6 @@ void DrawResults(int run = 411768, int iter = 1)
     }
   }
 
-  TLatex ltx;
-  ltx.SetNDC();
   TH1D *hds[nlayers][ntrees];
   TH1D *hdz[nlayers][ntrees];
   TH1D *hs[nlayers][nladders][ntrees];
@@ -73,8 +73,8 @@ void DrawResults(int run = 411768, int iter = 1)
                                        nbins, -xmax, xmax);
       }
 
-  FillHists(hs, hz, inFile, "ht1", 0);
-  FillHists(hs, hz, inFile, "ht2", 1);
+  FillHists(hs, hz, inFile1, "vtxhits", 0);
+  FillHists(hs, hz, inFile2, "vtxhits", 1);
 
   for (int lyr=0; lyr<nlayers; lyr++)
     for (int ldr=0; ldr<nLadders[lyr]; ldr++)
@@ -214,19 +214,22 @@ void DrawResults(int run = 411768, int iter = 1)
   ltx.SetTextSize(0.06);
   ltx.SetTextFont(42);
 
-  const int nxyp = 3;
-  const char *xyplots[nxyp] = {"vtx_xy","millepede_ds","millepede_dz"};
-  for (int i=0; i<nxyp; i++)
-  {
-    TCanvas *c = (TCanvas *) inFile->Get(xyplots[i]);
-    assert(c);
-    c->Draw();
-    ltx.DrawLatex(0.15, 0.92, gPad->GetTitle());
-    cList->Add(c);
-  }
+  // const int nxyp = 3;
+  // const char *xyplots[nxyp] = {"vtx_xy","millepede_ds","millepede_dz"};
+  // for (int i=0; i<nxyp; i++)
+  // {
+  //   TCanvas *c = (TCanvas *) inFile->Get(xyplots[i]);
+  //   assert(c);
+  //   c->Draw();
+  //   ltx.DrawLatex(0.15, 0.92, gPad->GetTitle());
+  //   cList->Add(c);
+  // }
 
-  PrintPDFs(cList, Form("pdfs/iter%d", iter), "");
-  PrintPDF(cList, Form("pdfs/self-align-iter%d", iter));
+  PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d",
+                        run, prod1, subit1, prod2, subit2), "");
+  PrintPDF(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d",
+                       run, prod1, subit1, prod2, subit2), "");
+  // PrintPDF(cList, Form("pdfs/self-align-iter%d", iter));
 }
 
 void
