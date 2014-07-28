@@ -5,20 +5,22 @@
 #include "SvxGeoTrack.h"
 #include "SvxProj.h"
 #include "Mille.h"
+#include "UtilFns.h"
 
-#include "GLSFitter.h"
-#include "BeamCenterFuncs.h"
-#include "ParameterDefs.h"
-#include "ConstraintBuilder.h"
-#include "BadLadders.h"
-#include "VtxIO.h"
-#include "VtxVis.h"
+// #include "GLSFitter.h"
+// #include "BeamCenterFuncs.h"
+// #include "ParameterDefs.h"
+// #include "ConstraintBuilder.h"
+// #include "BadLadders.h"
+// #include "VtxIO.h"
+// #include "VtxVis.h"
 
 #include <TFile.h>
 #include <TSystem.h>
 #include <TGeoManager.h>
 #include <TRandom3.h>
 #include <TNtuple.h>
+#include <TLatex.h>
 
 #include <iostream>
 #include <fstream>
