@@ -31,19 +31,19 @@ productionDir = vtxalignDir + "production/zerofield/"
 print("\n--> Reading in parameters from {}".format(configFileName))
 with open(configFileName,'r') as file:
 	for line in file:
-		if (line[0] == '#' and line[0] == '\r' and line[0] == '\n'):
+		if line[0] == '#':
 			continue
 		if "beamcenter" in line:
-			beamcenter = line[:-2].split(' ')[1:]
+			beamcenter = line.rstrip().split(' ')[1:]
 			print("beamcenter: ({}, {})".format(beamcenter[0],beamcenter[1]))
 		if "east-to-west" in line:
-			eastToWest = line[:-2].split(' ')[1:]
+			eastToWest = line.rstrip().split(' ')[1:]
 			print("east-to-west offset: ({}, {}, {})".format(eastToWest[0], eastToWest[1], eastToWest[2]))
 		if "vtx-to-cnt" in line:
-			vtxToCNT = line[:-2].split(' ')[1:]
+			vtxToCNT = line.rstrip().split(' ')[1:]
 			print("VTX-to-CNT offset: ({}, {}, {})".format(vtxToCNT[0], vtxToCNT[1], vtxToCNT[2]))
 		if "geomfile" in line:
-			parfile = line[:-2].split(' ')[1]
+			parfile = line.rstrip().split(' ')[1]
 			print("parfile: {}".format(parfile))
 
 
