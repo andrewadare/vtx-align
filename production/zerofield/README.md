@@ -16,3 +16,5 @@ Before submitting jobs, the variable `vtxalignDir` (line 24) should be set to a 
 ## Notes ##
 
 `makeCondorSubmit.py` will create the output directory specified with the `-o` option if it doesn't already exist. It will also create the `condor_logs/` directory expected by condor. 
+
+When using the `-c` option to specify the configuration file, you must give it the full path.
