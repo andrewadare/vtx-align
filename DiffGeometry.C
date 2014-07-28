@@ -1,12 +1,13 @@
-#include "SvxTGeo.h"
+#include "VtxAlignBase.h"
+
 #include "ParameterDefs.h"
 #include "BadLadders.h"
 #include "VtxVis.h"
 
 void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z);
 
-void DiffGeometry(const char *pfa = "geom/svxPISA-411768.par",
-                  const char *pfb = "geom/svxPISA-411768.par.2")
+void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
+                  const char *pfb = "geom/svxPISA-411768.par")
 {
   TLatex ltx;
   ltx.SetNDC();
@@ -19,31 +20,24 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-411768.par",
   GetXYZ(pfa, xa, ya, za);
   GetXYZ(pfb, xb, yb, zb);
 
-  SvxTGeo *geo = new SvxTGeo;
-  geo->ReadParFile(pfa);
-  geo->MakeTopVolume(100, 100, 100);
-  geo->AddSensors();
-  geo->GeoManager()->CloseGeometry();
+  SvxTGeo *geo = VTXModel(pfa);
+
   DrawXY(geo, "s_diff", "#Deltas_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "s");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print("pdfs/geom_ds.pdf");
+  gPad->Print("pdfs/geom-ds-ideal-v-db.pdf");
 
   DrawXY(geo, "z_diff", "#Deltaz_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "z");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print("pdfs/geom_dz.pdf");
+  gPad->Print("pdfs/geom-dz-ideal-v-db.pdf");
 
   return;
 }
 
 void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z)
 {
-  SvxTGeo *geo = new SvxTGeo;
-  geo->ReadParFile(parfile);
-  geo->MakeTopVolume(100, 100, 100);
-  geo->AddSensors();
-  geo->GeoManager()->CloseGeometry();
+  SvxTGeo *geo = VTXModel(parfile);
   GetLadderXYZ(geo, x, y, z);
   delete geo;
   return;
