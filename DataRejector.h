@@ -1,13 +1,11 @@
 #ifndef __DATAREJECTOR_H__
 #define __DATAREJECTOR_H__
 
+#include "VtxAlignBase.h"
 #include "GLSFitter.h"
 #include "VertexFinder.h"
 #include "DcaFunctions.h"
 #include "VtxIO.h"
-
-typedef vector<SvxGeoTrack> geoTracks;
-typedef vector<geoTracks> geoEvents;
 
 void
 FilterData(geoEvents &events,

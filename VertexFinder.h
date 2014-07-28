@@ -1,8 +1,7 @@
 #ifndef __VERTEXFINDER_H__
 #define __VERTEXFINDER_H__
 
-#include "SvxTGeo.h"
-#include "SvxGeoTrack.h"
+#include "VtxAlignBase.h"
 #include "GLSFitter.h"
 
 typedef vector<SvxGeoTrack> geoTracks;

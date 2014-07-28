@@ -1,10 +1,6 @@
 #include "VtxAlignBase.h"
 #include "DataRejector.h"
 
-
-// typedef vector<SvxGeoTrack> geoTracks;
-// typedef vector<geoTracks> geoEvents;
-
 void FilterData(const char *infilename = "rootfiles/411768_july17_ideal.root",
                 const char *outfilename = "rootfiles/411768-0-0.root",
                 const char *pisafilename = "geom/svxPISA-ideal.par",

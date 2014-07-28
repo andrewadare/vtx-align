@@ -7,20 +7,22 @@
 #include "Mille.h"
 #include "UtilFns.h"
 
-// #include "GLSFitter.h"
-// #include "BeamCenterFuncs.h"
-// #include "ParameterDefs.h"
-// #include "ConstraintBuilder.h"
-// #include "BadLadders.h"
-// #include "VtxIO.h"
-// #include "VtxVis.h"
-
 #include <TFile.h>
 #include <TSystem.h>
 #include <TGeoManager.h>
 #include <TRandom3.h>
 #include <TNtuple.h>
 #include <TLatex.h>
+#include <TMatrixD.h>
+#include <TVectorD.h>
+#include <TMath.h>
+#include <TGeoNode.h>
+#include <TGeoMatrix.h>
+#include <TProfile.h>
+#include <TGraph.h>
+#include <TGraphErrors.h>
+#include <TH1.h>
+#include <TH2.h>
 
 #include <iostream>
 #include <fstream>

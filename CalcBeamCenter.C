@@ -1,12 +1,10 @@
 #include "VtxAlignBase.h"
-
 #include "GLSFitter.h"
 #include "VertexFinder.h"
 #include "DcaFunctions.h"
 #include "BeamCenterFuncs.h"
 #include "ParameterDefs.h"
 #include "VtxIO.h"
-
 
 void CalcBeamCenter(int run = 411768, 
                     int prod = 0,
