@@ -39,13 +39,7 @@ if args.verbose :
 
 #Check whether the output directory specified exists
 # if not, create it
-
-cwd = os.getcwd()
-
-os.system("mkdir -p {}".format(args.outdir))
-os.chdir(args.outdir)
-os.system("mkdir -p condor_logs")
-os.chdir(cwd)
+os.system("mkdir -p {}condor_logs".format(args.outdir))
 
 
 #make the file
