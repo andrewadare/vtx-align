@@ -7,7 +7,9 @@
 void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z);
 
 void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
-                  const char *pfb = "geom/svxPISA-411768.par")
+                  const char *pfb = "geom/svxPISA-411768.par",
+                  const char* dspdf = "pdfs/geom-ds-ideal-v-db.pdf",
+                  const char* dzpdf = "pdfs/geom-dz-ideal-v-db.pdf")
 {
   TLatex ltx;
   ltx.SetNDC();
@@ -25,12 +27,12 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
   DrawXY(geo, "s_diff", "#Deltas_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "s");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print("pdfs/geom-ds-ideal-v-db.pdf");
+  gPad->Print(dspdf);
 
   DrawXY(geo, "z_diff", "#Deltaz_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "z");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print("pdfs/geom-dz-ideal-v-db.pdf");
+  gPad->Print(dzpdf);
 
   return;
 }
