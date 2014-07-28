@@ -118,9 +118,10 @@ print(command)
 os.system(command)
 
 # get the name of the dst
+filenum = "{:0>10}-{:0>4}.root".format(runNumber,segNumber)
 outfiles = os.listdir("{}DST_SVX/".format(outDir))
 for file in outfiles:
-	if str(runNumber) and str(segNumber) in file:
+	if str(filenum) in file:
 		dstFile = "{}DST_SVX/{}".format(outDir,file)
 		break
 print("Found DST: {}".format(dstFile))
