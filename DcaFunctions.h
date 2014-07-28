@@ -4,7 +4,7 @@
 #include "GLSFitter.h"
 #include "SvxTGeo.h"
 #include "SvxGeoTrack.h"
-
+#include "VertexFinder.h"
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
 #include <TGeoManager.h>
@@ -22,12 +22,7 @@ TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
 //                 TH1D *hr=0, int ntracks=10000);
 TGraph *DcaDist(geoTracks &tracks, TVectorD &bc, TString arm,
                 TH1D *hr=0, int ntracks=10000);
-TGraph *DcaDist(geoEvents &events, TVectorD &bc, TString arm,
-                TH1D *hr, int ntracks=10000);
-// TH2D *DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
-//                const char *name, const char *title);
-// TH2D *DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
-//                const char *name, const char *title);
+void DcaDist(geoEvents &events, TString arm, TH2D *hxy, TH1D *hr);
 void DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
               TH2D *hist, TProfile *prof);
 void DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
@@ -110,74 +105,71 @@ DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
   return g;
 }
 
-TGraph *
-DcaDist(geoEvents &events, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
+void
+DcaDist(geoEvents &events, TString arm, TH2D *hxy, TH1D *hr)
 {
-  int i = 0;
-  TGraph *g = new TGraph(ntracks);
-  g->SetMarkerStyle(kFullDotMedium);
-
   for (unsigned int ev=0; ev<events.size(); ev++)
-    for (unsigned int t=0; t<events[ev].size(); t++)
+  {
+    int ntrk = events[ev].size();
+    if (ntrk < 10)
+      continue;
+
+    TVectorD vertex = Vertex(events.at(ev), arm);
+    TVectorD vxy(2);
+    vxy(0) = vertex(0);
+    vxy(1) = vertex(1);
+
+    for (int t=0; t<ntrk; t++)
     {
       SvxGeoTrack trk = events[ev][t];
       double phi = trk.phi0;
+      TVectorD a(2); a(1) = trk.vy;
+      TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
+
       if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
       {
-        TVectorD a(2); a(1) = trk.vy;
-        TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-        TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
+        TVectorD d = IPVec(a,n,vxy);
 
-        if (i<ntracks)
-        {
-          g->SetPoint(i, d(0), d(1));
-          i++;
-        }
+        hxy->Fill(d(0), d(1));
 
         if (hr)
           hr->Fill(TMath::Sqrt(d*d));
       }
     }
+  }
 
-  return g;
+  return;
 }
-
-// TH2D *
-// DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
-//          const char *name, const char *title)
+// TGraph *
+// DcaDist(geoEvents &events, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
 // {
-//   TH2D *h = new TH2D(name, title, 100, 0, TMath::TwoPi(), 100, -0.0, 0.1);
-
-//   for (unsigned int i=0; i<tracks.size(); i++)
-//   {
-//     double phi = tracks[i].phi0;
-//     TVectorD a(2); a(1) = tracks[i].vy;
-//     TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-//     TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
-//     h->Fill(fmod(TMath::PiOver2()+phi,TMath::TwoPi()), TMath::Sqrt(d*d));
-//   }
-
-//   return h;
-// }
-
-// TH2D *
-// DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
-//          const char *name, const char *title)
-// {
-//   TH2D *h = new TH2D(name, title, 100, 0, TMath::TwoPi(), 100, -0.0, 0.1);
+//   int i = 0;
+//   TGraph *g = new TGraph(ntracks);
+//   g->SetMarkerStyle(kFullDotMedium);
 
 //   for (unsigned int ev=0; ev<events.size(); ev++)
 //     for (unsigned int t=0; t<events[ev].size(); t++)
 //     {
 //       SvxGeoTrack trk = events[ev][t];
 //       double phi = trk.phi0;
-//       TVectorD a(2); a(1) = trk.vy;
-//       TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-//       TVectorD d = IPVec(a,n, East(phi) ? bce : bcw);
-//       h->Fill(fmod(TMath::PiOver2()+phi,TMath::TwoPi()), TMath::Sqrt(d*d));
+//       if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
+//       {
+//         TVectorD a(2); a(1) = trk.vy;
+//         TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
+//         TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
+
+//         if (i<ntracks)
+//         {
+//           g->SetPoint(i, d(0), d(1));
+//           i++;
+//         }
+
+//         if (hr)
+//           hr->Fill(TMath::Sqrt(d*d));
+//       }
 //     }
 
-//   return h;
+//   return g;
 // }
 
 void
@@ -189,10 +181,10 @@ DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
   {
     SvxGeoTrack trk = tracks[i];
     double phi = trk.phi0;
-    TVectorD a(len); 
+    TVectorD a(len);
     a(1) = trk.vy;
-    TVectorD n(len); 
-    n(0) = TMath::Cos(phi); 
+    TVectorD n(len);
+    n(0) = TMath::Cos(phi);
     n(1) = TMath::Sin(phi);
     if (len==3)
       a(2) = East(phi) ? bce(2) : bcw(2); // So Delta z = 0 (computing 2-D dca)
