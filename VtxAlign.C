@@ -49,7 +49,7 @@ void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 // The iter parameter {0,1,2,...} is defined as the number of times millepede
 // has previously been run.
-void VtxAlign(int run = 411768, int iter = 1)
+void VtxAlign(int run = 411768, int iter = 0)
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -59,7 +59,7 @@ void VtxAlign(int run = 411768, int iter = 1)
   }
 
   assert(iter>=0 && iter<2);
-  TString fext[] = {"july17_ideal",
+  TString fext[] = {"july17_ideal_filt",
                     "july23_ideal_v1"
                    };
 
@@ -96,7 +96,7 @@ void VtxAlign(int run = 411768, int iter = 1)
   TNtuple *ht2 = new TNtuple("ht2", "Post-alignment SvxGeoHit variables",
                              hitvars);
 
-  TNtuple *svxseg = (TNtuple *)inFile->Get("seg_clusntuple");
+  TNtuple *svxseg = (TNtuple *)inFile->Get("ht0");
   TNtuple *svxcnt = (TNtuple *)inFile->Get("cnt_clusntuple");
   if (!svxseg)
   {
@@ -126,13 +126,6 @@ void VtxAlign(int run = 411768, int iter = 1)
   // Original ladder positions
   vecd x0; vecd y0; vecd z0;
   GetLadderXYZ(tgeo, x0, y0, z0);
-
-  // geoTracks tracks_nocut;
-  // geoTracks tracks;
-  // geoTracks cnttracks;
-  // GetTracksFromTree(svxseg, tgeo, tracks_nocut);
-  // if (nCntTracks > 0)
-  //   GetTracksFromTree(svxcnt, tgeo, cnttracks);
 
   geoEvents vtxevents; // Events containing SVX standalone tracks
   geoEvents cntevents; // Events containing SvxCentralTracks
@@ -175,35 +168,20 @@ void VtxAlign(int run = 411768, int iter = 1)
     for (unsigned int t=0; t<cntevents[ev].size(); t++)
       cntevents[ev][t].UpdateHits();
 
-  // for (unsigned int i=0; i<tracks.size(); i++)
-  //   tracks[i].UpdateHits();
-  // for (unsigned int i=0; i<cnttracks.size(); i++)
-  //   cnttracks[i].UpdateHits();
-
   // Record positions after alignment
   // Record ladder positions before alignment
   vecd x1; vecd y1; vecd z1;
   GetLadderXYZ(tgeo, x1, y1, z1);
 
-  Printf("Refitting in post-alignment geometry to get updated residuals...");
+  cout << "Refitting in post-alignment geometry to get updated residuals..."
+       << flush;
   FitTracks(vtxevents);
+  Printf("done.");
 
-  Printf("Writing output to tree...");
+  cout << "Filling output tree(s)..." << flush;
   FillNTuple(vtxevents, ht2);
   FillNTuple(cntevents, ht2); // Eventually: use a different tree
-
-  // Printf("Post-alignment refit...");
-  // for (unsigned int i=0; i<tracks.size(); i++)
-  // {
-  //   double pars[4] = {0}; /* y0, z0, phi, theta */
-  //   ZeroFieldResiduals(tracks[i], pars);
-  //   FillNTuple(tracks[i], ht2);
-  // }
-  // for (unsigned int i=0; i<cnttracks.size(); i++)
-  // {
-  //   // UpdateResiduals(cnttracks[i]);
-  //   FillNTuple(cnttracks[i], ht2);
-  // }
+  Printf("done.");
 
   // Draw changes in ladder positions
   const int NC = 3;
@@ -219,115 +197,13 @@ void VtxAlign(int run = 411768, int iter = 1)
 
   Printf("Writing %s", outFileName.Data());
   outFile->cd();
-  ht1->Write("ht1");
-  ht2->Write("ht2");
+  ht1->Write(0, TObject::kOverwrite);
+  ht2->Write(0, TObject::kOverwrite);
 
   for (int i=0; i<NC; i++)
     c[i]->Write();
 
-  Printf("Done.");
-  return;
-}
-
-void
-TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree, TNtuple *trkTree,
-          TString opt)
-{
-  // Options:
-  // - "fit": Do a straight-line fit to tracks in this function.
-  // - "ext": Assume residuals were computed from external information.
-  // The "fit" and "ext" options are mutually exclusive--don't pass both.
-
-  Printf("Calling mille() in TrackLoop(). Write to %s...", binfile.c_str());
-  Mille m(binfile.c_str());
-  for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    // Perform straight-line fit --> residuals, track parameters
-    double pars[4] = {0}; /* y0, z0, phi, theta */
-
-    if (opt.Contains("fit"))
-    {
-      ZeroFieldResiduals(tracks[i], pars);
-      tracks[i].vy   = pars[0];
-      tracks[i].vz   = pars[1];
-      tracks[i].phi0 = pars[2];
-      tracks[i].the0 = pars[3];
-    }
-    else
-    {
-      pars[0] = tracks[i].vy;
-      pars[1] = tracks[i].vz;
-      pars[2] = tracks[i].phi0;
-      pars[3] = tracks[i].the0;
-      // UpdateResiduals(tracks[i]);
-    }
-
-    if (hitTree)
-      FillNTuple(tracks[i], hitTree);
-
-    if (trkTree)
-    {
-      // Track id and fit parameters for TTree
-      float trkvars[5] = {0};
-      trkvars[0] = tracks[i].hits[0].trkid;
-      for (int j=0; j<4; j++)
-        trkvars[j+1] = pars[j];
-      trkTree->Fill(trkvars);
-    }
-
-    // Hit loop
-    int slabel[1] = {0};
-    int zlabel[1] = {0};
-    float derlc[1] = {1.0}; // Local derivatives
-    float dergl[1] = {1.0}; // Global derivatives
-
-    // float sigma_s[4] = {50e-4, 50e-4, 80e-4, 80e-4};
-    // float sigma_z[4] = {425e-4, 425e-4, 1000e-4, 1000e-4};
-
-    float sigma_s[4] = {100e-4, 100e-4, 160e-4, 160e-4};
-    float sigma_z[4] = {1000e-4, 1000e-4, 2000e-4, 2000e-4};
-
-    for (int j=0; j<4; j++)
-    {
-      sigma_s[j] *= 1./TMath::Sqrt(12);
-      sigma_z[j] *= 1./TMath::Sqrt(12);
-    }
-
-    if (opt.Contains("ext"))
-      for (int j=0; j<tracks[i].nhits; j++)
-      {
-        SvxGeoHit hit = tracks[i].GetHit(j);
-        slabel[0] = Label(hit.layer, hit.ladder, "s");
-        zlabel[0] = Label(hit.layer, hit.ladder, "z");
-        float sigs = hit.xsigma * sigma_s[hit.layer];
-        float sigz = hit.zsigma * sigma_z[hit.layer];
-        m.mille(1, derlc, 1, dergl, slabel, hit.ds, sigs);
-        m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
-        m.end();
-        m.mille(1, derlc, 1, dergl, zlabel, hit.dz, sigz);
-        m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
-        m.end();
-      }
-    else
-    {
-      for (int j=0; j<tracks[i].nhits; j++)
-      {
-        SvxGeoHit hit = tracks[i].GetHit(j);
-        slabel[0] = Label(hit.layer, hit.ladder, "s");
-        zlabel[0] = Label(hit.layer, hit.ladder, "z");
-        float r = hit.x*hit.x + hit.y*hit.y;
-        float sderlc[4] = {1.0,   r, 0.0, 0.0};
-        float zderlc[4] = {0.0, 0.0, 1.0,   r};
-        float sigs = hit.xsigma * sigma_s[hit.layer];
-        float sigz = hit.zsigma * sigma_z[hit.layer];
-        m.mille(4, sderlc, 1, dergl, slabel, hit.ds, sigs);
-        m.mille(4, zderlc, 1, dergl, zlabel, hit.dz, sigz);
-      }
-      m.end(); // Write residuals for this track & reset for next one
-    }
-  } // track loop
-
-  // Mille object must go out of scope for output file to close properly.
+  Printf("Done!");
   return;
 }
 
@@ -577,51 +453,4 @@ GetCorrections(const char *resFile, std::map<int, double> &mpc)
     }
 
   return (int)mpc.size();
-}
-
-void
-FilterTracks(geoTracks &a, geoTracks &b, double maxdca)
-{
-  // Copy the subset of a tracks to b that pass within maxdca of the beam center.
-
-  Printf("Computing east arm beam center...");
-  TVectorD bce = BeamCenter(a, 15000, "east", "print");
-
-  Printf("Computing west arm beam center...");
-  TVectorD bcw = BeamCenter(a, 15000, "west", "print");
-
-  // Residual outlier cut [cm]
-  double resCut = 0.10;
-
-  for (unsigned int i=0; i<a.size(); i++)
-  {
-    bool east = (a[i].phi0 > 0.5*TMath::Pi() && a[i].phi0 < 1.5*TMath::Pi());
-    TVectorD d = IPVec(a[i], east ? bce : bcw);
-
-    // DCA outlier cut
-    if (TMath::Sqrt(d*d) > maxdca)
-      continue;
-
-    // Hit-level cuts
-    bool reject = false;
-    for (int j=0; j<a[i].nhits; j++)
-    {
-      SvxGeoHit hit = a[i].GetHit(j);
-      // if (Dead(hit.layer, hit.ladder) || Locked(hit.layer, hit.ladder))
-      //   reject = true;
-      if (hit.ds > resCut || hit.dz > resCut)
-        reject = true;
-    }
-    if (reject)
-      continue;
-
-    b.push_back(a[i]);
-  }
-
-  double rejectFrac = 1.0 - (float)b.size()/a.size();
-  Printf("%.3f%% of tracks rejected by beam center DCA cut of %.0f um"
-         " and residual outlier cut of %.0f um.\n\n",
-         100*rejectFrac, 1e4*maxdca, 1e4*resCut);
-
-  return;
 }
