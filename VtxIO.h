@@ -1,17 +1,10 @@
 #ifndef __VTXIO_H__
 #define __VTXIO_H__
 
-#include "SvxTGeo.h"
-#include "SvxGeoTrack.h"
-#include <TNtuple.h>
+#include "VtxAlignBase.h"
 #include <TLeaf.h>
-#include <vector>
-#include <iostream>
 
 using namespace std;
-
-typedef vector<SvxGeoTrack> geoTracks;
-typedef vector<geoTracks> geoEvents;
 
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax=-1);
 void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1);

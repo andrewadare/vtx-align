@@ -1,15 +1,8 @@
 #ifndef __GLSFITTER_H__
 #define __GLSFITTER_H__
 
-#include "SvxGeoTrack.h"
+#include "VtxAlignBase.h"
 #include <TDecompSVD.h>
-#include <TMatrixD.h>
-#include <TVectorD.h>
-#include <TMath.h>
-#include <TGeoNode.h>
-#include <TGeoMatrix.h>
-#include <TNtuple.h>
-#include <iostream>
 
 using namespace std;
 typedef vector<SvxGeoTrack> geoTracks;

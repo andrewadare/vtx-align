@@ -1,20 +1,10 @@
 #ifndef __DCAFUNCTIONS_H__
 #define __DCAFUNCTIONS_H__
 
+#include "VtxAlignBase.h"
 #include "GLSFitter.h"
-#include "SvxTGeo.h"
-#include "SvxGeoTrack.h"
 #include "VertexFinder.h"
-#include <TTreeReader.h>
-#include <TTreeReaderValue.h>
-#include <TGeoManager.h>
-#include <TProfile.h>
-#include <TGraph.h>
-#include <TH1.h>
-#include <TH2.h>
 
-typedef vector<SvxGeoTrack> geoTracks;
-typedef vector<geoTracks> geoEvents;
 
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
