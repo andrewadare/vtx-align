@@ -91,8 +91,8 @@ int AnaVTXCluster::Init(PHCompositeNode *topNode)
     seg_clusntuple = new TNtuple("seg_clusntuple", "All clusters Associated with StandAloneTracks", "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:event");
     cnt_clusntuple = new TNtuple("cnt_clusntuple", "All clusters Associated with SvxCentralTracks", "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:trkphi:trktheta:event");
 
-    standalone_tracks_per_event = new TH1F("standalone tracks per event","standalone tracks per event",100,0,40);
-    cnt_tracks_per_event = new TH1F("cnt tracks per event","cnt tracks per event",100,0,40);
+    standalone_tracks_per_event = new TH1F("standalone_tracks_per_event","standalone tracks per event",51,-0.5,50.5);
+    cnt_tracks_per_event = new TH1F("cnt_tracks_per_event","cnt tracks per event",51,-0.5,50.5);
     //-- TTree containing track & associated cluster information for SvxCentralTracks --//
     /*svxcntclus = new TTree("svxcntclus", "Track and associated cluster information for SvxCentralTracks");
     svxcntclus->Branch("run", &run, "run/I");
@@ -169,9 +169,9 @@ int AnaVTXCluster::Init(PHCompositeNode *topNode)
     svxsegclus->Branch("clus_xsize",&clus_xsize,"clus_xsize[Nclus]/F");
     svxsegclus->Branch("clus_zsize",&clus_zsize,"clus_zsize[Nclus]/F");
     svxsegclus->Branch("centrality",&centrality,"centrality/F");
-*/    
+*/
       //        svxcntclus = new TNtuple("svxcntclus", "svxcntclus","event:cntindex:pT:Nhits:chisq:NDF:Nhits_B0:Nhits_B1:Nhits_B2:Nhits_B3:clusterID:layer:ladder:sensor:dphi:dz:lx:ly:lz");
-    
+
     //reset event counter
     nEvent = 0;
 
@@ -221,7 +221,7 @@ int AnaVTXCluster::InitRun(PHCompositeNode *topNode)
 int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 {
 
-    
+
     //get the PHCentralTrack node
     PHCentralTrack *phcnttrk = findNode::getClass<PHCentralTrack>(topNode, "PHCentralTrack");
     if (!phcnttrk)
@@ -237,7 +237,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
         std::cout << "ERROR!! Can't find SvxCentralTrackList." << std::endl;
         return -1;
     }
-    
+
 
     PHGlobal *global = findNode::getClass<PHGlobal>(topNode, "PHGlobal");
     if(!global)
@@ -276,17 +276,17 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
 
     centrality  = global->getCentrality();
-    float bbc_qn      = global->getBbcChargeN();                                                                                                                  
-    float bbc_qs      = global->getBbcChargeS();                                                                                                              
+    float bbc_qn      = global->getBbcChargeN();
+    float bbc_qs      = global->getBbcChargeS();
 
-    
+
     if(centrality==-9999)
       {
 	centrality = get_centrality(bbc_qn+bbc_qs);
-	
-	//std::cout<<"error: no centrality; using bbc_q centrality "<<std::endl; 
+
+	//std::cout<<"error: no centrality; using bbc_q centrality "<<std::endl;
       }
-    
+
     //    std::cout<<"centrality: "<<centrality<<std::endl;
 
     if(centrality < 50 )
@@ -308,7 +308,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     nEvent++;
     if(nEvent>500000) return -1;
     if (nEvent % 1000 == 0 )
-        std::cout << "--> Event #" << nEvent << std::endl;    
+        std::cout << "--> Event #" << nEvent << std::endl;
     /*
     //---------------------------------------------//
     // Fill the Cluster ntuple
@@ -343,44 +343,44 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     for (unsigned int itrk = 0; itrk < ncnttrack; itrk++)
       {
 	gl_itrack=itrk;
-	//cout<<"gl_itrack="<<gl_itrack<<"   itrk="<<itrk<<endl;                                                
+	//cout<<"gl_itrack="<<gl_itrack<<"   itrk="<<itrk<<endl;
 	gl_tr_mom = phcnttrk->get_mom(itrk);
 
 	gl_phi0 = phcnttrk->get_phi0(itrk);
 	if(gl_phi0 > M_PI) gl_phi0 = gl_phi0 - 2.*M_PI;
 
-	gl_the0 = phcnttrk->get_the0(itrk); //theta at the vertex                                                    
+	gl_the0 = phcnttrk->get_the0(itrk); //theta at the vertex
 
-	gl_pt = fabs(gl_tr_mom)*sin(gl_the0);//pt ok                                                               
+	gl_pt = fabs(gl_tr_mom)*sin(gl_the0);//pt ok
 
-	gl_charge = phcnttrk->get_charge(itrk);//charge                                                              
+	gl_charge = phcnttrk->get_charge(itrk);//charge
 
-	gl_emcdz = phcnttrk->get_emcdz(itrk);//emcz                                                                  
+	gl_emcdz = phcnttrk->get_emcdz(itrk);//emcz
 
-	gl_emcdphi = phcnttrk->get_emcdphi(itrk);//emcdphi                                                           
+	gl_emcdphi = phcnttrk->get_emcdphi(itrk);//emcdphi
 
-	gl_pc3dz = phcnttrk->get_pc3dz(itrk);//pc3dz                                                                 
+	gl_pc3dz = phcnttrk->get_pc3dz(itrk);//pc3dz
 
-	gl_pc3dphi = phcnttrk->get_pc3dphi(itrk);//pc3dphi                                                           
+	gl_pc3dphi = phcnttrk->get_pc3dphi(itrk);//pc3dphi
 
-	gl_pc2dz = phcnttrk->get_pc2dz(itrk);//pc2 dz                                                                
+	gl_pc2dz = phcnttrk->get_pc2dz(itrk);//pc2 dz
 
-	gl_pc2dphi = phcnttrk->get_pc2dphi(itrk);//pc2 dphi                                                          
+	gl_pc2dphi = phcnttrk->get_pc2dphi(itrk);//pc2 dphi
 
-	gl_zed= phcnttrk->get_zed(itrk);// Z coordinate at which the track crosses PC1                               
+	gl_zed= phcnttrk->get_zed(itrk);// Z coordinate at which the track crosses PC1
 
 	gl_trk_quality = phcnttrk->get_quality(itrk);
 
 	gl_n0 = phcnttrk->get_n0(itrk);
 
-	gl_ecore=phcnttrk->get_ecore(itrk); //EMC "shower core" energy.                                              
+	gl_ecore=phcnttrk->get_ecore(itrk); //EMC "shower core" energy.
 
 	gl_alpha = phcnttrk->get_alpha(itrk);
 
 	cntntuple->Fill();
 
       }
-    */    
+    */
     //---------------------------------------------//
     // Fill Ntuple for clusters associated
     // with CNT tracks
@@ -408,7 +408,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 	float px    = mom * sin(the0) * cos(phi0);
 	float py    = mom * sin(the0) * sin(phi0);
 	float pt    = sqrt(px * px + py * py);
-	// int nhits   = svxtrk->getNhits();                                                                                                   
+	// int nhits   = svxtrk->getNhits();
 	int score   = svxtrk->getLinkScore();
 	int ndf     = svxtrk->getNDF();
 	float chi2  = ndf < 1 ? 1e9 : svxtrk->getChiSquare() / ndf;
@@ -428,9 +428,9 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		  }
 		float cx   = svxclusinfo->getPosition(0);
 		float cy   = svxclusinfo->getPosition(1);
-		float cz   = svxclusinfo->getPosition(2); 
+		float cz   = svxclusinfo->getPosition(2);
 		float rcyl = sqrt(cx * cx + cy * cy);
-		float zp   = svxclusinfo->getdphi();      
+		float zp   = svxclusinfo->getdphi();
 		float zs   = rcyl * zp;
 		float zz   = svxclusinfo->getdz();
 		int layer  = svxclusinfo->getLayer();
@@ -438,7 +438,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		int sensor = svxclusinfo->getSensor();
 		int clusxsize = svxclusinfo->getXZSize(0);
 		int cluszsize = svxclusinfo->getXZSize(1);
-		
+
 		SvxCluster *svxclus = svxcluslist->get_Cluster(svxclusinfo->getClusterId());
 		if(!svxclus)
 		  {
@@ -447,9 +447,9 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		  }
 		float clx  = svxclus->get_xyz_local(0);
 		float cly  = svxclus->get_xyz_local(1);
-		float clz  = svxclus->get_xyz_local(2);		
-		
-		float varr[17] = 
+		float clz  = svxclus->get_xyz_local(2);
+
+		float varr[17] =
 		  {
 		    layer,
 		    ladder,
@@ -503,10 +503,10 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
         ndf = svxseg->getNDF();
         score = svxseg->getSegmentScore();
         vtx[0] = vtxpos.getX();
-        vtx[1] = vtxpos.getY();	
+        vtx[1] = vtxpos.getY();
 	if(/*pT < 0.4 || */score < 70 )
 	  continue;
-	
+
 	for(int ilayer = 0; ilayer < 4; ilayer++)
 	  {
 	    if(svxseg->getNhits(ilayer) == 1)
@@ -527,8 +527,8 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		float cz = svxclus->get_xyz_global(2);
 		float clusxsize = svxclus->get_xz_size(0);
 		float cluszsize = svxclus->get_xz_size(1);
-		
-		float varr[15] = 
+
+		float varr[15] =
 		  {
 		    ilayer,
 		    ladder,
@@ -548,7 +548,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		  };
 		seg_clusntuple->Fill(varr);
 	      }
-	    
+
 	  }
 	seg_trkid++;
       }
@@ -615,14 +615,14 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
                 if (svxclus)
                 {
-                    
+
                     //clus_layer[ihit] = svxclusinfo->getLayer();
                     //clus_ladder[ihit] = svxclusinfo->getLadder();
                     //clus_sensor[ihit] = svxclusinfo->getSensor();
                     //clus_gx[ihit] = svxclusinfo->getPosition(0);
                     //clus_gy[ihit] = svxclusinfo->getPosition(1);
                     //clus_gz[ihit] = svxclusinfo->getPosition(2);
-                    
+
                     clus_layer[ihit]  = svxclus->get_layer();
                     clus_ladder[ihit]  = svxclus->get_ladder();
                     clus_sensor[ihit]  = svxclus->get_sensor();
@@ -700,14 +700,14 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
                 if (svxclus)
 		  {
-                    
+
 		      //clus_layer[ihit] = svxclusinfo->getLayer();
 		      //clus_ladder[ihit] = svxclusinfo->getLadder();
 		      //clus_sensor[ihit] = svxclusinfo->getSensor();
 		      //clus_gx[ihit] = svxclusinfo->getPosition(0);
 		     // clus_gy[ihit] = svxclusinfo->getPosition(1);
 		    //  clus_gz[ihit] = svxclusinfo->getPosition(2);
-                    
+
 		                      clus_layer[ilayer]  = svxclus->get_layer();
                     clus_ladder[ilayer]  = svxclus->get_ladder();
                     clus_sensor[ilayer]  = svxclus->get_sensor();
@@ -720,7 +720,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		    clus_xsize[ilayer] = svxclus->get_xz_size(0);
                     clus_zsize[ilayer] = svxclus->get_xz_size(1);
 		    //cout<<"cluster: "<<ilayer<<" radius"<<sqrt(clus_gx
-		    
+
 		  }
 		}
 	      else
@@ -737,14 +737,14 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		  clus_xsize[ilayer] = -9999;
 		  clus_zsize[ilayer] = -9999;
 		}
-	      
+
             }
-	    
-	} 
+
+	}
 	svxsegclus->Fill();
     }
-*/    
-    
+*/
+
 
     return 0;
 }
