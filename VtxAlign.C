@@ -1,34 +1,6 @@
-
-#include "SvxTGeo.h"
-#include "SvxGeoTrack.h"
-#include "SvxProj.h"
-#include "GLSFitter.h"
-#include "BeamCenterFuncs.h"
-#include "ParameterDefs.h"
-#include "ConstraintBuilder.h"
-#include "BadLadders.h"
-#include "VtxIO.h"
-#include "VtxVis.h"
-#include "Mille.h"
-
-#include <TFile.h>
-#include <TSystem.h>
-#include <TGeoManager.h>
-#include <TRandom3.h>
-#include <TNtuple.h>
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <map>
+#include "VtxAlignBase.h"
 
 using namespace std;
-
-typedef vector<double> vecd;
-typedef vector<int>    veci;
-typedef vector<string> vecs;
-typedef vector<SvxGeoTrack> geoTracks;
-typedef vector<geoTracks> geoEvents;
 
 // Globals
 const double BField = 0.0;
@@ -47,9 +19,9 @@ void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
-// The iter parameter {0,1,2,...} is defined as the number of times millepede
-// has previously been run.
-void VtxAlign(int run = 411768, int iter = 0)
+void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
+              int prod = 0,        // Mini-production pass (starting at 0)
+              int subiter = 0)     // 1 geometry update/sub-iteration
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -58,23 +30,10 @@ void VtxAlign(int run = 411768, int iter = 0)
     gSystem->Exit(-1);
   }
 
-  assert(iter>=0 && iter<2);
-  TString fext[] = {"july17_ideal_filt",
-                    "july23_ideal_v1"
-                   };
-
-  // TString fext[] = {"june26_small",
-  //                   "july3_parv1_small",
-  //                   "july11_v3_500kevents"
-  //                  };
-  TString inFileName  = Form("rootfiles/%d_%s.root", run, fext[iter].Data());
-  TString outFileName = Form("rootfiles/%d.%d.root", run, iter + 1);
-  // TString pisaFileIn  = Form("geom/svxPISA-%d.par", run);
-  TString pisaFileIn  = Form("geom/svxPISA-ideal.par");
-  if (iter > 0)
-    pisaFileIn += Form(".%d.%d", run, iter);
-  // TString pisaFileOut = Form("geom/svxPISA-%d.par.%d", run, iter + 1);
-  TString pisaFileOut = Form("geom/svxPISA-ideal.par.%d.%d", run, iter + 1);
+  TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
+  TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, subiter + 1);
+  TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
+  TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, subiter + 1);
 
   vecs constfiles;
   vecs binfiles;
@@ -84,41 +43,16 @@ void VtxAlign(int run = 411768, int iter = 0)
   if (nCntTracks > 0)
     binfiles.push_back(pedeBinFileCnt);
 
-  TFile *inFile  = new TFile(inFileName.Data(), "read");
+  TFile *inFile  = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
-  TFile *outFile = new TFile(outFileName.Data(), "recreate");
 
-  const char *hitvars = "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:"
-                        "x_size:z_size:res_z:res_s:trkid:event";
-
-  TNtuple *ht1 = new TNtuple("ht1", "Pre-alignment SvxGeoHit variables",
-                             hitvars);
-  TNtuple *ht2 = new TNtuple("ht2", "Post-alignment SvxGeoHit variables",
-                             hitvars);
-
-  TNtuple *svxseg = (TNtuple *)inFile->Get("ht0");
+  TNtuple *svxseg = (TNtuple *)inFile->Get("vtxhits");
   TNtuple *svxcnt = (TNtuple *)inFile->Get("cnt_clusntuple");
-  if (!svxseg)
-  {
-    svxseg = (TNtuple *)inFile->Get("ht2");
-    svxseg->SetName("seg_clusntuple");
-  }
   assert(svxseg);
   if (nCntTracks>0)
     assert(svxcnt);
 
-  SvxTGeo *tgeo = new SvxTGeo;
-  tgeo->ReadParFile(pisaFileIn.Data());
-  tgeo->MakeTopVolume(100, 100, 100);
-  tgeo->AddSensors();
-
-  TGeoManager *mgr = tgeo->GeoManager();
-  mgr->CloseGeometry();
-
-  // TGeoVolume* top = mgr->GetTopVolume();
-  // TCanvas* ctop = new TCanvas("ctop", "ctop", 1);
-  // top->Draw();
-  // return;
+  SvxTGeo *tgeo = VTXModel(pisaFileIn.Data());
 
   WriteConstFile(pedeConstFile, tgeo, ""); // "empty" writes empty file
   WriteSteerFile(pedeSteerFile, binfiles, constfiles);
@@ -135,13 +69,13 @@ void VtxAlign(int run = 411768, int iter = 0)
     GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
     FitTracks(vtxevents);
     EventLoop(pedeBinFileStd, vtxevents);
-    FillNTuple(vtxevents, ht1);
+    // FillNTuple(vtxevents, ht1);
   }
   if (nCntTracks > 0)
   {
     GetEventsFromTree(svxcnt, tgeo, cntevents);
     EventLoop(pedeBinFileCnt, cntevents);
-    FillNTuple(cntevents, ht1); // Eventually: use a different tree
+    // FillNTuple(cntevents, ht1); // Eventually: use a different tree
   }
 
   // Shell out to pede executable
@@ -169,18 +103,17 @@ void VtxAlign(int run = 411768, int iter = 0)
       cntevents[ev][t].UpdateHits();
 
   // Record positions after alignment
-  // Record ladder positions before alignment
   vecd x1; vecd y1; vecd z1;
   GetLadderXYZ(tgeo, x1, y1, z1);
 
-  cout << "Refitting in post-alignment geometry to get updated residuals..."
-       << flush;
+  Printf("Refitting in post-alignment geometry to get updated residuals.");
   FitTracks(vtxevents);
-  Printf("done.");
 
   cout << "Filling output tree(s)..." << flush;
-  FillNTuple(vtxevents, ht2);
-  FillNTuple(cntevents, ht2); // Eventually: use a different tree
+  TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
+  TNtuple *ht = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
+  FillNTuple(vtxevents, ht);
+  FillNTuple(cntevents, ht); // Eventually: use a different tree
   Printf("done.");
 
   // Draw changes in ladder positions
@@ -195,11 +128,9 @@ void VtxAlign(int run = 411768, int iter = 0)
   Printf("Writing %s", pisaFileOut.Data());
   tgeo->WriteParFile(pisaFileOut.Data());
 
-  Printf("Writing %s", outFileName.Data());
+  Printf("Writing %s", rootFileOut.Data());
   outFile->cd();
-  ht1->Write(0, TObject::kOverwrite);
-  ht2->Write(0, TObject::kOverwrite);
-
+  outFile->Write(0, TObject::kOverwrite);
   for (int i=0; i<NC; i++)
     c[i]->Write();
 
