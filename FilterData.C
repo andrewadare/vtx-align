@@ -5,23 +5,23 @@ typedef vector<SvxGeoTrack> geoTracks;
 typedef vector<geoTracks> geoEvents;
 
 void FilterData(const char *infilename = "rootfiles/411768_july17_ideal.root",
-                const char *outfilename = "rootfiles/test.root")
+                const char *outfilename = "rootfiles/411768_july17_ideal_filt.root",
+                double vertexprobmin = 0.01,
+                double vertexprobmax = 0.99,
+                double maxdca = 0.5,
+                double maxres_s = 0.1,
+                double maxres_z = 0.1)
 {
   TFile *inFile = new TFile(infilename, "read");
-  TFile *outFile = new TFile(outfilename, "recreate");
 
   TNtuple *svxseg = (TNtuple *)inFile->Get("seg_clusntuple");
-  if (!svxseg)
-  {
-    svxseg = (TNtuple *)inFile->Get("ht2");
-    svxseg->SetName("seg_clusntuple");
-  }
-
   assert(svxseg);
-
+    
+  TFile *outFile = new TFile(outfilename, "recreate");
+  
   const char *hitvars = "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:"
                         "x_size:z_size:res_z:res_s:trkid:event";
-  TNtuple *ht1 = new TNtuple("ht1", "SvxGeoHit variables", hitvars);
+  TNtuple *ht0 = new TNtuple("ht0", "SvxGeoHit variables", hitvars);
 
   SvxTGeo *tgeo = new SvxTGeo;
   tgeo->ReadParFile("geom/svxPISA-ideal.par");
@@ -33,14 +33,20 @@ void FilterData(const char *infilename = "rootfiles/411768_july17_ideal.root",
   geoEvents vtxevents;
   GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
   FitTracks(vtxevents);
-  FilterData(vtxevents, 0.01, 0.99, 0.2, 0.1, 0.1, ht1);
+  FilterData(vtxevents,
+             vertexprobmin,
+             vertexprobmax,
+             maxdca,
+             maxres_s,
+             maxres_z,
+             ht0);
 
-  Printf("%.1f%% of initial data rejected.", 
-         100*(1.0 - (float)ht1->GetEntries()/svxseg->GetEntries()));
+  Printf("%.1f%% of initial data rejected.",
+         100*(1.0 - (float)ht0->GetEntries()/svxseg->GetEntries()));
 
   Printf("Writing output to %s", outfilename);
   outFile->cd();
-  ht1->Write("seg_clusntuple");
+  ht0->Write(0, TObject::kOverwrite);
 
   return;
 }
