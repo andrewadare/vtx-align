@@ -14,6 +14,7 @@ configFileName = sys.argv[1]
 runNumber = int(sys.argv[2])
 segNumber = int(sys.argv[3])
 outDir = sys.argv[4]
+vtxalignDir = sys.argv[5]
 
 ##############################################
 # Set some parameters for running
@@ -21,7 +22,7 @@ outDir = sys.argv[4]
 nevents = 0
 condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
 #condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
-vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"
+#vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"
 productionDir = vtxalignDir + "production/zerofield/"
 
 

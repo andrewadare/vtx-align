@@ -47,8 +47,8 @@ fo = open(args.filename,'w')
 
 #write the job information
 fo.write("Universe        = vanilla\n")
-fo.write("Executable      = /direct/phenix+u/dcm07e/work/vtx-align/production/zerofield/run_alignment_production.py\n")
-fo.write("Arguments       = {} {} $(Process) {} \n".format(args.config,args.run,args.outdir))
+fo.write("Executable      = {}/run_alignment_production.py\n".format(os.getcwd()))
+fo.write("Arguments       = {} {} $(Process) {} {}\n".format(args.config,args.run,args.outdir,os.getcwd()[0:-20]))
 fo.write("Requirements    = (CPU_Speed >= 1 && CPU_Experiment == \"phenix\")\n")
 fo.write("Rank            = CPU_Speed\n")
 fo.write("Priority        = +1\n")
