@@ -34,7 +34,7 @@ args = parser.parse_args()
 
 
 #Check the input arguments for compatabiity and fix if necessary
-if args.outdir.endswith('/'):
+if not args.outdir.endswith('/'):
 	args.outdir += '/'
 
 if args.config.startswith('.'):
