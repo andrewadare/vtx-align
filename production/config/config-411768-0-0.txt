@@ -1,0 +1,15 @@
+# This is /Users/adare/phenix/alignment/vtx-alignproduction/config/config-411768-0-0.txt
+# Created by user adare
+# On Tue Jul 29 11:09:47 MDT 2014
+# At rl1-1-156-208-dhcp.int.colorado.edu
+# Run number: 411768
+# Production step: 0
+# Sub-iteration step: 0
+# Source: https://git.racf.bnl.gov/phenix/git/vtx-align/vtx-align.git
+# Latest commit: e1d1f0ffa74d75fc6c08e935ae49f2f058ab0f55
+# Notes: this is a test
+
+beamcenter: 0.356141 0.053441
+east-to-west: 0.016558 0.0141322 -0.0278905
+vtx-to-cnt: 0 0 0
+geomfile: 411768-0-0.par
