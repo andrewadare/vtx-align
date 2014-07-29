@@ -4,6 +4,7 @@ Makes condor submit file for zf alignment production
 '''
 
 import os
+import sys
 from argparse import ArgumentParser
 
 #First get any command line arguments
@@ -30,12 +31,31 @@ parser.set_defaults(filename="condor.job",
 
 args = parser.parse_args()
 
+
+
+#Check the input arguments for compatabiity and fix if necessary
+if args.outdir.endswith('/'):
+	args.outdir += '/'
+
+if args.config.startswith('.'):
+	print("\nWARNING!! Configuration file requires an absolute path!\n")
+	print(" Fixing now based on your current working directory.")
+	cwd = os.getcwd()
+	args.config = cwd[0:cwd.rfind('/')]  + args.config[args.config.find('/'):]
+	print(" Config file now: {}\n".format(args.config))
+
+if not os.path.isfile(args.config):
+	print("\nERROR!! Can't find config file - {}\n".format(args.config))
+	sys.exit(1)
+
+
+#Print out arguments
 if args.verbose :
 	print(" Writting job file to {}".format(args.filename))
 	print(" Using config file {}".format(args.config))
 	print(" Using run {}".format(args.run))
 	print(" Producing {} segments".format(args.nsegments))
-
+	print(" Output of condor jobs will go to {}".format(args.outdir))
 
 #Check whether the output directory specified exists
 # if not, create it
