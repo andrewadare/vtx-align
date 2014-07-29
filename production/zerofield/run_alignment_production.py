@@ -87,7 +87,7 @@ os.chdir(condorDir)
 print("production directory: " + os.getcwd())
 
 os.system("LuxorLinker.pl -1 {}".format(runNumber))
-os.system("ln -sf {}Fun4All_VTX_ZeroField.C .".format(productionDir))
+os.system("ln -sf {}Fun4All_VTX_ZeroField_Standalone.C .".format(productionDir))
 os.system("ln -sf {}TrigSelect.C .".format(productionDir))
 os.system("ln -sf {}OutputManager.C .".format(productionDir))
 os.system("ln -sf {}rawdatacheck.C .".format(productionDir))
@@ -99,7 +99,7 @@ pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns
 strip_deadchannel = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadChannels.txt".format(runNumber)
 strip_deadRCC = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadReadouts.txt".format(runNumber)
 
-command = "root -b -q \'Fun4All_VTX_ZeroField.C("
+command = "root -b -q \'Fun4All_VTX_ZeroField_Standalone.C("
 command += str(nevents) +","
 command += "\"" + prdfFile + "\","
 command += "\"" + outDir + "DST_SVX/" + "\","
