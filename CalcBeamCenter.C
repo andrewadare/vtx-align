@@ -15,13 +15,13 @@ void WriteConfigFile(const char *filename,
                      TVectorD &cntdiff,
                      TString notes = "");
 
-void CalcBeamCenter(int run = 406541,
-                    int prod = 0,
+void CalcBeamCenter(int run = 411768,
+                    int prod = 1,
                     int subiter = 0)
 {
   TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
-  TString configFile = Form("production/config/config-%d-%d-%d.txt", 
+  TString configFile = Form("production/config/config-%d-%d-%d.txt",
                             run, prod, subiter);
 
   TFile *f = new TFile(rootFileIn.Data());
@@ -32,6 +32,7 @@ void CalcBeamCenter(int run = 406541,
   TObjArray *cList = new TObjArray();
   TLatex ltx;
   ltx.SetNDC();
+  ltx.SetTextFont(42);
 
   SvxTGeo *geo = VTXModel(pisaFileIn.Data());
 
@@ -40,76 +41,21 @@ void CalcBeamCenter(int run = 406541,
   FitTracks(events);
 
   // Event multiplicity histograms
-  TH1D *hne = new TH1D("hne", "East;tracks/event", 100, 0, 100);
-  TH1D *hnw = new TH1D("hnw", "West;tracks/event", 100, 0, 100);
+  TH1D *hne = new TH1D("hne", Form("VTXE multiplicity - prod %d step %d;"
+                                   "tracks/event;events",
+                                   prod, subiter), 100, 0, 100);
+  TH1D *hnw = new TH1D("hnw", Form("VTXW multiplicity - prod %d step %d;"
+                                   "tracks/event;events",
+                                   prod, subiter), 100, 0, 100);
 
-  Printf("Filling multiplicity distributions...");
-  int minmult = 10;
-  int N = 0; // Pre-allocation size
-  for (unsigned int ev=0; ev<events.size(); ev++)
-  {
-    int ne=0, nw=0;
-    int mult = events[ev].size();
-    if (mult >= minmult)
-      N++;
-    for (int t=0; t<mult; t++)
-    {
-      SvxGeoTrack trk = events[ev][t];
-      if (East(trk.phi0)) ne++;
-      else nw++;
-      if (false)
-        Printf("%d %f %f %f %f", trk.nhits, trk.phi0, trk.the0, trk.vy, trk.vz);
-    }
-    hne->Fill(ne);
-    hnw->Fill(nw);
-  }
-
-  Printf("Allocating vertex arrays...");
-  int nfilled = 0;
-  double vxe[N], vye[N], vze[N];  // Vertex from east arm
-  double vxw[N], vyw[N], vzw[N];  // Vertex from west arm
-  double dvx[N], dvy[N], dvz[N];  // West - east offsets
-
-  Printf("Filling vertex arrays...");
-  FillVertexArrays(events, minmult, vxe, vye, vze, vxw, vyw, vzw, dvx, dvy, dvz,
-                   nfilled);
-
-  Printf("Computing quantiles for {e,w}{x,y}");
-  const int nq = 5;
-  double probs[nq] = {0.01, 0.32, 0.50, 0.68, 0.99};
-  double qxe[nq] = {0}, qxw[nq] = {0}, qye[nq] = {0}, qyw[nq] = {0};
-  TMath::Quantiles(nfilled, nq, vxe, qxe, probs, false);
-  TMath::Quantiles(nfilled, nq, vxw, qxw, probs, false);
-  TMath::Quantiles(nfilled, nq, vye, qye, probs, false);
-  TMath::Quantiles(nfilled, nq, vyw, qyw, probs, false);
-
-  TVectorD bce(2); bce(0) = qxe[2]; bce(1) = qye[2];
-  TVectorD bcw(2); bcw(0) = qxw[2]; bcw(1) = qyw[2];
-
-  Printf("East-west offsets...");
-  double eastrange = TMath::Max(qxe[nq-1]-qxe[0], qye[nq-1]-qye[0]);
-  double westrange = TMath::Max(qxw[nq-1]-qxw[0], qyw[nq-1]-qyw[0]);
-  if (eastrange > 1.)
-    eastrange = 1.;
-  if (westrange > 1.)
-    westrange = 1.;
-
-  double x0 = qxe[2] - eastrange/2;
-  double y0 = qye[2] - eastrange/2;
-  double x1 = qxe[2] + eastrange/2;
-  double y1 = qye[2] + eastrange/2;
-  TH2D *hve = new TH2D("hve", Form("East vertex - prod %d sub %d;"
+  // x-y vertex distributions
+  double x0 = -1.0, y0 = -1.0, x1 = +1.0, y1 = +1.0;
+  TH2D *hve = new TH2D("hve", Form("East vertex - prod %d step %d;"
                                    "x [cm];y [cm]", prod, subiter),
-                       100, x0, x1, 100, y0, y1);
-  x0 = qxw[2] - westrange/2;
-  y0 = qyw[2] - westrange/2;
-  x1 = qxw[2] + westrange/2;
-  y1 = qyw[2] + westrange/2;
-  TH2D *hvw = new TH2D("hvw", Form("West vertex - prod %d sub %d;"
+                       500, x0, x1, 500, y0, y1);
+  TH2D *hvw = new TH2D("hvw", Form("West vertex - prod %d step %d;"
                                    "x [cm];y [cm]", prod, subiter),
-                       100, x0, x1, 100, y0, y1);
-  hve->FillN(nfilled, vxe, vye, NULL, 1);
-  hvw->FillN(nfilled, vxw, vyw, NULL, 1);
+                       500, x0, x1, 500, y0, y1);
 
   // West - East offset histograms
   TH1D *hdv[3];
@@ -117,21 +63,81 @@ void CalcBeamCenter(int run = 406541,
   for (int k=0; k<3; k++)
     hdv[k] = new TH1D(Form("hdv%d",k),
                       Form("West - East vertex difference #Delta%s "
-                           "- prod %d sub %d; #Delta%s [cm];events",
+                           "- prod %d step %d; #Delta%s [cm];events",
                            xyzstr[k], prod, subiter, xyzstr[k]),
                       200, -1, 1);
-  hdv[0]->FillN(nfilled, dvx, NULL, 1);
-  hdv[1]->FillN(nfilled, dvy, NULL, 1);
-  hdv[2]->FillN(nfilled, dvz, NULL, 1);
 
-  x0=-0.05;
-  y0=-0.05;
-  x1=+0.05;
-  y1=+0.05;
+  Printf("Filling mult/vertex distributions...");
+  int minmult = 10;
+  for (unsigned int ev=0; ev<events.size(); ev++)
+  {
+    int ne=0, nw=0;
+    int mult = events[ev].size();
+    for (int t=0; t<mult; t++)
+    {
+      SvxGeoTrack trk = events[ev][t];
+      if (East(trk.phi0)) ne++;
+      else nw++;
+    }
+
+    hne->Fill(ne);
+    hnw->Fill(nw);
+
+    if (mult >= minmult)
+    {
+      TVectorD ve = Vertex(events.at(ev), "east");
+      TVectorD vw = Vertex(events.at(ev), "west");
+
+      hve->Fill(ve(0), ve(1));
+      hvw->Fill(vw(0), vw(1));
+
+      for (int k=0; k<3; k++)
+        hdv[k]->Fill(vw(k) - ve(k));
+    }
+  }
+
+  Printf("Computing quantiles for {e,w}{x,y}");
+  const int nq = 5;
+  double probs[nq] = {0.01, 0.32, 0.50, 0.68, 0.99};
+  double qxe[nq] = {0}, qxw[nq] = {0}, qye[nq] = {0}, qyw[nq] = {0};
+  hve->ProjectionX()->GetQuantiles(nq, qxe, probs);
+  hvw->ProjectionX()->GetQuantiles(nq, qxw, probs);
+  hve->ProjectionY()->GetQuantiles(nq, qye, probs);
+  hvw->ProjectionY()->GetQuantiles(nq, qyw, probs);
+
+  TVectorD bce(2); bce(0) = qxe[2]; bce(1) = qye[2];
+  TVectorD bcw(2); bcw(0) = qxw[2]; bcw(1) = qyw[2];
+
+  // Zoom in on beam spot, keeping 98% of the data in view. 
+  // Maintain a 1:1 aspect ratio.
+  double eastrange = TMath::Max(qxe[nq-1]-qxe[0], qye[nq-1]-qye[0]);
+  double westrange = TMath::Max(qxw[nq-1]-qxw[0], qyw[nq-1]-qyw[0]);
+  if (eastrange > 1.)
+    eastrange = TMath::Min(westrange, 1.);
+  if (westrange > 1.)
+    westrange = TMath::Min(eastrange, 1.);
+  x0 = qxe[2] - eastrange/2;
+  y0 = qye[2] - eastrange/2;
+  x1 = qxe[2] + eastrange/2;
+  y1 = qye[2] + eastrange/2;
+  hve->GetXaxis()->SetRangeUser(x0, x1);
+  hve->GetYaxis()->SetRangeUser(y0, y1);
+  x0 = qxw[2] - westrange/2;
+  y0 = qyw[2] - westrange/2;
+  x1 = qxw[2] + westrange/2;
+  y1 = qyw[2] + westrange/2;
+  hvw->GetXaxis()->SetRangeUser(x0, x1);
+  hvw->GetYaxis()->SetRangeUser(y0, y1);
+
+  Printf("DCA x-y distribution...");
+  x0 = -0.12;
+  y0 = -0.12;
+  x1 = +0.12;
+  y1 = +0.12;
   TH2D *hxye = new TH2D("hxye", "DCA (east);x [cm];y [cm]",
-                        200, x0, x1, 200, y0, y1);
+                        60, x0, x1, 60, y0, y1);
   TH2D *hxyw = new TH2D("hxyw", "DCA (west);x [cm];y [cm]",
-                        200, x0, x1, 200, y0, y1);
+                        60, x0, x1, 60, y0, y1);
   TH1D *hre = new TH1D("hre", "hre", 100, 0, 0.5);
   TH1D *hrw = new TH1D("hrw", "hrw", 100, 0, 0.5);
   hxye->SetLineColorAlpha(kRed+2, 0.4);
@@ -213,6 +219,7 @@ void CalcBeamCenter(int run = 406541,
     ltx.DrawLatex(0.15, 0.80, Form("Std dev %.3f", hdv[k]->GetRMS()));
   }
 
+  // DCA contour plot
   TCanvas *c = new TCanvas("c", "dca2d", 1000, 500);
   c->Divide(2,1,0,0);
   c->cd(1);
@@ -223,6 +230,7 @@ void CalcBeamCenter(int run = 406541,
   ax->SetNdivisions(208);
   ay->SetNdivisions(208);
   hxye->Draw("cont3");
+  gPad->SetLogz();
   c->cd(2);
   ax = hxyw->GetXaxis();
   ay = hxyw->GetYaxis();
@@ -231,6 +239,7 @@ void CalcBeamCenter(int run = 406541,
   ax->SetNdivisions(208);
   ay->SetNdivisions(208);
   hxyw->Draw("cont3");
+  gPad->SetLogz();
   cList->Add(c);
 
   TCanvas *cr = new TCanvas("cr", "dcar", 500, 500);
@@ -241,6 +250,10 @@ void CalcBeamCenter(int run = 406541,
   hrw->SetTitle("Beam center DCA #color[861]{ east}, #color[800]{ west};DCA [cm];");
   hrw->Draw("");
   hre->Draw("same");
+  ltx.DrawLatex(0.2, 0.85, Form("East mean %.3f, std dev %.3f", 
+                hre->GetMean(), hre->GetRMS()));
+  ltx.DrawLatex(0.2, 0.80, Form("West mean %.3f, std dev %.3f", 
+                hrw->GetMean(), hrw->GetRMS()));  
   cr->SetLogy();
   cList->Add(cr);
 
