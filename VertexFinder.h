@@ -4,15 +4,20 @@
 #include "VtxAlignBase.h"
 #include "GLSFitter.h"
 
-typedef vector<SvxGeoTrack> geoTracks;
-typedef vector<geoTracks> geoEvents;
 TVectorD Vertex(geoTracks &event, TString arm);
 double ZVertex(geoTracks &event, TString arm);
+void FillVertexArrays(geoEvents &events, int minmult,
+                      vecd &vxe, vecd &vye, vecd &vze,
+                      vecd &vxw, vecd &vyw, vecd &vzw,
+                      vecd &dvx, vecd &dvy, vecd &dvz,
+                      int &n);
 void FillVertexArrays(geoEvents &events, int minmult,
                       double *vxe, double *vye, double *vze,
                       double *vxw, double *vyw, double *vzw,
                       double *dvx, double *dvy, double *dvz,
                       int &nfilled);
+void FillVertexHists(geoEvents &events, int minmult,
+                     TH2D *he, TH2D *hw, TH1D **hdv);
 
 // Code snippet for median calculation:
 // root [0] double x[] = {1,2,3,4,5,6,7,8,9,10};
@@ -63,6 +68,43 @@ Vertex(geoTracks &event, TString arm)
 
 void
 FillVertexArrays(geoEvents &events, int minmult,
+                 vecd &vxe, vecd &vye, vecd &vze,
+                 vecd &vxw, vecd &vyw, vecd &vzw,
+                 vecd &dvx, vecd &dvy, vecd &dvz,
+                 int &n)
+{
+  // Fill v{x,y,z}{e,w} vectors with vertex positions.
+  // No checking is done that arrays are pre-allocated.
+
+  n = 0;
+  for (unsigned int ev=0; ev<events.size(); ev++)
+  {
+    int ntrk = events[ev].size();
+    if (ntrk > minmult)
+    {
+      TVectorD ve = Vertex(events.at(ev), "east");
+      TVectorD vw = Vertex(events.at(ev), "west");
+
+      vxe.push_back(ve(0));
+      vye.push_back(ve(1));
+      vze.push_back(ve(2));
+      vxw.push_back(vw(0));
+      vyw.push_back(vw(1));
+      vzw.push_back(vw(2));
+
+      dvx.push_back(vxw[n] - vxe[n]);
+      dvy.push_back(vyw[n] - vye[n]);
+      dvz.push_back(vzw[n] - vze[n]);
+
+      n++;
+    }
+  }
+
+  return;
+}
+
+void
+FillVertexArrays(geoEvents &events, int minmult,
                  double *vxe, double *vye, double *vze,
                  double *vxw, double *vyw, double *vzw,
                  double *dvx, double *dvy, double *dvz,
@@ -77,6 +119,7 @@ FillVertexArrays(geoEvents &events, int minmult,
     int ntrk = events[ev].size();
     if (ntrk > minmult)
     {
+      Printf("%d", n);
       TVectorD ve = Vertex(events.at(ev), "east");
       TVectorD vw = Vertex(events.at(ev), "west");
 
@@ -96,6 +139,27 @@ FillVertexArrays(geoEvents &events, int minmult,
   }
 
   return;
+}
+
+void FillVertexHists(geoEvents &events, int minmult,
+                     TH2D *he, TH2D *hw, TH1D **hdv)
+{
+  for (unsigned int ev=0; ev<events.size(); ev++)
+  {
+    int ntrk = events[ev].size();
+    if (ntrk > minmult)
+    {
+      TVectorD ve = Vertex(events.at(ev), "east");
+      TVectorD vw = Vertex(events.at(ev), "west");
+
+      he->Fill(ve(0), ve(1));
+      hw->Fill(vw(0), vw(1));
+
+      for (int j=0; j<3; j++)
+        hdv[j]->Fill(vw(j) - ve(j));
+    }
+  }
+
 }
 
 #endif
