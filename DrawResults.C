@@ -16,9 +16,9 @@ void SetYMax(TH1 *h1, TH1 *h2);
 
 void DrawResults(int run = 411768,
                  int prod1 = 0,
-                 int subit1 = 0,
+                 int subit1 = 2,
                  int prod2 = 0,
-                 int subit2 = 1)
+                 int subit2 = 3)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
@@ -214,16 +214,19 @@ void DrawResults(int run = 411768,
   ltx.SetTextSize(0.06);
   ltx.SetTextFont(42);
 
-  // const int nxyp = 3;
-  // const char *xyplots[nxyp] = {"vtx_xy","millepede_ds","millepede_dz"};
-  // for (int i=0; i<nxyp; i++)
-  // {
-  //   TCanvas *c = (TCanvas *) inFile->Get(xyplots[i]);
-  //   assert(c);
-  //   c->Draw();
-  //   ltx.DrawLatex(0.15, 0.92, gPad->GetTitle());
-  //   cList->Add(c);
-  // }
+  if (prod1==prod2)
+  {
+    const int nxyp = 3;
+    const char *xyplots[nxyp] = {"vtx_xy","millepede_ds","millepede_dz"};
+    for (int i=0; i<nxyp; i++)
+    {
+      TCanvas *c = (TCanvas *) inFile2->Get(xyplots[i]);
+      assert(c);
+      c->Draw();
+      ltx.DrawLatex(0.15, 0.92, gPad->GetTitle());
+      cList->Add(c);
+    }
+  }
 
   PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d",
                         run, prod1, subit1, prod2, subit2), "");
