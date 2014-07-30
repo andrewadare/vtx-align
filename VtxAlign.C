@@ -1,4 +1,10 @@
+
 #include "VtxAlignBase.h"
+#include "GLSFitter.h"
+#include "ParameterDefs.h"
+#include "ConstraintBuilder.h"
+#include "VtxIO.h"
+#include "VtxVis.h"
 
 using namespace std;
 
@@ -20,8 +26,8 @@ int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 0,        // Mini-production pass (starting at 0)
-              int subiter = 0)     // 1 geometry update/sub-iteration
+              int prod = 1,        // Production step. Starts at 0.
+              int subiter = 0)     // Geometry update step. Starts at 0.
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -69,13 +75,11 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
     GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
     FitTracks(vtxevents);
     EventLoop(pedeBinFileStd, vtxevents);
-    // FillNTuple(vtxevents, ht1);
   }
   if (nCntTracks > 0)
   {
     GetEventsFromTree(svxcnt, tgeo, cntevents);
     EventLoop(pedeBinFileCnt, cntevents);
-    // FillNTuple(cntevents, ht1); // Eventually: use a different tree
   }
 
   // Shell out to pede executable
