@@ -1,34 +1,36 @@
 import sys
 import os
 
-narg = len(sys.argv)
+on = True  # enable/disable execution
 run = 411768
-iter = 0
+p = 1  # production step
+itersteps = [0,1,2,3]
 
-# No args - use defaults above
-if narg == 1:
-    pass
+pat = '{}-{}-{}'.format(run, p, 0)
+g = 'geom/{}.par'.format(pat)
+r = 'rootfiles/{}.root'.format(pat)
+root = 'time root -b -q '
 
-# One argument - iteration index
-elif narg == 2 and sys.argv[1].isdigit():
-    iter = sys.argv[1]
+if os.path.isfile(g) == False:
+    print('Error: {} not found.'.format(g))
+    sys.exit()
 
-# Two arguments - run number and iteration
-elif narg == 3 and sys.argv[1].isdigit() and sys.argv[2].isdigit():
-    run = sys.argv[1]
-    iter = sys.argv[2]
+if os.path.isfile(r) == False:
+    print('Error: {} not found.'.format(g))
+    sys.exit()
 
-else:
-    print("Usage: python run-alignment.py <run> <iter> "),
-    print("(run number is optional and iter = 0,1,2,...)")
-    sys.exit(0)
+for i in itersteps[:-1]:
+    m = "'VtxAlign.C+({},{},{})' >& logs/{}-{}-{}.log".format(run, p, i, 
+                                                              run, p, i)
+    print('Executing ' + root + m)
+    # if on: os.system(root + m)
 
-root = 'time root -b -q'
-cmd1 = "{} 'VtxAlign.C+({},{})' >& logs/iter{}.log".format(root,
-                                                           run, iter, iter)
-cmd2 = "{} 'DrawResults.C({},{})'".format(root, run, iter)
+for i in itersteps:
+    m = "'DrawResults.C+({},{},{},{},{})'".format(run, p, i, p, i+1)
+    print('Executing ' + root + m)
+    # if on: os.system(root + m)
 
-print('Executing ' + cmd1)
-os.system(cmd1)
-print('Executing ' + cmd2)
-os.system(cmd2)
+for i in itersteps:
+    m = "'CalcBeamCenter.C+({},{},{})'".format(run, p, i)
+    print('Executing ' + root + m)
+    if on: os.system(root + m)
