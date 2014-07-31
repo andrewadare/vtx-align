@@ -6,23 +6,23 @@
 using namespace std;
 
 void Fun4All_VTX_Fieldon(int nEvents = 0,
-                           const char *inputfile = "/phenix/u/theok/hhj2/PRDF/ZEROFDATA_P00-0000411768-0000.PRDFF",
-                           const char *outputDir = ".",
-                           const char *parfile = "/direct/phenix+u/dcm07e/work/vtx-align/geom/svxPISA-ideal.par",
-                           float beamcenter_x = 0,
-                           float beamcenter_y = 0,
-                           float eastToWest_x = 0,
-                           float eastToWest_y = 0,
-                           float eastToWest_z = 0,
-                           float vtxToCNT_x = 0,
-                           float vtxToCNT_y = 0,
-                           float vtxToCNT_z = 0,
-                           const char *pixel_refmap = "",
-                           const char *pixel_diffmap = "",
-                           const char *pixel_chipmap = "",
-                           const char *strip_deadchannel = "",
-                           const char *strip_deadRCC = ""
-                          )
+                         const char *inputfile = "/phenix/u/theok/hhj2/PRDF/ZEROFDATA_P00-0000411768-0000.PRDFF",
+                         const char *outputDir = ".",
+                         const char *parfile = "/direct/phenix+u/dcm07e/work/vtx-align/geom/svxPISA-ideal.par",
+                         float beamcenter_x = 0,
+                         float beamcenter_y = 0,
+                         float eastToWest_x = 0,
+                         float eastToWest_y = 0,
+                         float eastToWest_z = 0,
+                         float vtxToCNT_x = 0,
+                         float vtxToCNT_y = 0,
+                         float vtxToCNT_z = 0,
+                         const char *pixel_refmap = "",
+                         const char *pixel_diffmap = "",
+                         const char *pixel_chipmap = "",
+                         const char *strip_deadchannel = "",
+                         const char *strip_deadRCC = ""
+                        )
 {
     //Tell root to really crash when something goes wrong not start it's
     //signal handling.
@@ -330,10 +330,10 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     }
 
     SubsysReco *svxproductionqa  = new SvxQAForProduction();
-    //    se->registerSubsystem(svxproductionqa);
+    se->registerSubsystem(svxproductionqa);
 
     SubsysReco *svxalignmentqa  = new SvxAlignment_QA();
-    //    se->registerSubsystem(svxalignmentqa);
+    se->registerSubsystem(svxalignmentqa);
 
     ///////////////////////////////////////////
     // Analyze the Data.
@@ -351,7 +351,7 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     se->run(nEvents);
 
     se->End();
-    SVXQA_IOManager(runnumber, segnumber);
+    SVXQA_IOManager(runnumber, segnumber, outputDir);
     //  se->dumpHistos(histofile);
     PrintTrigSelect();
 
