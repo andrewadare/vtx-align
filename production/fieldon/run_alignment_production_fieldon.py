@@ -20,7 +20,7 @@ vtxalignDir = sys.argv[5]
 ##############################################
 # Set some parameters for running
 ##############################################
-nevents = 0
+nevents = 10000
 condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
 #condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
 #vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"

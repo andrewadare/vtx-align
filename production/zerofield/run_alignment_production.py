@@ -6,6 +6,7 @@ for use in the millipede alignment
 
 import os
 import sys
+import stat
 
 ##############################################
 # Get the command line arguments
@@ -160,6 +161,11 @@ os.chdir(condorDir)
 #remove the PRDFF
 os.remove(prdfFile)
 
+#make all the directories we were in group writable
+os.system("chmod a+w {}".format(outDir))
+for root, dirs, files in os.walk(outDir, topdown=False):
+        for dir in dirs:
+            os.system("chmod a+w {}".format(outDir+dir))
 
 ##############################################
 # DONE!
