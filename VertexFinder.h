@@ -119,7 +119,6 @@ FillVertexArrays(geoEvents &events, int minmult,
     int ntrk = events[ev].size();
     if (ntrk > minmult)
     {
-      Printf("%d", n);
       TVectorD ve = Vertex(events.at(ev), "east");
       TVectorD vw = Vertex(events.at(ev), "west");
 
