@@ -1,0 +1,15 @@
+# This is /Users/adare/phenix/alignment/vtx-alignproduction/config/config-411768-2-2.txt
+# Created by user adare
+# On Wed Jul 30 20:17:05 MDT 2014
+# At Andrews-MacBook-Pro.local
+# Run number: 411768
+# Production step: 2
+# Sub-iteration step: 2
+# Source: https://git.racf.bnl.gov/phenix/git/vtx-align/vtx-align.git
+# Latest commit: 1aa997af49cf758c447231cac4727c13e29ab3e2
+# Notes: this is a test
+
+beamcenter: 0.36364 0.0431118
+east-to-west: -0.0119982 -0.0110568 -0.112758
+vtx-to-cnt: 0 0 0
+geomfile: 411768-2-2.par
