@@ -11,12 +11,16 @@
 #include <TMarker.h>
 #include <TPolyLine.h>
 #include <TString.h>
+#include <TGraphAsymmErrors.h>
+#include <TLine.h>
 
 typedef vector<double> vecd;
 
 void GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z);
 TCanvas *DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt);
 void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2, TString opt = "sz");
+TCanvas *DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
+                         const char *name, const char *title, TString coord, double maxy=0);
 
 void
 GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z)
@@ -141,6 +145,80 @@ DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2, TString op
   }
 
   return;
+}
+
+TCanvas *
+DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
+                const char *name, const char *title, TString coord, double maxy)
+{
+  int nLadders[4] = {10,20,16,24}; // ladders/layer
+  int start[4] = {0,10,30,46}; // # ladders within & excluding layer 0,1,2,3
+
+  int n = (int)x1.size();
+  TLatex ltx;
+  ltx.SetNDC();
+  ltx.SetTextFont(43);
+  ltx.SetTextSize(24);
+
+  TGraphAsymmErrors *g = new TGraphAsymmErrors(n);
+  g->SetMarkerStyle(kOpenCircle);
+  g->SetMarkerColor(coord=="s" ? kRed+2 : kAzure+3);
+  g->SetTitle(Form(";ladder index in layer {0,1,2,3};%s [cm]", 
+              coord=="s" ? "#Deltas" : "#Deltaz"));
+  double maxval = 0;
+  for (int i=0; i<n; i++)
+  {
+    double x = x1[i], y = y1[i];
+    double dx = x2[i] - x;
+    double dy = y2[i] - y;
+    double ds = TMath::Sqrt(dx*dx + dy*dy);
+    if (TMath::ATan2(dy,dx) < 0)
+      ds *= -1;
+
+    double dz = z2[i] - z1[i];
+    double val = (coord=="s") ? ds : dz;
+
+    if (val > maxval)
+      maxval = val;
+
+    g->SetPoint(i, (double)i, val);
+    if (val > 0.0)
+      g->SetPointEYlow(i, val);
+    if (val < 0.0)
+      g->SetPointEYhigh(i, -val);
+
+  }
+
+  TCanvas *c = new TCanvas(name, title, 1400, 500);
+  double xstart = 0.03;
+  double x0 = xstart;
+
+  g->Draw("ap");
+  if (maxy > 0) maxval = maxy;
+  g->GetYaxis()->SetRangeUser(-1.5*maxval, 1.5*maxval);
+  g->GetYaxis()->SetTickLength(0.01);
+  g->GetYaxis()->SetNdivisions(208);
+  gPad->SetGridy();
+  gPad->SetMargin(0.07, 0.02, 0.1, 0.01); // l,r,b,t
+
+  g->GetXaxis()->Set(n, -0.5, n-0.5);
+  for (int i=0; i<n; i++)
+  {
+    int layer = TMath::BinarySearch(4, start, i);
+    int k = i - start[layer];
+    g->GetXaxis()->SetBinLabel(i+1, Form("%d", k));
+
+  }
+
+  for (int layer=0; layer<4; layer++)
+  {
+    TLine l;
+    l.DrawLine(start[layer]-0.5, -1.5*maxval, start[layer]-0.5, 1.5*maxval);
+  }
+  g->GetXaxis()->CenterTitle();
+  g->GetYaxis()->CenterTitle();
+
+  return c;
 }
 
 #endif
