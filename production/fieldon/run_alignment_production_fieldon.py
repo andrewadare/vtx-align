@@ -1,11 +1,12 @@
 #!/opt/phenix/bin/python
 '''
-Python script for running a small field-on physics production
+Python script for running a small field-on production
 for use in testing the millipede alignment
 '''
 
 import os
 import sys
+import stat
 
 ##############################################
 # Get the command line arguments
@@ -14,6 +15,7 @@ configFileName = sys.argv[1]
 runNumber = int(sys.argv[2])
 segNumber = int(sys.argv[3])
 outDir = sys.argv[4]
+vtxalignDir = sys.argv[5]
 
 ##############################################
 # Set some parameters for running
@@ -21,7 +23,7 @@ outDir = sys.argv[4]
 nevents = 0
 condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
 #condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
-vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"
+#vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"
 productionDir = vtxalignDir + "production/fieldon/"
 
 
@@ -118,9 +120,10 @@ print(command)
 os.system(command)
 
 # get the name of the dst
+filenum = "{:0>10}-{:0>4}.root".format(runNumber,segNumber)
 outfiles = os.listdir("{}DST_SVX/".format(outDir))
 for file in outfiles:
-	if str(runNumber) and str(segNumber) in file:
+	if str(filenum) in file:
 		dstFile = "{}DST_SVX/{}".format(outDir,file)
 		break
 print("Found DST: {}".format(dstFile))
@@ -158,6 +161,11 @@ os.chdir(condorDir)
 #remove the PRDFF
 os.remove(prdfFile)
 
+#make all the directories we were in group writable
+os.system("chmod a+w {}".format(outDir))
+for root, dirs, files in os.walk(outDir, topdown=False):
+        for dir in dirs:
+            os.system("chmod a+w {}".format(outDir+dir))
 
 ##############################################
 # DONE!
