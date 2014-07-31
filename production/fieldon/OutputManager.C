@@ -79,9 +79,9 @@ void DST_SVX(const int runnumber, const int segment, const char *dir, const char
     se->registerOutputManager(OutManager);
 }
 
-void SVXQA_IOManager(const int runnumber, const int segment)
+void SVXQA_IOManager(const int runnumber, const int segment, const char *dir)
 {
-    MakeOutput(runnumber, segment, "SVXQA");
+    MakeOutput(runnumber, segment, "SVXQA", dir);
     Fun4AllServer *se = Fun4AllServer::instance();
     Fun4AllHistoManager *hm = se->getHistoManager("SVXQA");
     if (hm) hm->dumpHistos(output);
