@@ -41,6 +41,7 @@
 #include "VtxOut.h"
 #include "PHPoint.h"
 #include "PHGlobal.h"
+#include "PreviousEvent.h"
 
 //root libraries
 #include "TMath.h"
@@ -55,26 +56,28 @@ float get_centrality(int bbcc);
 
 //===========================================================================
 AnaVTXCluster::AnaVTXCluster() :
+    m_print_pevent(true),
     m_runnumber(0),
-    nEvent(0)
+    nEvent(0),
+    OutFileName("AnaVTXCluster_output.root"),
+    OutputFile(NULL)
 {
     ThisName = "AnaVTXCluster";
 
-    OutFileName = "AnaVTXCluster_output.root";
-    std::cout << "new build" << std::endl;
-
+    reset_variables();
 }
 
 //===========================================================================
 AnaVTXCluster::AnaVTXCluster(std::string filename) :
+    m_print_pevent(true),
     m_runnumber(0),
-    nEvent(0)
+    nEvent(0),
+    OutFileName(filename),
+    OutputFile(NULL)
 {
     ThisName = "AnaVTXCluster";
 
-    OutFileName = filename;
-
-
+    reset_variables();
 }
 
 
@@ -93,6 +96,21 @@ int AnaVTXCluster::Init(PHCompositeNode *topNode)
 
     standalone_tracks_per_event = new TH1F("standalone_tracks_per_event", "standalone tracks per event", 51, -0.5, 50.5);
     cnt_tracks_per_event = new TH1F("cnt_tracks_per_event", "cnt tracks per event", 51, -0.5, 50.5);
+
+
+    //make the tree for event information
+    ntp_event = new TTree("ntp_event", "Tree containing event information");
+    ntp_event->Branch("run", &run, "run/I");
+    ntp_event->Branch("event", &event, "event/I");
+    ntp_event->Branch("vtx", &vtx, "vtx[3]/F");
+    ntp_event->Branch("vtxE", &vtxE, "vtxE[3]/F");
+    ntp_event->Branch("vtxW", &vtxW, "vtxW[3]/F");
+    ntp_event->Branch("which_vtx", &which_vtx);
+    ntp_event->Branch("centrality", &centrality, "centrality/F");
+    ntp_event->Branch("bbcq", &bbcq, "bbcq[2]/F");
+    ntp_event->Branch("tickCut", &tickCut, "tickCut/O");
+
+
 
     //reset event counter
     nEvent = 0;
@@ -183,6 +201,18 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     }
     //------------------------------------------------------------------//
 
+    //------------------ PreviousEvent ---------------------------------//
+    PreviousEvent *pevent    = findNode::getClass<PreviousEvent>(topNode, "PreviousEvent");
+    if (!pevent && m_print_pevent)
+    {
+        std::cout << "WARNING!! Can't find PreviousEvent! (suppressing further warnings)" << std::endl;
+        m_print_pevent = false;
+        //return -1;
+    }
+    //------------------------------------------------------------------//
+
+
+
 
     //output some event info
 
@@ -204,12 +234,41 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     if (centrality < 50 )
         return -1;
 
+
+    //---------------------------------------------//
+    // CHECK TICK CUT
+    //---------------------------------------------//
+    bool pass_tick = false;
+
+    if (pevent)
+    {
+        int pticks[3] = {0};
+        for ( int i = 0; i < 3; i++ )
+            pticks[i] = pevent->get_clockticks(i);
+
+        pass_tick =  !( ( 50 < pticks[0] && pticks[0] < 120) ||
+                        (700 < pticks[1] && pticks[1] < 780) );
+    }
+
+
+
     //---------------------------------------------//
     // GET THE EVENT VERTEX
     //---------------------------------------------//
     PHPoint vtxpos;
     vtxpos = vtxout->get_Vertex();
     float vtx_z = vtxpos.getZ();
+
+    //get the East vertex (if available, else fill with 0's)
+    PHPoint vtxposE;
+    vtxposE = vtxout->get_Vertex("SVX_PRECISEE");
+
+    //get the West vertex (if available, else fill with 0's)
+    PHPoint vtxposW;
+    vtxposW = vtxout->get_Vertex("SVX_PRECISEW");
+
+    //make sure a precise vertex was found
+    std::string s_vtx = vtxout->which_Vtx();
 
     //std::cout<<"vtx_z: "<<vtx_z<<std::endl;
 
@@ -224,6 +283,32 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
 
     //---------------------------------------------//
+    // FILL THE EVENT TREE
+    //---------------------------------------------//
+    reset_variables();
+    run = m_runnumber;
+    event = nEvent;
+    vtx[0] = vtxpos.getX();
+    vtx[1] = vtxpos.getY();
+    vtx[2] = vtxpos.getZ();
+    vtxE[0] = vtxposE.getX();
+    vtxE[1] = vtxposE.getY();
+    vtxE[2] = vtxposE.getZ();
+    vtxW[0] = vtxposW.getX();
+    vtxW[1] = vtxposW.getY();
+    vtxW[2] = vtxposW.getZ();
+    which_vtx = s_vtx;
+    //centrality = gcent;
+    bbcq[0] = bbc_qn;
+    bbcq[1] = bbc_qs;
+    //tick cut
+    //false - passes the tick cut
+    //true  - falis the tick cut
+    tickCut = !pass_tick;
+    ntp_event->Fill();
+
+
+    //---------------------------------------------//
     // Fill Ntuple for clusters associated
     // with SvxCentralTracks
     //---------------------------------------------//
@@ -233,7 +318,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     {
 
         cnt_tracks_per_event->Fill(svxcnttrklist->get_nCentralTracks());
-        for (unsigned int itrk = 0; itrk < svxcnttrklist->get_nCentralTracks(); itrk++)
+        for (int itrk = 0; itrk < svxcnttrklist->get_nCentralTracks(); itrk++)
         {
             SvxCentralTrack *svxtrk = svxcnttrklist->getCentralTrack(itrk);
 
@@ -246,12 +331,12 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
             }
 
             int dchqual = phcnttrk->get_quality(cntindex);
-            float mom   = phcnttrk->get_mom(cntindex);
             float the0  = phcnttrk->get_the0(cntindex);
             float phi0  = phcnttrk->get_phi0(cntindex);
-            float px    = mom * sin(the0) * cos(phi0);
-            float py    = mom * sin(the0) * sin(phi0);
-            float pt    = sqrt(px * px + py * py);
+            // float mom   = phcnttrk->get_mom(cntindex);
+            // float px    = mom * sin(the0) * cos(phi0);
+            // float py    = mom * sin(the0) * sin(phi0);
+            // float pt    = sqrt(px * px + py * py);
             // int nhits   = svxtrk->getNhits();
             int score   = svxtrk->getLinkScore();
             int ndf     = svxtrk->getNDF();
@@ -329,7 +414,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
     standalone_tracks_per_event->Fill(svxseglist->get_nSegments());
     //std::cout<<"n segments: "<<svxseglist->get_nSegments()<<std::endl;
-    for (unsigned int itrk = 0; itrk < svxseglist->get_nSegments(); itrk++)
+    for (int itrk = 0; itrk < svxseglist->get_nSegments(); itrk++)
     {
         SvxSegment *svxseg = svxseglist->get_segment(itrk);
         if (!svxseg)
@@ -337,24 +422,25 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
             continue;
         }
 
-        run = m_runnumber;
-        event = nEvent;
-        svxindex = itrk;
-        float px = svxseg->get3Momentum(0);
-        float py = svxseg->get3Momentum(1);
-        float pz = svxseg->get3Momentum(2);
-        pT = sqrt(px * px + py * py);
-        phi = TMath::ATan2(py, px);
-        theta = TMath::ACos(pz / pT);
+        // int run = m_runnumber;
+        // int event = nEvent;
+        // int svxindex = itrk;
+        // float px = svxseg->get3Momentum(0);
+        // float py = svxseg->get3Momentum(1);
+        // float pz = svxseg->get3Momentum(2);
+        // float pT = sqrt(px * px + py * py);
+        // float phi = TMath::ATan2(py, px);
+        // float theta = TMath::ACos(pz / pT);
 
-        charge = 1;
-        if (!svxseg->IsPositive())
-            charge = -1;
-        chisq = svxseg->getChiSq();
-        ndf = svxseg->getNDF();
-        score = svxseg->getSegmentScore();
-        vtx[0] = vtxpos.getX();
-        vtx[1] = vtxpos.getY();
+        // int charge = 1;
+        // if (!svxseg->IsPositive())
+        //     charge = -1;
+        // float chisq = svxseg->getChiSq();
+        // float ndf = svxseg->getNDF();
+        float score = svxseg->getSegmentScore();
+        // float vtx[2];
+        // vtx[0] = vtxpos.getX();
+        // vtx[1] = vtxpos.getY();
         if (/*pT < 0.4 || */score < 70 )
             continue;
 
@@ -496,5 +582,28 @@ float get_centrality(int bbcc)
 
 }
 
+
+//===========================================================================
+void AnaVTXCluster::reset_variables()
+{
+    run = -9999;
+    event = -9999;
+    centrality = -9999.;
+    tickCut = true;
+
+    for (int i = 0; i < 3; i++)
+    {
+        vtx[i] = -9999.;
+        vtxE[i] = -9999.;
+        vtxW[i] = -9999.;
+    }
+
+    which_vtx = "";
+
+    for (int i = 0; i < 2; i++)
+    {
+        bbcq[i] = -9999.;
+    }
+}
 
 
