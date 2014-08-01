@@ -51,6 +51,7 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     //  gSystem->Load("librecal");
     gSystem->Load("libSvxDstQA.so");
     //gSystem->Load("libSvxAlignment.so");
+    gSystem->Load("libProdEventCutter.so");
 
     gROOT->ProcessLine(".L OutputManager.C");
     gROOT->ProcessLine(".L rawdatacheck.C");
@@ -115,16 +116,28 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     SubsysReco *outacc = new OutputAccounting();
 
     //////////////////////////////////////////
-    // Central arms
+    // Event
     //////////////////////////////////////////
     BbcReco *bbc     = new BbcReco();
     bbc->setBbcVtxError( 0.5 );
 
-    SubsysReco *ert     = new ErtReco();
+    SubsysReco *vtx     = new VtxReco();
     SubsysReco *zdc     = new ZdcReco();
+
+    SubsysReco *global  = new GlobalReco();
+    SubsysReco *global_central  = new GlobalReco_central();
+    //  SubsysReco *mpc     = new MpcReco();
+
+    SubsysReco *cutter = new ProdEventCutter();
+    //cutter->Verbosity(1);
+
+    //////////////////////////////////////////
+    // Central Arms
+    //////////////////////////////////////////
+
+    SubsysReco *ert     = new ErtReco();
     SubsysReco *t0      = new T0Reco();
     SubsysReco *pad     = new PadReco();
-    SubsysReco *vtx     = new VtxReco();
     SubsysReco *emc     = new EmcReco3();
     SubsysReco *emcres  = new EmcClusterContainerResurrector();
     //SubsysReco *padvtx  = new PadVtxReco();
@@ -136,9 +149,6 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     SubsysReco *aerocl  = new AccclusterReco();
     SubsysReco *ring    = new RingReco();
     SubsysReco *tofw    = new TofwReco();
-    SubsysReco *global  = new GlobalReco();
-    SubsysReco *global_central  = new GlobalReco_central();
-    //  SubsysReco *mpc     = new MpcReco();
 
     SvxParManager *svxpar = new SvxParManager();
     svxpar->set_BeamCenter(beamcenter_x, beamcenter_y);
@@ -196,9 +206,14 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     se->registerSubsystem(peve);
     se->registerSubsystem(bbc);
     se->registerSubsystem(zdc);
+    se->registerSubsystem(vtx);
+    se->registerSubsystem(global);
+    se->registerSubsystem(global_central);
+    se->registerSubsystem(cutter);
+
+
     se->registerSubsystem(t0);
     se->registerSubsystem(pad);
-    se->registerSubsystem(vtx);
     se->registerSubsystem(emc);
     se->registerSubsystem(emcres);
     //se->registerSubsystem(padvtx);
@@ -215,8 +230,6 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     se->registerSubsystem(ring);
     //  se->registerSubsystem(mpc);
 
-    se->registerSubsystem(global);
-    se->registerSubsystem(global_central);
     se->registerSubsystem(svxpar);
     se->registerSubsystem(svxdecode);
     se->registerSubsystem(svxhotdead);
@@ -224,8 +237,8 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     se->registerSubsystem(svxvtxseedfinder);
     se->registerSubsystem(svxstandalone);
     se->registerSubsystem(svxprimvtxfinder);
-    //se->registerSubsystem(svxprimvtxfinder_east);
-    //se->registerSubsystem(svxprimvtxfinder_west);
+    se->registerSubsystem(svxprimvtxfinder_east);
+    se->registerSubsystem(svxprimvtxfinder_west);
 
     //=========================================
     // These fill the compactCNT storage nodes
