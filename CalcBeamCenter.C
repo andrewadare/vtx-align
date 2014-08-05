@@ -16,8 +16,8 @@ void WriteConfigFile(const char *filename,
                      TString notes = "");
 
 void CalcBeamCenter(int run = 411768,
-                    int prod = 1,
-                    int subiter = 0)
+                    int prod = 4,
+                    int subiter = 0) // Keep note field current in WriteConfigFile()
 {
   TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
@@ -176,7 +176,7 @@ void CalcBeamCenter(int run = 411768,
     }
   }
 
-  TVectorD avgbc = 0.5*(bce + bcw);
+  // TVectorD avgbc = 0.5*(bce + bcw);
   TVectorD ewdiff(3);
   for (int k=0; k<3; k++)
     ewdiff(k) = hdv[k]->GetMean();
@@ -186,10 +186,10 @@ void CalcBeamCenter(int run = 411768,
                   run,
                   prod,
                   subiter,
-                  avgbc,
+                  bcw,
                   ewdiff,
                   cntdiff,
-                  "this is a test");
+                  "No alignment was done. Directly from production with ideal geom. Using west beam center (not avg, as previously done).");
 
 
   // ---- ---- ---- ---- ---- ---- ----
