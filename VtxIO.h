@@ -7,7 +7,8 @@
 using namespace std;
 
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax=-1);
-void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1);
+void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1,
+                       TString opt = "");
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event = -1);
 void FillNTuple(geoEvents &events, TNtuple *ntuple);
 
@@ -62,6 +63,10 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
     hit.ds     = t->GetLeaf("res_s")->GetValue();
     hit.trkid  = t->GetLeaf("trkid")->GetValue();
     hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
+
+    // Overwrite x,y,z with local-->global transformation on xs,ys,zs
+    hit.Update();
+
     tracks.back().nhits++;
     tracks.back().hits.push_back(hit);
     previd = id;
@@ -75,7 +80,8 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
 }
 
 void
-GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax)
+GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
+                  TString opt)
 {
   // This function reads hit ntuple variables of the form
   // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:event"
@@ -113,15 +119,18 @@ GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax)
         return;
       }
 
-      //      printf("\nevent %d: ", ev);
       geoTracks tracks;
       events.push_back(tracks);
     }
     if (id != previd) // New track
     {
-      //    printf(" %d", id);
-      SvxGeoTrack t;
-      events.back().push_back(t);
+      SvxGeoTrack trk;
+      if (opt.Contains("cnt"))
+      {
+        trk.phi0 = t->GetLeaf("trkphi")->GetValue();
+        trk.the0 = t->GetLeaf("trktheta")->GetValue();
+      }
+      events.back().push_back(trk);
       ntracks++;
     }
 
@@ -141,6 +150,9 @@ GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax)
     hit.ds     = t->GetLeaf("res_s")->GetValue();
     hit.trkid  = t->GetLeaf("trkid")->GetValue();
     hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
+
+    // Overwrite x,y,z with local-->global transformation on xs,ys,zs
+    hit.Update();
 
     events.back().back().nhits++;
     events.back().back().hits.push_back(hit);
