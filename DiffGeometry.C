@@ -6,8 +6,8 @@
 
 void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z);
 
-void DiffGeometry(const char *pfa = "geom/411768-2-0.par",
-                  const char *pfb = "geom/411768-2-3.par")
+void DiffGeometry(const char *pfa = "geom/411768-0-0.par",
+                  const char *pfb = "geom/411768-3-3.par")
 {
   TLatex ltx;
   ltx.SetNDC();
@@ -24,26 +24,39 @@ void DiffGeometry(const char *pfa = "geom/411768-2-0.par",
 
   TString a = TString(gSystem->BaseName(pfa)).ReplaceAll(".par", "");
   TString b = TString(gSystem->BaseName(pfb)).ReplaceAll(".par", "");
-  const char *ab = Form("%s-vs-%s", a.Data(), b.Data());
+  TString ab = Form("%s-vs-%s", a.Data(), b.Data());
 
   DrawXY(geo, "s_diff", "#Deltas_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "s");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print(Form("pdfs/dsxy%s.pdf",ab));
+  gPad->Print(Form("pdfs/dsxy%s.pdf",ab.Data()));
 
   DrawXY(geo, "z_diff", "#Deltaz_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "z");
   ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print(Form("pdfs/dzxy%s.pdf",ab));
+  gPad->Print(Form("pdfs/dzxy%s.pdf",ab.Data()));
 
   ltx.SetTextSize(0.05);
-  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "sdiff", "#Delta s", "s", 0.083);
-  ltx.DrawLatex(0.7, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print(Form("pdfs/ds%s.pdf",ab));
 
-  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "zdiff", "#Delta z", "z", 0.028);
-  ltx.DrawLatex(0.7, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
-  gPad->Print(Form("pdfs/dz%s.pdf",ab));
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "xdiff", "#Delta x", "x"/*, 0.028*/);
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  gPad->Print(Form("pdfs/dx%s.pdf",ab.Data()));
+
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "ydiff", "#Delta y", "y"/*, 0.028*/);
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  gPad->Print(Form("pdfs/dy%s.pdf",ab.Data()));
+
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "zdiff", "#Delta z", "z"/*, 0.028*/);
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  gPad->Print(Form("pdfs/dz%s.pdf",ab.Data()));
+
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "sdiff", "#Delta s", "s"/*, 0.083*/);
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  gPad->Print(Form("pdfs/ds%s.pdf",ab.Data()));
+
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "rdiff", "#Delta r", "r"/*, 0.083*/);
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  gPad->Print(Form("pdfs/dr%s.pdf",ab.Data()));
 
   return;
 }
