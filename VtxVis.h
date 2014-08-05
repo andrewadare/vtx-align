@@ -14,7 +14,7 @@
 #include <TGraphAsymmErrors.h>
 #include <TLine.h>
 
-typedef vector<double> vecd;
+#include <map>
 
 void GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z);
 TCanvas *DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt);
@@ -162,31 +162,38 @@ DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
 
   TGraphAsymmErrors *g = new TGraphAsymmErrors(n);
   g->SetMarkerStyle(kOpenCircle);
-  g->SetMarkerColor(coord=="s" ? kRed+2 : kAzure+3);
-  g->SetTitle(Form(";ladder index in layer {0,1,2,3};%s [cm]", 
-              coord=="s" ? "#Deltas" : "#Deltaz"));
+  g->SetMarkerColor((coord=="s" || coord=="r") ? kRed+2 : kAzure+3);
+  g->SetLineColor((coord=="s" || coord=="r") ? kRed+2 : kAzure+3);
+  g->SetTitle(Form(";ladder index in layer {0,1,2,3};#Delta%s [cm]",
+                   coord.Data()));
+
   double maxval = 0;
   for (int i=0; i<n; i++)
   {
-    double x = x1[i], y = y1[i];
-    double dx = x2[i] - x;
-    double dy = y2[i] - y;
-    double ds = TMath::Sqrt(dx*dx + dy*dy);
-    if (TMath::ATan2(dy,dx) < 0)
-      ds *= -1;
+    double r1 = TMath::Sqrt(x1[i]*x1[i] + y1[i]*y1[i]);
+    double r2 = TMath::Sqrt(x2[i]*x2[i] + y2[i]*y2[i]);
+    double phi1 = TMath::ATan2(y1[i], x1[i]);
+    double phi2 = TMath::ATan2(y2[i], x2[i]);
 
-    double dz = z2[i] - z1[i];
-    double val = (coord=="s") ? ds : dz;
+    std::map<TString, double> delta;
+    delta["x"] = x2[i] - x1[i];
+    delta["y"] = y2[i] - y1[i];
+    delta["z"] = z2[i] - z1[i];
+    delta["r"] = r2 - r1;
+    // delta["s"] = r2*phi2 - r1*phi1;
 
-    if (val > maxval)
-      maxval = val;
+    delta["s"] = TMath::Sqrt(delta["x"]*delta["x"] + delta["y"]*delta["y"]);
+    if (phi2 < phi1)
+      delta["s"] *= -1;
 
-    g->SetPoint(i, (double)i, val);
-    if (val > 0.0)
-      g->SetPointEYlow(i, val);
-    if (val < 0.0)
-      g->SetPointEYhigh(i, -val);
+    g->SetPoint(i, (double)i, delta[coord]);
+    if (delta[coord] > 0.0)
+      g->SetPointEYlow(i, delta[coord]);
+    if (delta[coord] < 0.0)
+      g->SetPointEYhigh(i, -delta[coord]);
 
+    if (delta[coord] > maxval)
+      maxval = delta[coord];
   }
 
   TCanvas *c = new TCanvas(name, title, 1400, 500);
@@ -213,7 +220,21 @@ DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
   for (int layer=0; layer<4; layer++)
   {
     TLine l;
-    l.DrawLine(start[layer]-0.5, -1.5*maxval, start[layer]-0.5, 1.5*maxval);
+    TLatex lt; // Not in NDC coords
+
+    l.SetLineWidth(2);
+
+    // Layer boundaries
+    double lx = start[layer] - 0.5;
+    l.SetLineColor(kBlack);
+    l.DrawLine(lx, -1.5*maxval, lx, +1.5*maxval);
+
+    // East/west boundaries
+    lx = start[layer] + nLadders[layer]/2 - 0.5;
+    l.SetLineColor(kGray+1);
+    lt.SetTextColor(kGray+1);
+    l.DrawLine(lx, -1.5*maxval, lx, +1.5*maxval);
+    lt.DrawLatex(lx - 4, -1.4*maxval, Form("B%d(W)    B%d(E)",layer,layer));
   }
   g->GetXaxis()->CenterTitle();
   g->GetYaxis()->CenterTitle();
