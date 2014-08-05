@@ -51,6 +51,8 @@ void Fun4All_VTX_ZeroField_Standalone(int nEvents = 0,
     //  gSystem->Load("librecal");
     gSystem->Load("libSvxDstQA.so");
     //gSystem->Load("libSvxAlignment.so");
+    gSystem->Load("libProdEventCutter.so");
+
 
     gROOT->ProcessLine(".L OutputManager.C");
     gROOT->ProcessLine(".L rawdatacheck.C");
@@ -112,7 +114,7 @@ void Fun4All_VTX_ZeroField_Standalone(int nEvents = 0,
     SubsysReco *outacc = new OutputAccounting();
 
     //////////////////////////////////////////
-    // Central arms
+    // Event
     //////////////////////////////////////////
     BbcReco *bbc     = new BbcReco();
     bbc->setBbcVtxError( 0.5 );
@@ -120,6 +122,15 @@ void Fun4All_VTX_ZeroField_Standalone(int nEvents = 0,
     SubsysReco *vtx     = new VtxReco();
     SubsysReco *global  = new GlobalReco();
     SubsysReco *global_central  = new GlobalReco_central();
+
+    SubsysReco *cutter = new ProdEventCutter();
+    //cutter->Verbosity(1);
+
+    //////////////////////////////////////////
+    // VTX
+    //////////////////////////////////////////
+
+
 
     SvxParManager *svxpar = new SvxParManager();
     svxpar->set_BeamCenter(beamcenter_x, beamcenter_y);
@@ -154,9 +165,7 @@ void Fun4All_VTX_ZeroField_Standalone(int nEvents = 0,
     //svxstandalone->setPPFlag(true);
 
     SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
-
     SubsysReco *svxprimvtxfinder_west = new SvxPrimVertexFinder("SVXPRIMVTXFINDERW", 1);
-
     SubsysReco *svxprimvtxfinder_east = new SvxPrimVertexFinder("SVXPRIMVTXFINDERE", 2);
 
     //////////////////////////////////
@@ -179,6 +188,8 @@ void Fun4All_VTX_ZeroField_Standalone(int nEvents = 0,
     se->registerSubsystem(vtx);
     se->registerSubsystem(global);
     se->registerSubsystem(global_central);
+    se->registerSubsystem(cutter);
+
     se->registerSubsystem(svxpar);
     se->registerSubsystem(svxdecode);
     se->registerSubsystem(svxhotdead);
@@ -186,11 +197,11 @@ void Fun4All_VTX_ZeroField_Standalone(int nEvents = 0,
     se->registerSubsystem(svxvtxseedfinder);
     se->registerSubsystem(svxstandalone);
     se->registerSubsystem(svxprimvtxfinder);
-    //se->registerSubsystem(svxprimvtxfinder_east);
-    //se->registerSubsystem(svxprimvtxfinder_west);
+    se->registerSubsystem(svxprimvtxfinder_east);
+    se->registerSubsystem(svxprimvtxfinder_west);
 
     //////////////////////////////////
-    // Central arm output
+    // Output
     //////////////////////////////////
     // trgsel is a global vector from TrigSelect.C which
     // contains the names of the trigger selectors

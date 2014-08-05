@@ -221,8 +221,8 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     se->registerSubsystem(svxvtxseedfinder);
     se->registerSubsystem(svxstandalone);
     se->registerSubsystem(svxprimvtxfinder);
-    //se->registerSubsystem(svxprimvtxfinder_east);
-    //se->registerSubsystem(svxprimvtxfinder_west);
+    se->registerSubsystem(svxprimvtxfinder_east);
+    se->registerSubsystem(svxprimvtxfinder_west);
 
     //=========================================
     // These fill the compactCNT storage nodes
