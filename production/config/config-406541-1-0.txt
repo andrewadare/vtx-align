@@ -12,4 +12,4 @@
 beamcenter: 0.319291 0.0447938
 east-to-west: -0.0183543 0.0087358 -0.151062
 vtx-to-cnt: 0 0 0
-geomfile: 406541-1-0.par
+geomfile: 411768-7-2.par
