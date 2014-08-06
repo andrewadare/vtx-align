@@ -1,0 +1,15 @@
+# This is /Users/adare/phenix/alignment/vtx-alignproduction/config/config-406541-1-0.txt
+# Created by user adare
+# On Wed Aug  6 12:52:36 MDT 2014
+# At rl1-1-156-208-dhcp.int.colorado.edu
+# Run number: 406541
+# Production step: 1
+# Sub-iteration step: 0
+# Source: https://git.racf.bnl.gov/phenix/git/vtx-align/vtx-align.git
+# Latest commit: f84e976bd9ac8bf25de79bf849e99d8a3da79842
+# Notes: Using west beam center.
+
+beamcenter: 0.319291 0.0447938
+east-to-west: -0.0183543 0.0087358 -0.151062
+vtx-to-cnt: 0 0 0
+geomfile: 406541-1-0.par
