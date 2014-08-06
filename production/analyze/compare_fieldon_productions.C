@@ -33,7 +33,7 @@ void compare_fieldon_productions()
 {
 
     gStyle->SetOptStat(0);
-    gStyle->SetPalette(56, 0, 0.5);
+    //gStyle->SetPalette(56, 0, 0.5);
 
     //================================================//
     // SET RUNNING CONDITIONS
@@ -41,32 +41,36 @@ void compare_fieldon_productions()
 
     bool print_plots = true;
 
-    const int NFILES = 5;
+    const int NFILES = 3;
     const char *fileName[] =
     {
-        //        "/direct/phenix+prod01/phnxreco/millepede/fieldon/taebong-407951-p2-v8/ntuple/testvtxproduction_taebong-407951-p2-v8.root",
+        "/direct/phenix+prod01/phnxreco/millepede/fieldon/taebong-407951-p2-v8/ntuple/testvtxproduction_taebong-407951-p2-v8.root",
+        "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-ideal-407951-0-0/ntuple/testvtxproduction_ideal-407951-0-0.root",
+        "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-0-0/ntuple/testvtxproduction_407951-0-0.root",
         //        "/direct/phenix+prod01/phnxreco/millepede/fieldon/ideal-407951-2-3/ntuple/testvtxproduction_407951-2-3.root",
-        "testvtxproduction_taebong-407951-p2-v8.root",
+        //"testvtxproduction_taebong-407951-p2-v8.root",
         //"testvtxproduction_407951-0-0.root",
         //"testvtxproduction_407951-2-3.root",
         //"testvtxproduction_407951-2-3-1.root",
         //"testvtxproduction_407951-2-3-2.root",
-        "testvtxproduction_407951-2-3-3.root",
-        "testvtxproduction_407951-2-3-4.root",
-        "testvtxproduction_407951-2-3-5.root",
-        "testvtxproduction_407951-2-3-6.root",
+        //"testvtxproduction_407951-2-3-3.root",
+        //"testvtxproduction_407951-2-3-4.root",
+        //"testvtxproduction_407951-2-3-5.root",
+        //"testvtxproduction_407951-2-3-6.root",
     };
     const char *fileLabel[] =
     {
         "Taebong p2 v8",
+        "Andrew ideal-407951-0-0",
+        "Andrew 407951-0-0",
         //"Ideal Geo",
         //"Andrew 2-3",
         //"Andrew 2-3-1 (Z shift)",
         //"Andrew 2-3-2 (0 offsets)",
-        "Andrew 2-3-3 (offsets)",
-        "Andrew 2-3-4 (no cnt-z)",
-        "Andrew 2-3-5 (add W-E)",
-        "Andrew 2-3-6 (ideal geo)",
+        //"Andrew 2-3-3 (offsets)",
+        //"Andrew 2-3-4 (no cnt-z)",
+        //"Andrew 2-3-5 (add W-E)",
+        //"Andrew 2-3-6 (ideal geo)",
     };
     int color[] =
     {
@@ -620,7 +624,7 @@ void compare_fieldon_productions()
     for (int iarm = 0; iarm < NARM; iarm++)
     {
         cdcares_svxcnt->cd(iarm + 1);
-        gdca_ptres_svxcnt[iarm][0]->GetYaxis()->SetRangeUser(20, 300);
+        gdca_ptres_svxcnt[iarm][0]->GetYaxis()->SetRangeUser(0, 175);
         gdca_ptres_svxcnt[iarm][0]->Draw("AP");
         for (int ifile = 1; ifile < NFILES; ifile++)
             gdca_ptres_svxcnt[iarm][ifile]->Draw("P");
