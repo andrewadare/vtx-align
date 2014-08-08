@@ -1,11 +1,11 @@
 #include "VtxAlignBase.h"
 #include "DataRejector.h"
 
-void FilterData(const char *infilename = "rootfiles/411768_july17_ideal.root",
-                const char *outfilename = "rootfiles/411768-0-0.root",
-                const char *pisafilename = "geom/svxPISA-ideal.par",
-                double vertexprobmin = 0.01,
-                double vertexprobmax = 0.99,
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_406541-pro1.root",
+                const char *outfilename = "rootfiles/406541-1-99.root",
+                const char *pisafilename = "geom/411768-7-2.par",
+                double vertexprobmin = 0.02,
+                double vertexprobmax = 0.98,
                 double maxdca = 0.5,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1)
@@ -16,7 +16,8 @@ void FilterData(const char *infilename = "rootfiles/411768_july17_ideal.root",
   assert(svxseg);
 
   TFile *outFile = new TFile(outfilename, "recreate");
-  TNtuple *ht = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
+  TNtuple *vtxhits = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
+  // TNtuple *cnthits = new TNtuple("cnthits", "CNT hit variables", HITVARS);
 
   SvxTGeo *tgeo = VTXModel(pisafilename);
 
@@ -29,10 +30,10 @@ void FilterData(const char *infilename = "rootfiles/411768_july17_ideal.root",
              maxdca,
              maxres_s,
              maxres_z,
-             ht);
+             vtxhits);
 
   Printf("%.1f%% of initial data rejected.",
-         100*(1.0 - (float)ht->GetEntries()/svxseg->GetEntries()));
+         100*(1.0 - (float)vtxhits->GetEntries()/svxseg->GetEntries()));
 
   Printf("Writing output to %s", outfilename);
   outFile->cd();

@@ -30,10 +30,10 @@ FilterData(geoEvents &events,
   // x-y vertex distributions
   Printf("Filling mult/vertex distributions...");
   double x0 = -1.0, y0 = -1.0, x1 = +1.0, y1 = +1.0;
-  TH2D *hve = new TH2D(Form("%s_ve",ntuple->GetName()), 
+  TH2D *hve = new TH2D(Form("%s_ve",ntuple->GetName()),
                        Form("East vertex;x [cm];y [cm]"),
                        500, x0, x1, 500, y0, y1);
-  TH2D *hvw = new TH2D(Form("%s_vw",ntuple->GetName()), 
+  TH2D *hvw = new TH2D(Form("%s_vw",ntuple->GetName()),
                        Form("West vertex;x [cm];y [cm]"),
                        500, x0, x1, 500, y0, y1);
   for (unsigned int ev=0; ev<events.size(); ev++)
@@ -66,18 +66,33 @@ FilterData(geoEvents &events,
     bool keep = true;
     int ntrk = events[ev].size();
 
-    // Reject outlying vertices (box cut for now)
+    // Reject outlying vertices
     if (ntrk > minmult)
     {
+      keep = false;
+
       TVectorD ve = Vertex(events.at(ev), "east");
       TVectorD vw = Vertex(events.at(ev), "west");
+      double dxe = ve(0) - bce(0);
+      double dye = ve(1) - bce(1);
+      double dxw = vw(0) - bcw(0);
+      double dyw = vw(1) - bcw(1);
+      double ex = 0.5*(qxe[nq-1] - qxe[0]);
+      double ey = 0.5*(qye[nq-1] - qye[0]);
+      double wx = 0.5*(qxw[nq-1] - qxw[0]);
+      double wy = 0.5*(qyw[nq-1] - qyw[0]);
 
-      keep = false;
-      if (ve(0) > qxe[0] && ve(0) < qxe[nq-1]) // East x vertex
-        if (ve(1) > qye[0] && ve(1) < qye[nq-1]) // East y vertex
-          if (vw(0) > qxw[0] && vw(0) < qxw[nq-1]) // West x vertex
-            if (vw(1) > qyw[0] && vw(1) < qyw[nq-1]) // West y vertex
-              keep = true;
+      if (dxe*dxe/ex/ex + dye*dye/ey/ey < 1.0 &&
+          dxw*dxw/wx/wx + dyw*dyw/wy/wy < 1.0)
+      {
+        keep = true;
+      }
+      // keep = false;
+      // if (ve(0) > qxe[0] && ve(0) < qxe[nq-1]) // East x vertex
+      //   if (ve(1) > qye[0] && ve(1) < qye[nq-1]) // East y vertex
+      //     if (vw(0) > qxw[0] && vw(0) < qxw[nq-1]) // West x vertex
+      //       if (vw(1) > qyw[0] && vw(1) < qyw[nq-1]) // West y vertex
+      //         keep = true;
     }
 
     if (keep)
