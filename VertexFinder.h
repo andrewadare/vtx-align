@@ -4,7 +4,7 @@
 #include "VtxAlignBase.h"
 #include "GLSFitter.h"
 
-TVectorD Vertex(geoTracks &event, TString arm);
+TVectorD Vertex(geoTracks &event, TString arm, TString opt = "");
 double ZVertex(geoTracks &event, TString arm);
 void FillVertexArrays(geoEvents &events, int minmult,
                       vecd &vxe, vecd &vye, vecd &vze,
@@ -51,13 +51,13 @@ ZVertex(geoTracks &tracks, TString arm)
 }
 
 TVectorD
-Vertex(geoTracks &event, TString arm)
+Vertex(geoTracks &event, TString arm, TString opt)
 {
   // Compute least-squares vertex from tracks.
 
   int n = event.size();
   assert(n>0);
-  TVectorD xy = XYCenter(event, arm);
+  TVectorD xy = XYCenter(event, arm, -1, opt);
 
   TVectorD xyz(3);
   xyz(0) = xy(0);
