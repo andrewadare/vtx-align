@@ -1,5 +1,6 @@
 #include "VtxAlignBase.h"
 #include "BadLadders.h"
+#include "VtxVis.h"
 
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
@@ -12,7 +13,6 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
                TH1D *hz[nlayers][nladders][ntrees],
                TFile *f, const char *treename, int stage);
 void SetupHist(TH1D *h, int stage);
-void SetYMax(TH1 *h1, TH1 *h2);
 
 void DrawResults(int run = 411768,
                  int prod1 = 0,
@@ -287,13 +287,4 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
   }
 
   return;
-}
-
-void
-SetYMax(TH1 *h1, TH1 *h2)
-{
-  double a = h1->GetBinContent(h1->GetMaximumBin());
-  double b = h2->GetBinContent(h2->GetMaximumBin());
-  h1->GetYaxis()->SetRangeUser(0, 1.2*TMath::Max(a,b));
-  h2->GetYaxis()->SetRangeUser(0, 1.2*TMath::Max(a,b));
 }

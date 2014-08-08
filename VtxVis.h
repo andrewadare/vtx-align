@@ -21,6 +21,7 @@ TCanvas *DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt);
 void DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2, TString opt = "sz");
 TCanvas *DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
                          const char *name, const char *title, TString coord, double maxy=0);
+void SetYMax(TH1 *h1, TH1 *h2);
 
 void
 GetLadderXYZ(SvxTGeo *tgeo, vecd &x, vecd &y, vecd &z)
@@ -240,6 +241,15 @@ DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
   g->GetYaxis()->CenterTitle();
 
   return c;
+}
+
+void
+SetYMax(TH1 *h1, TH1 *h2)
+{
+  double a = h1->GetBinContent(h1->GetMaximumBin());
+  double b = h2->GetBinContent(h2->GetMaximumBin());
+  h1->GetYaxis()->SetRangeUser(0, 1.2*TMath::Max(a,b));
+  h2->GetYaxis()->SetRangeUser(0, 1.2*TMath::Max(a,b));
 }
 
 #endif
