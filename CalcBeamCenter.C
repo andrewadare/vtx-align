@@ -15,10 +15,11 @@ void WriteConfigFile(const char *filename,
                      TVectorD &cntdiff,
                      TString notes = "");
 
-void CalcBeamCenter(int run = 411768,
-                    int prod = 4,
-                    int subiter = 0) // Keep note field current in WriteConfigFile()
+void CalcBeamCenter(int run = 406541,
+                    int prod = 1,
+                    int subiter = 99)
 {
+  bool write = false;
   TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
   TString configFile = Form("production/config/config-%d-%d-%d.txt",
@@ -85,8 +86,8 @@ void CalcBeamCenter(int run = 411768,
 
     if (mult >= minmult)
     {
-      TVectorD ve = Vertex(events.at(ev), "east");
-      TVectorD vw = Vertex(events.at(ev), "west");
+      TVectorD ve = Vertex(events.at(ev), "east", "");
+      TVectorD vw = Vertex(events.at(ev), "west", "");
 
       hve->Fill(ve(0), ve(1));
       hvw->Fill(vw(0), vw(1));
@@ -108,7 +109,7 @@ void CalcBeamCenter(int run = 411768,
   TVectorD bce(2); bce(0) = qxe[2]; bce(1) = qye[2];
   TVectorD bcw(2); bcw(0) = qxw[2]; bcw(1) = qyw[2];
 
-  // Zoom in on beam spot, keeping 98% of the data in view. 
+  // Zoom in on beam spot, keeping 98% of the data in view.
   // Maintain a 1:1 aspect ratio.
   double eastrange = TMath::Max(qxe[nq-1]-qxe[0], qye[nq-1]-qye[0]);
   double westrange = TMath::Max(qxw[nq-1]-qxw[0], qyw[nq-1]-qyw[0]);
@@ -182,14 +183,15 @@ void CalcBeamCenter(int run = 411768,
     ewdiff(k) = hdv[k]->GetMean();
   TVectorD cntdiff(3);
 
-  WriteConfigFile(configFile.Data(),
-                  run,
-                  prod,
-                  subiter,
-                  bcw,
-                  ewdiff,
-                  cntdiff,
-                  "No alignment was done. Directly from production with ideal geom. Using west beam center (not avg, as previously done).");
+  if (write)
+    WriteConfigFile(configFile.Data(),
+                    run,
+                    prod,
+                    subiter,
+                    bcw,
+                    ewdiff,
+                    cntdiff,
+                    "Using west beam center.");
 
 
   // ---- ---- ---- ---- ---- ---- ----
@@ -206,10 +208,16 @@ void CalcBeamCenter(int run = 411768,
   TCanvas *cve = new TCanvas("cve", "cve", 500, 500);
   hve->Draw("col");
   ltx.DrawLatex(0.15, 0.85, Form("BC = %.3f, %.3f", bce(0), bce(1)));
+  ltx.DrawLatex(0.15, 0.80, Form("#sigma_{qx} = %.3f, #sigma_{qy} = %.3f",
+                                 0.5*(qxe[3]-qxe[1]),
+                                 0.5*(qye[3]-qye[1])));
   cList->Add(cve);
   TCanvas *cvw = new TCanvas("cvw", "cvw", 500, 500);
   hvw->Draw("col");
   ltx.DrawLatex(0.15, 0.85, Form("BC = %.3f, %.3f", bcw(0), bcw(1)));
+  ltx.DrawLatex(0.15, 0.80, Form("#sigma_{qx} = %.3f, #sigma_{qy} = %.3f",
+                                 0.5*(qxw[3]-qxw[1]),
+                                 0.5*(qyw[3]-qyw[1])));
   cList->Add(cvw);
 
   for (int k=0; k<3; k++)
@@ -250,10 +258,10 @@ void CalcBeamCenter(int run = 411768,
   hrw->SetTitle("Beam center DCA #color[861]{ east}, #color[800]{ west};DCA [cm];");
   hrw->Draw("");
   hre->Draw("same");
-  ltx.DrawLatex(0.2, 0.85, Form("East mean %.3f, std dev %.3f", 
-                hre->GetMean(), hre->GetRMS()));
-  ltx.DrawLatex(0.2, 0.80, Form("West mean %.3f, std dev %.3f", 
-                hrw->GetMean(), hrw->GetRMS()));  
+  ltx.DrawLatex(0.2, 0.85, Form("East mean %.3f, std dev %.3f",
+                                hre->GetMean(), hre->GetRMS()));
+  ltx.DrawLatex(0.2, 0.80, Form("West mean %.3f, std dev %.3f",
+                                hrw->GetMean(), hrw->GetRMS()));
   cr->SetLogy();
   cList->Add(cr);
 
@@ -283,13 +291,15 @@ void CalcBeamCenter(int run = 411768,
   gPad->SetGridy();
   dprof->Draw("same");
 
-
   Printf("Fraction outside 1000um: %.3f (e) %.3f (w)",
          1.0 - hre->Integral(1,hre->FindBin(0.099))/hre->Integral(),
          1.0 - hrw->Integral(1,hrw->FindBin(0.099))/hrw->Integral());
 
-  PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
-  PrintPDF(cList, Form("pdfs/beam-center-run%d-pro%d-sub%d", run, prod, subiter));
+  if (write)
+  {
+    PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
+    PrintPDF(cList, Form("pdfs/beam-center-run%d-pro%d-sub%d", run, prod, subiter));
+  }
 
   return;
 }
