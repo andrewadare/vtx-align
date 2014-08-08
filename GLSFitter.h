@@ -248,13 +248,17 @@ TVectorD
 XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
 {
   // Compute least-squares (x,y) center from ntrk tracks.
+  // Used for primary vertex or beam center estimation.
+  // Solves the linear system y0[i] = -m[i]*bc0 + bc1 for i..ntrk-1 tracks.
+  // m[i] is the slope (tan(phi)), y0[i] is the y-intercept, and (bc0,bc1)
+  // is the least-squares vertex or beam (x,y) position.
   // - arm can be "east", "west" or "" for both.
   // - ntrk is an optional upper limit on the number of tracks to use
   //   (to limit cpu time).
-  // - opt can currently be either empty (default) or "print".
-  // Solves the linear system y0[i] = -m[i]*bc0 + bc1 for i..ntrk-1 tracks.
-  // m[i] is the slope (tan(phi)), y0[i] is the y-intercept, and (bc0,bc1)
-  // is the least-squares beam (x,y) position.
+  // - opt: 1 or more of the following:
+  //   * "" or empty (default).
+  //   * "print" Print result.
+  //   * "hitw"  Weight 4-hit tracks > 3-hit tracks in the fit.
 
   assert(ntrk <= (int)tracks.size());
   int n = ntrk > 0 ? ntrk : (int)tracks.size();
@@ -281,7 +285,7 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
 
   TMatrixD M(n,2);   // "Design matrix" containing track slopes
   TVectorD y0(n);    // Vector of track y-intercept values
-  TMatrixD L(n,n);   // Covariance matrix for track fit parameters y0, m
+  TMatrixD L(n,n);   // Error (co)variance for track fit parameters y0, m
   L.UnitMatrix();
   L *= 0.01;         // TODO: Get mean dm, dy0 from track fits
   TMatrixD cov(2,2); // Assigned in SolveGLS()
@@ -294,6 +298,10 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
     double yint = tracks[i].vy;
     double phi = tracks[i].phi0;
     bool east = East(phi);
+
+    if (opt.Contains("hitw") && tracks[i].nhits == 4)
+      L(row,row) *= 0.5;
+
     if (arm=="")
     {
       M(row, 0) = -TMath::Tan(phi);
