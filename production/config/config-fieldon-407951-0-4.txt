@@ -1,0 +1,47 @@
+# Created by D. McGlinchey
+# On Wed Aug 7 15:47 MDT 2014
+# Run number: 407951
+# Production step: 0
+# Sub-iteration step: 3
+# Notes:
+# Using the east-to-west offset from config-411768-7-2.txt
+# Using the geomfile from config-411768-7-2.txt
+# Using DCH West offsets from Taebong -
+#   CNTBEAM_WEST: -0.120756  0.0741091
+# Using the VTX West beamcenter from config-406541-1-0.txt
+# Calculating vtx-to-cnt -
+#   vtx-to-cnt X: -0.120756 - 0.319291 = -0.440047
+#   vtx-to-cnt Y: 0.0741091 - 0.0447938 = 0.0293153
+# Using DCH beam center as beamcenter
+#
+# Sub-iteration step 2 modifies the east-to-west offset
+# based on the production output of sub-iteration step 1
+# W-E x offset from production: -0.0025
+# W-E y offset from production: -0.0003
+# W-E z offset from production: 0.0015
+# New east-to-west x: -0.0236 - 0.0025 = -0.0261
+# New east-to-west y:  0.0080 - 0.0003 =  0.0077
+# New east-to-west z: -0.1393 + 0.0015 = -0.1378
+#
+# Sub-iteration step 3 modifies the vtx-to-cnt offset
+# so that the vtx beamcenter coincides with the
+# DC beamcenter better
+# x-vtx from production: -0.1155
+# y-vtx from production:  0.0698
+# Try subtracting the difference between beamcenter and x/y-vtx
+# from the vtx-to-cnt offset
+# remaining x-offset = -0.1208 + 0.1155 = -0.0053
+# remaining y-offset =  0.0741 - 0.0698 =  0.0043
+# vtx-to-cnt x: -0.4400 - 0.0053 = -0.4453
+# vtx-to-cnt y:  0.0293 + 0.0043 =  0.0336
+#
+# Sub-iteration step 4 modifies the vtx-to-cnt offset
+# in z to more closely match with Taebong's west arm
+# geometry, under the assumption that his results are
+# "correct"
+# Try 700 microns
+
+beamcenter: -0.120756 0.0741091
+east-to-west: -0.0261 0.0077 -0.1378
+vtx-to-cnt: -0.4453 0.0336 0.0700
+geomfile: 411768-7-2.par
