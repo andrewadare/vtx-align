@@ -5,7 +5,7 @@
 #include "VtxVis.h"
 
 void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z);
-void GetXYZOffset(const char *parfile, vecd &x, vecd &y, vecd &z, float eastToWest[], float vtxToCNT[]);
+SvxTGeo *GetXYZOffset(const char *parfile, vecd &x, vecd &y, vecd &z, float eastToWest[], float vtxToCNT[]);
 
 /**
  *
@@ -14,8 +14,8 @@ void GetXYZOffset(const char *parfile, vecd &x, vecd &y, vecd &z, float eastToWe
  */
 void DiffGeometryConfig(const char *confa = "production/config/config-fieldon-407951-0-4.txt",
                         const char *confb = "production/config/config-taebong-p2-v8.txt"
-                        //const char *confb = "production/config/config-offset-test.txt"
-                        )
+                                //const char *confb = "production/config/config-offset-test.txt"
+                       )
 {
     TLatex ltx;
     ltx.SetNDC();
@@ -135,45 +135,45 @@ void DiffGeometryConfig(const char *confa = "production/config/config-fieldon-40
     vecd xb; vecd yb; vecd zb;
     //GetXYZ(pfa, xa, ya, za);
     //GetXYZ(pfb, xb, yb, zb);
-    GetXYZOffset(pfa, xa, ya, za, eastToWesta, vtxToCNTa);
-    GetXYZOffset(pfb, xb, yb, zb, eastToWestb, vtxToCNTb);
+    SvxTGeo *geoa = GetXYZOffset(pfa, xa, ya, za, eastToWesta, vtxToCNTa);
+    SvxTGeo *geob = GetXYZOffset(pfb, xb, yb, zb, eastToWestb, vtxToCNTb);
 
-    SvxTGeo *geo = VTXModel(pfa);
+    //SvxTGeo *geo = VTXModel(pfa);
 
-    TString a = TString(gSystem->BaseName(pfa)).ReplaceAll(".par", "");
-    TString b = TString(gSystem->BaseName(pfb)).ReplaceAll(".par", "");
+    TString a = TString(TString(gSystem->BaseName(confa)).ReplaceAll(".txt", "")).ReplaceAll("production/config/", "");
+    TString b = TString(TString(gSystem->BaseName(confb)).ReplaceAll(".txt", "")).ReplaceAll("production/config/", "");
     TString ab = Form("%s-vs-%s", a.Data(), b.Data());
 
-    DrawXY(geo, "s_diff", "#Deltas_{ab}", "L, dead, faint");
+    DrawXY(geoa, "s_diff", "#Deltas_{ab}", "L, dead, faint");
     DrawDiffs(xa, ya, za, xb, yb, zb, "s");
-    ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}", pfa, pfb));
+    ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}", a.Data(), b.Data()));
     gPad->Print(Form("pdfs/dsxy%s.pdf", ab.Data()));
 
-    DrawXY(geo, "z_diff", "#Deltaz_{ab}", "L, dead, faint");
+    DrawXY(geoa, "z_diff", "#Deltaz_{ab}", "L, dead, faint");
     DrawDiffs(xa, ya, za, xb, yb, zb, "z");
-    ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}", pfa, pfb));
+    ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}", a.Data(), b.Data()));
     gPad->Print(Form("pdfs/dzxy%s.pdf", ab.Data()));
 
     ltx.SetTextSize(0.05);
 
     DrawDiffsLinear(xa, ya, za, xb, yb, zb, "xdiff", "#Delta x", "x"/*, 0.028*/);
-    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", pfa, pfb));
+    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", a.Data(), b.Data()));
     gPad->Print(Form("pdfs/dx%s.pdf", ab.Data()));
 
     DrawDiffsLinear(xa, ya, za, xb, yb, zb, "ydiff", "#Delta y", "y"/*, 0.028*/);
-    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", pfa, pfb));
+    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", a.Data(), b.Data()));
     gPad->Print(Form("pdfs/dy%s.pdf", ab.Data()));
 
     DrawDiffsLinear(xa, ya, za, xb, yb, zb, "zdiff", "#Delta z", "z"/*, 0.028*/);
-    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", pfa, pfb));
+    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", a.Data(), b.Data()));
     gPad->Print(Form("pdfs/dz%s.pdf", ab.Data()));
 
     DrawDiffsLinear(xa, ya, za, xb, yb, zb, "sdiff", "#Delta s", "s"/*, 0.083*/);
-    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", pfa, pfb));
+    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", a.Data(), b.Data()));
     gPad->Print(Form("pdfs/ds%s.pdf", ab.Data()));
 
     DrawDiffsLinear(xa, ya, za, xb, yb, zb, "rdiff", "#Delta r", "r"/*, 0.083*/);
-    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", pfa, pfb));
+    ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}", a.Data(), b.Data()));
     gPad->Print(Form("pdfs/dr%s.pdf", ab.Data()));
 
     return;
@@ -188,7 +188,7 @@ void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z)
 }
 
 
-void GetXYZOffset(const char *parfile, vecd &x, vecd &y, vecd &z, float eastToWest[], float vtxToCNT[])
+SvxTGeo *GetXYZOffset(const char *parfile, vecd &x, vecd &y, vecd &z, float eastToWest[], float vtxToCNT[])
 {
     SvxTGeo *geo = VTXModel(parfile);
     //-- shift the ladders by the offsets
@@ -217,6 +217,6 @@ void GetXYZOffset(const char *parfile, vecd &x, vecd &y, vecd &z, float eastToWe
             }
         }
     GetLadderXYZ(geo, x, y, z);
-    delete geo;
-    return;
+    //delete geo;
+    return geo;
 }
