@@ -15,11 +15,11 @@ void WriteConfigFile(const char *filename,
                      TVectorD &cntdiff,
                      TString notes = "");
 
-void CalcBeamCenter(int run = 406541,
-                    int prod = 1,
-                    int subiter = 99)
+void CalcBeamCenter(int run = 411768,
+                    int prod = 6,
+                    int subiter = 12)
 {
-  bool write = false;
+  bool write = true;
   TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
   TString configFile = Form("production/config/config-%d-%d-%d.txt",
