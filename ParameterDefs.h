@@ -19,6 +19,8 @@ Label(int layer, int ladder, string coord)
     ic = 0;
   if (coord.compare("z") == 0)
     ic = 1;
+  if (coord.compare("r") == 0)
+    ic = 2;
   // Add other coordinates / degrees of freedom here as needed
   // Then ParInfo() would need corresponding modification.
 
@@ -32,26 +34,22 @@ ParInfo(int label, int &layer, int &ladder, string &coord)
   // Inverse of Label() function.
 
   int start[4] = {0,10,30,46}; // # ladders within & excluding layer 0,1,2,3
-  int l = 0;
 
-  if (label > 70)
-  {
-    coord = "z";
-    l = label - 70;
-  }
-  else
-  {
-    coord = "s";
-    l = label;
-  }
-
+  // Assign layer
+  int l = label % 70; // Global ladder index 1,2,...,69
+  if (l == 0) l = 70; // Handle corner cases: label = 70, 140, 210 --> l = 70
   layer = 3;
   for (int i=3; i>=0; i--)
     if (l < start[i] + 1)
       layer = i - 1;
 
+  // Assign ladder
   ladder = l - start[layer] - 1;
+
+  // Assign coord
+  coord = (label <= 70)? "s" : (label <= 140)? "z" : (label <= 210)? "r" : ""; 
 
   return;
 }
+
 #endif
