@@ -26,8 +26,8 @@ int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 1,        // Production step. Starts at 0.
-              int subiter = 0)     // Geometry update step. Starts at 0.
+              int prod = 6,        // Production step. Starts at 0.
+              int subiter = 11)    // Geometry update step. Starts at 0.
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -97,6 +97,8 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
       tgeo->RotateLadderRPhi(i, j, mpc[Label(i,j,"s")]);
       // Longitudinal (z) correction
       tgeo->TranslateLadder(i, j, 0. ,0., mpc[Label(i,j,"z")]);
+      // Radial correction
+      tgeo->MoveLadderRadially(i, j, mpc[Label(i,j,"r")]);
     }
 
   for (unsigned int ev=0; ev<vtxevents.size(); ev++)
@@ -157,10 +159,10 @@ EventLoop(string binfile, geoEvents &events, TString opt)
       SvxGeoTrack trk = events[ev][t];
 
       // Hit loop
-      int slabel[1] = {0};
-      int zlabel[1] = {0};
-      float derlc[1] = {1.0}; // Local derivatives
-      float dergl[1] = {1.0}; // Global derivatives
+      // int slabel[1] = {0};
+      // int zlabel[1] = {0};
+      // float derlc[1] = {1.0}; // Local derivatives
+      // float dergl[1] = {1.0}; // Global derivatives
 
       float sigma_s[4] = {100e-4, 100e-4, 160e-4, 160e-4};
       float sigma_z[4] = {1000e-4, 1000e-4, 2000e-4, 2000e-4};
@@ -171,35 +173,51 @@ EventLoop(string binfile, geoEvents &events, TString opt)
         sigma_z[j] *= 1./TMath::Sqrt(12);
       }
 
-      if (opt.Contains("ext"))
-        for (int j=0; j<trk.nhits; j++)
-        {
-          SvxGeoHit hit = trk.GetHit(j);
-          slabel[0] = Label(hit.layer, hit.ladder, "s");
-          zlabel[0] = Label(hit.layer, hit.ladder, "z");
-          float sigs = hit.xsigma * sigma_s[hit.layer];
-          float sigz = hit.zsigma * sigma_z[hit.layer];
-          m.mille(1, derlc, 1, dergl, slabel, hit.ds, sigs);
-          m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
-          m.end();
-          m.mille(1, derlc, 1, dergl, zlabel, hit.dz, sigz);
-          m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
-          m.end();
-        }
-      else
+      // if (opt.Contains("ext"))
+      //   for (int j=0; j<trk.nhits; j++)
+      //   {
+      //     SvxGeoHit hit = trk.GetHit(j);
+      //     slabel[0] = Label(hit.layer, hit.ladder, "s");
+      //     zlabel[0] = Label(hit.layer, hit.ladder, "z");
+      //     float sigs = hit.xsigma * sigma_s[hit.layer];
+      //     float sigz = hit.zsigma * sigma_z[hit.layer];
+      //     m.mille(1, derlc, 1, dergl, slabel, hit.ds, sigs);
+      //     m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
+      //     m.end();
+      //     m.mille(1, derlc, 1, dergl, zlabel, hit.dz, sigz);
+      //     m.mille(1, derlc, 0, dergl, slabel, 0, .000001);
+      //     m.end();
+      //   }
+      // else
       {
         for (int j=0; j<trk.nhits; j++)
         {
           SvxGeoHit hit = trk.GetHit(j);
-          slabel[0] = Label(hit.layer, hit.ladder, "s");
-          zlabel[0] = Label(hit.layer, hit.ladder, "z");
+          int ls = Label(hit.layer, hit.ladder, "s");
+          int lz = Label(hit.layer, hit.ladder, "z");
+          int lr = Label(hit.layer, hit.ladder, "r");
+          int slabels[2] = {ls, lr};
+          int zlabels[2] = {lz, lr};
           float r = hit.x*hit.x + hit.y*hit.y;
-          float sderlc[4] = {1.0,   r, 0.0, 0.0};
-          float zderlc[4] = {0.0, 0.0, 1.0,   r};
+
+          // Local derivatives
+          // Split into two independent fits per track:
+          // 1. in the r-z plane: z = z0 + slope*r
+          // 2. in the x-y plane: y = y0 + slope*r (consider r=x)
+          float sderlc[4] = {1.0,   r, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
+          float zderlc[4] = {0.0, 0.0, 1.0,   r}; // dz(r)/dz0, dz(r)/dslope
+
+          // (Approximate) global derivatives
+          float dsdr = hit.ds/r;
+          float dzdr = TMath::Tan(trk.the0 - TMath::PiOver2());
+
+          float sdergl[2] = {1., dsdr}; // ds/ds, ds/dr
+          float zdergl[2] = {1., dzdr}; // dz/dz, dz/dr
+
           float sigs = hit.xsigma * sigma_s[hit.layer];
           float sigz = hit.zsigma * sigma_z[hit.layer];
-          m.mille(4, sderlc, 1, dergl, slabel, hit.ds, sigs);
-          m.mille(4, zderlc, 1, dergl, zlabel, hit.dz, sigz);
+          m.mille(4, sderlc, 2, sdergl, slabels, hit.ds, sigs);
+          m.mille(4, zderlc, 2, zdergl, zlabels, hit.dz, sigz);
         }
         m.end(); // Write residuals for this track & reset for next one
       }
@@ -231,7 +249,6 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   // ...
 
   // Fix ladders. Example: 104 0.0 -1
-  double xyz[3] = {0};
   fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
      << endl;
   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
@@ -246,65 +263,90 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
       }
   fs << endl;
 
+  // Apply presigma to regulate radial movement
+  fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
+     << endl;
+  for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+    for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
+    {
+      double presig = 1e-4; // Smaller values --> stronger regularization
+      fs << Form("%4d 0.0 %g ! B%dL%d(r)",
+                 Label(lyr, ldr, "r"), presig, lyr, ldr) << endl;
+    }
+  fs << endl;
+
+  vecd x;
+
   // Global parameter labels for z and s coordinates in east and west arms
   veci wz;
   veci ws;
+  veci wr;
   veci ez;
   veci es;
-
-  // Boundary "wedge" units - sequences of 4 edge ladders at top and bottom
-  int wb[4] = {0,0,0,0};
-  int wt[4] = {4,9,7,11};
-  int et[4] = {5,10,8,12};
-  int eb[4] = {9,19,15,23};
-  veci wtz; // west top z
-  veci wts; // west top s
-  veci wbz; // west bottom z
-  veci wbs; // west bottom s
-  veci etz; // east top z
-  veci ets; // east top s
-  veci ebz; // east bottom z
-  veci ebs; // east bottom s
-  for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-  {
-    wtz.push_back(Label(lyr, wt[lyr], "z")); // west top z
-    wts.push_back(Label(lyr, wt[lyr], "s")); // west top s
-    wbz.push_back(Label(lyr, wb[lyr], "z")); // west bottom z
-    wbs.push_back(Label(lyr, wb[lyr], "s")); // west bottom s
-    etz.push_back(Label(lyr, et[lyr], "z")); // east top z
-    ets.push_back(Label(lyr, et[lyr], "s")); // east top s
-    ebz.push_back(Label(lyr, eb[lyr], "z")); // east bottom z
-    ebs.push_back(Label(lyr, eb[lyr], "s")); // east bottom s
-  }
-
-  for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-  {
-    // West arm
-    for (int ldr=0; ldr<geo->GetNLadders(lyr)/2; ldr++)
-    {
-      wz.push_back(Label(lyr, ldr, "z"));
-      ws.push_back(Label(lyr, ldr, "s"));
-    }
-    // East arm
-    for (int ldr=geo->GetNLadders(lyr)/2; ldr < geo->GetNLadders(lyr); ldr++)
-    {
-      ez.push_back(Label(lyr, ldr, "z"));
-      es.push_back(Label(lyr, ldr, "s"));
-    }
-  }
+  veci er;
+  veci vtxr;
 
   // Labels for global parameters to be excluded from sum constraints
   veci excl;
-  vecd x;
-  Radii(wtz,excl,geo,x),     AddConstraint(wtz, x, fs, "West top z r shear");
-  Radii(etz,excl,geo,x);     AddConstraint(etz, x, fs, "East top z r shear");
-  Radii(wts,excl,geo,x);     AddConstraint(wts, x, fs, "West top s r shear");
-  Radii(ets,excl,geo,x);     AddConstraint(ets, x, fs, "East top s r shear");
 
-  Radii(wbz,excl,geo,x),     AddConstraint(wbz, x, fs, "West bottom z r shear");
-  Radii(ebz,excl,geo,x);     AddConstraint(ebz, x, fs, "East bottom z r shear");
-  Radii(wbs,excl,geo,x);     AddConstraint(wbs, x, fs, "West bottom s r shear");
-  Radii(ebs,excl,geo,x);     AddConstraint(ebs, x, fs, "East bottom s r shear");
+  bool constrainEdgeLadders = true;
+
+  if (constrainEdgeLadders)
+  {
+    // Boundary "wedge" units - sequences of 4 edge ladders at top and bottom
+    int wb[4] = {0,0,0,0};
+    int wt[4] = {4,9,7,11};
+    int et[4] = {5,10,8,12};
+    int eb[4] = {9,19,15,23};
+    veci wtz; // west top z
+    veci wts; // west top s
+    veci wbz; // west bottom z
+    veci wbs; // west bottom s
+    veci etz; // east top z
+    veci ets; // east top s
+    veci ebz; // east bottom z
+    veci ebs; // east bottom s
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+    {
+      wtz.push_back(Label(lyr, wt[lyr], "z")); // west top z
+      wts.push_back(Label(lyr, wt[lyr], "s")); // west top s
+      wbz.push_back(Label(lyr, wb[lyr], "z")); // west bottom z
+      wbs.push_back(Label(lyr, wb[lyr], "s")); // west bottom s
+      etz.push_back(Label(lyr, et[lyr], "z")); // east top z
+      ets.push_back(Label(lyr, et[lyr], "s")); // east top s
+      ebz.push_back(Label(lyr, eb[lyr], "z")); // east bottom z
+      ebs.push_back(Label(lyr, eb[lyr], "s")); // east bottom s
+    }
+
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+    {
+      // West arm
+      for (int ldr=0; ldr<geo->GetNLadders(lyr)/2; ldr++)
+      {
+        ws.push_back(Label(lyr, ldr, "s"));
+        wz.push_back(Label(lyr, ldr, "z"));
+        wr.push_back(Label(lyr, ldr, "r"));
+        vtxr.push_back(Label(lyr, ldr, "r"));
+      }
+      // East arm
+      for (int ldr=geo->GetNLadders(lyr)/2; ldr < geo->GetNLadders(lyr); ldr++)
+      {
+        es.push_back(Label(lyr, ldr, "s"));
+        ez.push_back(Label(lyr, ldr, "z"));
+        er.push_back(Label(lyr, ldr, "r"));
+        vtxr.push_back(Label(lyr, ldr, "r"));
+      }
+    }
+
+    Radii(wtz,excl,geo,x);  AddConstraint(wtz, x, fs, "West top z r shear");
+    Radii(etz,excl,geo,x);  AddConstraint(etz, x, fs, "East top z r shear");
+    Radii(wts,excl,geo,x);  AddConstraint(wts, x, fs, "West top s r shear");
+    Radii(ets,excl,geo,x);  AddConstraint(ets, x, fs, "East top s r shear");
+    Radii(wbz,excl,geo,x);  AddConstraint(wbz, x, fs, "West bottom z r shear");
+    Radii(ebz,excl,geo,x);  AddConstraint(ebz, x, fs, "East bottom z r shear");
+    Radii(wbs,excl,geo,x);  AddConstraint(wbs, x, fs, "West bottom s r shear");
+    Radii(ebs,excl,geo,x);  AddConstraint(ebs, x, fs, "East bottom s r shear");
+  } // end constrainEdgeLadders block
 
   // Fill vector of excluded ladders
   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
@@ -315,22 +357,33 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
         excl.push_back(Label(lyr, ldr, "s"));
       }
 
-  Ones(wz,excl,x);          AddConstraint(wz, x, fs, "West z translation");
-  Ones(ez,excl,x);          AddConstraint(ez, x, fs, "East z translation");
-  Ones(ws,excl,x);          AddConstraint(ws, x, fs, "West s translation");
-  Ones(es,excl,x);          AddConstraint(es, x, fs, "East s translation");
-  Radii(wz,excl,geo,x),     AddConstraint(wz, x, fs, "West z r shear");
-  Radii(ez,excl,geo,x);     AddConstraint(ez, x, fs, "East z r shear");
-  Radii(ws,excl,geo,x);     AddConstraint(ws, x, fs, "West s r shear");
-  Radii(es,excl,geo,x);     AddConstraint(es, x, fs, "East s r shear");
-  PhiAngles(wz,excl,geo,x); AddConstraint(wz, x, fs, "West z phi shear");
-  PhiAngles(ez,excl,geo,x); AddConstraint(ez, x, fs, "East z phi shear");
-  PhiAngles(ws,excl,geo,x); AddConstraint(ws, x, fs, "West s phi shear");
-  PhiAngles(es,excl,geo,x); AddConstraint(es, x, fs, "East s phi shear");
-  RPhi(wz,excl,geo,x);      AddConstraint(wz, x, fs, "West z r-phi shear");
-  RPhi(ez,excl,geo,x);      AddConstraint(ez, x, fs, "East z r-phi shear");
-  RPhi(ws,excl,geo,x);      AddConstraint(ws, x, fs, "West s r-phi shear");
-  RPhi(es,excl,geo,x);      AddConstraint(es, x, fs, "East s r-phi shear");
+  if (true)
+  {
+    // Prevent net radial displacement over all vtx ladders
+    // Ones(vtxr,excl,x);  AddConstraint(vtxr, x, fs, "Full-VTX radial expansion/contraction");
+
+    // Prevent net shift or rotation of an entire arm
+    Ones(wz,excl,x);  AddConstraint(wz, x, fs, "West z translation");
+    Ones(ez,excl,x);  AddConstraint(ez, x, fs, "East z translation");
+    Ones(ws,excl,x);  AddConstraint(ws, x, fs, "West s translation");
+    Ones(es,excl,x);  AddConstraint(es, x, fs, "East s translation");
+    Ones(wr,excl,x);  AddConstraint(wr, x, fs, "West r expansion/contraction");
+    Ones(er,excl,x);  AddConstraint(er, x, fs, "East r expansion/contraction");
+
+    // Prevent various shear distortions of an entire arm
+    PhiAngles(wz,excl,geo,x); AddConstraint(wz, x, fs, "West z phi shear");
+    PhiAngles(ez,excl,geo,x); AddConstraint(ez, x, fs, "East z phi shear");
+    PhiAngles(ws,excl,geo,x); AddConstraint(ws, x, fs, "West s phi shear");
+    PhiAngles(es,excl,geo,x); AddConstraint(es, x, fs, "East s phi shear");
+    RPhi(wz,excl,geo,x);      AddConstraint(wz, x, fs, "West z r-phi shear");
+    RPhi(ez,excl,geo,x);      AddConstraint(ez, x, fs, "East z r-phi shear");
+    RPhi(ws,excl,geo,x);      AddConstraint(ws, x, fs, "West s r-phi shear");
+    RPhi(es,excl,geo,x);      AddConstraint(es, x, fs, "East s r-phi shear");
+    Radii(wz,excl,geo,x);     AddConstraint(wz, x, fs, "West z r shear");
+    Radii(ez,excl,geo,x);     AddConstraint(ez, x, fs, "East z r shear");
+    Radii(ws,excl,geo,x);     AddConstraint(ws, x, fs, "West s r shear");
+    Radii(es,excl,geo,x);     AddConstraint(es, x, fs, "East s r shear");
+  }
 
   fs.close();
   Printf("done.");
@@ -344,7 +397,7 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
 
   ofstream fs(filename);
 
-  fs << Form("* This is %s created by %s", filename, "SimVtxAlign.C") << endl;
+  fs << Form("* This is %s created by %s", filename, "VtxAlign.C") << endl;
   fs << Form("* Pass this file to pede: pede %s", filename) << endl;
   fs << endl;
 
