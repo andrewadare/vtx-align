@@ -52,6 +52,7 @@ protected:
     std::string which_vtx;
     float centrality;
     float bbcq[2];
+    float bbcz;
     bool tickCut;
 
 

@@ -108,6 +108,7 @@ int AnaVTXCluster::Init(PHCompositeNode *topNode)
     ntp_event->Branch("which_vtx", &which_vtx);
     ntp_event->Branch("centrality", &centrality, "centrality/F");
     ntp_event->Branch("bbcq", &bbcq, "bbcq[2]/F");
+    ntp_event->Branch("bbcz", &bbcz, "bbcz/F");
     ntp_event->Branch("tickCut", &tickCut, "tickCut/O");
 
 
@@ -212,15 +213,22 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     //------------------------------------------------------------------//
 
 
+    //---------------------------------------------//
+    // COUNT THE EVENT
+    //---------------------------------------------//
+    nEvent++;
+    if (nEvent > 500000) return -1;
+    if (nEvent % 1000 == 0 )
+        std::cout << "--> Event #" << nEvent << std::endl;
 
 
-    //output some event info
 
-
+    //---------------------------------------------//
+    // GET CENTRALITY
+    //---------------------------------------------//
     centrality  = global->getCentrality();
     float bbc_qn      = global->getBbcChargeN();
     float bbc_qs      = global->getBbcChargeS();
-
 
     if (centrality == -9999)
     {
@@ -228,12 +236,6 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
         //std::cout<<"error: no centrality; using bbc_q centrality "<<std::endl;
     }
-
-    //    std::cout<<"centrality: "<<centrality<<std::endl;
-
-    if (centrality < 50 )
-        return -1;
-
 
     //---------------------------------------------//
     // CHECK TICK CUT
@@ -250,14 +252,11 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
                         (700 < pticks[1] && pticks[1] < 780) );
     }
 
-
-
     //---------------------------------------------//
     // GET THE EVENT VERTEX
     //---------------------------------------------//
     PHPoint vtxpos;
     vtxpos = vtxout->get_Vertex();
-    float vtx_z = vtxpos.getZ();
 
     //get the East vertex (if available, else fill with 0's)
     PHPoint vtxposE;
@@ -270,16 +269,6 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     //make sure a precise vertex was found
     std::string s_vtx = vtxout->which_Vtx();
 
-    //std::cout<<"vtx_z: "<<vtx_z<<std::endl;
-
-    if (vtx_z > 10 || vtx_z < -10)
-        return -1;
-
-
-    nEvent++;
-    if (nEvent > 500000) return -1;
-    if (nEvent % 1000 == 0 )
-        std::cout << "--> Event #" << nEvent << std::endl;
 
 
     //---------------------------------------------//
@@ -301,9 +290,10 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     //centrality = gcent;
     bbcq[0] = bbc_qn;
     bbcq[1] = bbc_qs;
+    bbcz = (vtxout->get_Vertex("BBC")).getZ();
     //tick cut
     //false - passes the tick cut
-    //true  - falis the tick cut
+    //true  - fails the tick cut
     tickCut = !pass_tick;
     ntp_event->Fill();
 
@@ -422,26 +412,8 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
             continue;
         }
 
-        // int run = m_runnumber;
-        // int event = nEvent;
-        // int svxindex = itrk;
-        // float px = svxseg->get3Momentum(0);
-        // float py = svxseg->get3Momentum(1);
-        // float pz = svxseg->get3Momentum(2);
-        // float pT = sqrt(px * px + py * py);
-        // float phi = TMath::ATan2(py, px);
-        // float theta = TMath::ACos(pz / pT);
-
-        // int charge = 1;
-        // if (!svxseg->IsPositive())
-        //     charge = -1;
-        // float chisq = svxseg->getChiSq();
-        // float ndf = svxseg->getNDF();
         float score = svxseg->getSegmentScore();
-        // float vtx[2];
-        // vtx[0] = vtxpos.getX();
-        // vtx[1] = vtxpos.getY();
-        if (/*pT < 0.4 || */score < 70 )
+        if ( score < 70 )
             continue;
 
         for (int ilayer = 0; ilayer < 4; ilayer++)
@@ -590,6 +562,7 @@ void AnaVTXCluster::reset_variables()
     event = -9999;
     centrality = -9999.;
     tickCut = true;
+    bbcz = -9999.;
 
     for (int i = 0; i < 3; i++)
     {
