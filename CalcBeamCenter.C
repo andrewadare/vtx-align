@@ -147,9 +147,10 @@ void CalcBeamCenter(int run = 411768,
   DcaDist(events, "west", hxyw, hrw);
 
   Printf("DCA to beam center vs phi");
+  int nphibins = 200;
   double dmin = 0.0, dmax = 0.1;
-  TH2D *hbp = new TH2D("hbp", "", 100, 0, TMath::TwoPi(), 100, dmin, dmax);
-  TProfile *bprof = new TProfile("bprof", "", 100, 0, TMath::TwoPi(), dmin, dmax);
+  TH2D *hbp = new TH2D("hbp", "", nphibins, 0, TMath::TwoPi(), 100, dmin, dmax);
+  TProfile *bprof = new TProfile("bprof", "", nphibins, 0, TMath::TwoPi(), dmin, dmax);
   bprof->SetMarkerStyle(kFullCircle);
 
   // Error calculation options:
@@ -160,8 +161,8 @@ void CalcBeamCenter(int run = 411768,
   DcaVsPhi(events, bce, bcw, hbp, bprof);
 
   Printf("DCA vs phi...");
-  TH2D *hdp = new TH2D("hdp", "", 100, 0, TMath::TwoPi(), 100, dmin, dmax);
-  TProfile *dprof = new TProfile("dprof", "", 100, 0, TMath::TwoPi(), dmin, dmax);
+  TH2D *hdp = new TH2D("hdp", "", nphibins, 0, TMath::TwoPi(), 100, dmin, dmax);
+  TProfile *dprof = new TProfile("dprof", "", nphibins, 0, TMath::TwoPi(), dmin, dmax);
   dprof->SetMarkerStyle(kFullCircle);
   dprof->BuildOptions(dmin, dmax, "g");
 
