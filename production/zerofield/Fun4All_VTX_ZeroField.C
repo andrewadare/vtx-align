@@ -180,8 +180,8 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     //svxstandalone->setProjectionFlag(false);
     svxstandalone->setZerofieldFlag(true);
     //svxstandalone->setVertexRecoFlag(2);
-    //svxstandalone->setPPFlag(true);
-
+    svxstandalone->setPPFlag(true);
+    svxstandalone->setWindowScale(20.0);
     SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
 
     SubsysReco *svxprimvtxfinder_west = new SvxPrimVertexFinder("SVXPRIMVTXFINDERW", 1);
