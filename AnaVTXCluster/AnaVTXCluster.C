@@ -214,16 +214,6 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
 
     //---------------------------------------------//
-    // COUNT THE EVENT
-    //---------------------------------------------//
-    nEvent++;
-    if (nEvent > 500000) return -1;
-    if (nEvent % 1000 == 0 )
-        std::cout << "--> Event #" << nEvent << std::endl;
-
-
-
-    //---------------------------------------------//
     // GET CENTRALITY
     //---------------------------------------------//
     centrality  = global->getCentrality();
@@ -268,6 +258,24 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 
     //make sure a precise vertex was found
     std::string s_vtx = vtxout->which_Vtx();
+
+
+    //---------------------------------------------//
+    // MAKE RECONSTRUCTED Z VERTEX CUT
+    // NOTE: this isn't in ProdEventCutter
+    // because the vertex is not yet reconstructed
+    //---------------------------------------------//
+
+    if (vtxpos.getZ() > 10 || vtxpos.getZ() < -10)
+        return -1;
+
+    //---------------------------------------------//
+    // COUNT THE EVENT
+    //---------------------------------------------//
+    nEvent++;
+    if (nEvent > 500000) return -1;
+    if (nEvent % 1000 == 0 )
+        std::cout << "--> Event #" << nEvent << std::endl;
 
 
 
