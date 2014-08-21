@@ -17,7 +17,8 @@
 #include <PHPoint.h>
 #include "RunHeader.h"
 #include "PHGlobal.h"
-
+#include "PreviousEvent.h"
+#include "TriggerHelper.h"
 
 
 //===========================================================================
@@ -80,13 +81,21 @@ int ProdEventCutter::process_event(PHCompositeNode *topNode)
     }
     //------------------------------------------------------------------//
 
+    //------------------ PreviousEvent ---------------------------------//
+    PreviousEvent *pevent    = findNode::getClass<PreviousEvent>(topNode, "PreviousEvent");
+    if (!pevent)
+    {
+        std::cout << "ERROR!! Can't find PreviousEvent! (suppressing further warnings)" << std::endl;
+        return -1;
+    }
+    //------------------------------------------------------------------//
 
 
 
 
 
     //---------------------------------------------//
-    // MAKE EVENT CUT
+    // MAKE CENTRALITY CUT
     //---------------------------------------------//
 
     float bbc_qn      = d_global->getBbcChargeN();
@@ -96,9 +105,36 @@ int ProdEventCutter::process_event(PHCompositeNode *topNode)
     if (verbosity > 0)
         std::cout << PHWHERE << " - bbcq=" << bbcq << std::endl;
 
-    if ( (bbc_qn + bbc_qs) >= 245)
+    if ( (bbc_qn + bbc_qs) > 200)
         return ABORTEVENT;
 
+
+    //---------------------------------------------//
+    // MAKE TICK CUT
+    //---------------------------------------------//
+    int pticks[3] = {0};
+    for ( int i = 0; i < 3; i++ )
+        pticks[i] = pevent->get_clockticks(i);
+
+    bool pass_tick =  !( ( 50 < pticks[0] && pticks[0] < 120) ||
+                         (700 < pticks[1] && pticks[1] < 780) );
+
+    if (!pass_tick)
+        return ABORTEVENT;
+
+
+    //---------------------------------------------//
+    // CHECK TRIGGERS
+    // ABORT IF NOT FOUND
+    //---------------------------------------------//
+    TriggerHelper d_trghelp(topNode);
+
+    //set up for Run 14 AuAu 200
+    bool isnarrow = d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx") ||
+                    d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx CopyA") ||
+                    d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx Copy B");
+
+    if (!isnarrow) return 0;
 
 
     //---------------------------------------------//
