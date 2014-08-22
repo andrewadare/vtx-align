@@ -144,14 +144,39 @@ print("\n--> Running over the DST to produce cluster ntuple")
 
 os.chdir(outDir)
 os.system("mkdir -p ntuple")
+os.system("mkdir -p ntuple/anavtxcluster")
 os.chdir(condorDir)
 print("current directory: " + os.getcwd())
 os.system("ln -sf {}run_anavtxcluster.C .".format(productionDir))
 
-ntupleFile = "{}ntuple/anavtxcluster_{:0>10}-{:0>4}.root".format(outDir,runNumber,segNumber)
+ntupleFile = "{}ntuple/anavtxcluster/anavtxcluster_{:0>10}-{:0>4}.root".format(outDir,runNumber,segNumber)
 print("Output Ntuple: {}".format(ntupleFile))
 
 command = "root -b -q \'run_anavtxcluster.C("
+command += str(nevents) + ","
+command += "\"" + dstFile + "\","
+command += "\"" + ntupleFile
+command += ")\'"
+print(command)
+
+os.system(command)
+
+##############################################                                                                                                                                                                                                             
+# run over the data, producing the ntuples                                                                                                                                                                                                                 
+##############################################                                                                                                                                                                                                             
+print("\n--> Running over the DST to produce cluster ntuple")
+
+os.chdir(outDir)
+os.system("mkdir -p ntuple")
+os.system("mkdir -p ntuple/testvtxproduction")
+os.chdir(condorDir)
+print("current directory: " + os.getcwd())
+os.system("ln -sf {}analyze_run14_test_prod_output.C .".format(productionDir))
+
+ntupleFile = "{}ntuple/testvtxproduction/testvtxproduction_{:0>10}-{:0>4}.root".format(outDir,runNumber,segNumber)
+print("Output Ntuple: {}".format(ntupleFile))
+
+command = "root -b -q \'analyze_run14_test_prod_output.C("
 command += str(nevents) + ","
 command += "\"" + dstFile + "\","
 command += "\"" + ntupleFile
