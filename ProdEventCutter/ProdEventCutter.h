@@ -21,10 +21,14 @@ public:
     int InitRun(PHCompositeNode *topNode);
     int process_event(PHCompositeNode *topNode);
     int End(PHCompositeNode *topNode);
+    void SetCentral(bool cent){m_central = cent;};
+    void SetBBCqCut(float qcut){m_bbcq = qcut;};
 
 protected:
 
     int m_pass;
+    bool m_central;
+    float m_bbcq;
 
 };
 

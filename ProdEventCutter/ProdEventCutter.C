@@ -23,7 +23,9 @@
 
 //===========================================================================
 ProdEventCutter::ProdEventCutter() :
-    m_pass(0)
+    m_pass(0),
+    m_central(false),
+    m_bbcq(200)
 {
     ThisName = "ProdEventCutter";
 
@@ -31,7 +33,9 @@ ProdEventCutter::ProdEventCutter() :
 
 //===========================================================================
 ProdEventCutter::ProdEventCutter(std::string filename) :
-    m_pass(0)
+    m_pass(0),
+    m_central(false),
+    m_bbcq(200)
 {
     ThisName = "ProdEventCutter";
 
@@ -42,6 +46,10 @@ ProdEventCutter::ProdEventCutter(std::string filename) :
 int ProdEventCutter::Init(PHCompositeNode *topNode)
 {
     std::cout << PHWHERE << std::endl;
+    if (!m_central)
+        std::cout << PHWHERE << " - cutting on events bbcq < " << m_bbcq << std::endl;
+    else if (m_central)
+        std::cout << PHWHERE << " - cutting on events bbcq > " << m_bbcq << std::endl;
 
     return 0;
 }
@@ -105,7 +113,9 @@ int ProdEventCutter::process_event(PHCompositeNode *topNode)
     if (verbosity > 0)
         std::cout << PHWHERE << " - bbcq=" << bbcq << std::endl;
 
-    if ( (bbc_qn + bbc_qs) > 200)
+    if (!m_central && (bbc_qn + bbc_qs) > m_bbcq)
+        return ABORTEVENT;
+    else if (m_central && (bbc_qn + bbc_qs) < m_bbcq)
         return ABORTEVENT;
 
 
