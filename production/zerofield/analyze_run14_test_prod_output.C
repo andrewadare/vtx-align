@@ -41,6 +41,7 @@ analyze_run14_test_prod_output(int nevents = 0,
     //se->registerSubsystem(trig);
 
     SubsysReco *svxtest = new TestVTXProduction(outfile);
+    svxtest->SetZeroField(true);
     se->registerSubsystem(svxtest);
 
 
