@@ -1,0 +1,15 @@
+# This is /Users/theok/temp_git/vtx-alignproduction/config/config-411768-9-0.txt
+# Created by user theok
+# On Fri Aug 22 15:26:50 MDT 2014
+# At rl1-1-152-154-dhcp.int.colorado.edu
+# Run number: 411768
+# Production step: 9
+# Sub-iteration step: 0
+# Source: https://git.racf.bnl.gov/phenix/git/vtx-align/vtx-align.git
+# Latest commit: ab29db21d1b29732201c5ce42ce8cedf795bae2d
+# Notes: Using west beam center.
+
+beamcenter: 0.353192 0.0528139
+east-to-west: -0.0070541 0.00819173 -0.143723
+vtx-to-cnt: 0 0 0
+geomfile: svxPISA-ideal.par

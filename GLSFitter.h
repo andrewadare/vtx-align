@@ -11,13 +11,15 @@ typedef vector<geoTracks> geoEvents;
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L);
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov);
 void TrackFitZResid(SvxGeoTrack &gt, double *pars = 0);
-void TrackFitSResid(SvxGeoTrack &gt, double *pars = 0);
-void ZeroFieldResiduals(SvxGeoTrack &gt, double *pars /* y0, z0, phi, theta */);
+void TrackFitSResid(SvxGeoTrack &gt, double *pars = 0, double *bc = 0);
+void ZeroFieldResiduals(SvxGeoTrack &gt,
+                        double *pars = 0, /* y0, z0, yslope, zslope */
+                        double *bc = 0    /* bc x, bc y, bc sigma */);
 void Residuals(SvxGeoTrack &tt, SvxGeoTrack &mt, TNtuple *t);
 TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
-void FitTrack(SvxGeoTrack &track);
-void FitTracks(geoTracks &tracks);
-void FitTracks(geoEvents &events);
+void FitTrack(SvxGeoTrack &track, double *bc = 0);
+void FitTracks(geoTracks &tracks, double *bce = 0, double *bcw = 0);
+void FitTracks(geoEvents &events, double *bce = 0, double *bcw = 0);
 bool East(double phi);
 
 TVectorD
@@ -85,7 +87,9 @@ SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L)
 }
 
 void
-ZeroFieldResiduals(SvxGeoTrack &gt, double *pars /* y0, z0, yslope, zslope */)
+ZeroFieldResiduals(SvxGeoTrack &gt,
+                   double *pars, /* y0, z0, yslope, zslope */
+                   double *bc /* bcx, bcy, sigma */)
 {
   if (gt.nhits < 1)
   {
@@ -95,13 +99,14 @@ ZeroFieldResiduals(SvxGeoTrack &gt, double *pars /* y0, z0, yslope, zslope */)
 
   double zpars[2] = {0}, spars[2] = {0};
   TrackFitZResid(gt, zpars);
-  TrackFitSResid(gt, spars);
+  TrackFitSResid(gt, spars, bc);
 
   pars[0] = spars[0]; // y0 (y-intercept)
   pars[1] = zpars[0]; // z0 (z-intercept)
   pars[2] = spars[1]; // slope in transverse (y vs x) plane
   pars[3] = zpars[1]; // slope in longitudinal (z vs r) plane
 
+  // Printf("y0 %f z0 %f ysl %f zsl %f", pars[0], pars[1], pars[2], pars[3]);//////////////////////////////
   return;
 }
 
@@ -109,8 +114,10 @@ void
 TrackFitZResid(SvxGeoTrack &gt, double *pars)
 {
   // Perform straight-line fit z(r) = z0 + c*r.
-  // Assign residuals to gt.hits[i].dz. Put [z0, theta] from fit in pars.
-  int m = gt.nhits, n = 2;
+  // Assign residuals to gt.hits[i].dz.
+  // Put [z0, theta] from fit in pars if provided.
+
+  int m = gt.nhits, n = 2; // m = # measurements; n = # parameters.
   TMatrixD X(m, n);
   TMatrixD Cinv(m, m);
   TVectorD y(m);
@@ -145,30 +152,58 @@ TrackFitZResid(SvxGeoTrack &gt, double *pars)
 }
 
 void
-TrackFitSResid(SvxGeoTrack &gt, double *pars)
+TrackFitSResid(SvxGeoTrack &gt, double *pars, double *bc)
 {
   // Perform straight-line fit y' = m'*x' + b' after rotating points
   // to approximately lie along the x axis. Then by construction,
   // x' ~ r, m' ~ 0, and the error is (mostly) in the y' = phi direction.
   // Assign s = r*phi residual to gt.hits[i].ds.
   // Optionally put [y0, phi] from fit in pars array.
+  // Use beam center info if provided. bc should be {bcx, bcy, bcsigma}.
 
-  int m = gt.nhits, n = 2;
-  TMatrixD points(n, m); // Columns are x',y' pairs
+  int m = (bc) ? gt.nhits + 1 : gt.nhits; 
+  int n = 2;
+  TMatrixD points(n, m); // Datapoints. Columns are x',y' pairs
   TMatrixD X(m, n);      // Column 0 is 1's, column 1 is x' (~r) hit coords.
   TMatrixD Cinv(m, m);   // Inverse covariance matrix. Currently diagonal.
   TVectorD y(m);         // Dependent variables y'.
-  double phirot = 0;
+  double phirot = 0;     // <phi_cluster> used to rotate clusters
 
-  for (int ihit=0; ihit<m; ihit++)
+  if (bc)
   {
-    SvxGeoHit t = gt.GetHit(ihit);
-    points(0,ihit) = t.x;
-    points(1,ihit) = t.y;
-    X(ihit,0) = 1;
-    Cinv(ihit,ihit) = (t.xsigma > 0) ? 1./t.xsigma : 1.;
-    phirot += 1./m * TMath::ATan2(t.y, t.x);
+    // Printf("m = %d bc = %f, %f, %f", m, bc[0], bc[1], bc[2]);
+
+    // Include beam (x,y) as the first data point.
+    // All points will be shifted to a frame where the beam center is (0,0).
+    points(0,0) = 0.0; // beam center x
+    points(1,0) = 0.0; // beam center y
+    X(0,0) = 1;
+    Cinv(0,0) = 1.; // (bc[2]>0) ? 1./bc[2] : 1.; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    // Fill matrices with hit info
+    for (int ihit=0; ihit<gt.nhits; ihit++)
+    {
+      SvxGeoHit hit = gt.GetHit(ihit);
+      int k = ihit + 1;
+      points(0,k) = hit.x - bc[0];
+      points(1,k) = hit.y - bc[1];
+
+      X(k,0) = 1;
+      Cinv(k,k) = (hit.xsigma > 0) ? 1./hit.xsigma : 1.;
+      phirot += 1./gt.nhits * TMath::ATan2(points(1,k), points(0,k));
+    }
   }
+  else  // Just use clusters in track fit
+    for (int ihit=0; ihit<m; ihit++)
+    {
+      SvxGeoHit hit = gt.GetHit(ihit);
+      points(0,ihit) = hit.x;
+      points(1,ihit) = hit.y;
+
+      X(ihit,0) = 1;
+      Cinv(ihit,ihit) = (hit.xsigma > 0) ? 1./hit.xsigma : 1.;
+      phirot += 1./m * TMath::ATan2(hit.y, hit.x);
+    }
 
   // Rotate x, y by -phirot so error is approximately in y' direction only.
   // In rotated frame (xp, yp) = (cx + sy, cy - sx)
@@ -181,14 +216,19 @@ TrackFitSResid(SvxGeoTrack &gt, double *pars)
 
   TMatrixDColumn(X, 1) = TMatrixDRow(points, 0);
   y = TMatrixDRow(points, 1);
+  // Fit track to get beta prime = [b', m'] in rotated system.
+  TVectorD betap = SolveGLS(X,y,Cinv);
+  double bp = betap(0), mp = betap(1); // Intercept and slope, both small.
 
-  // Fit track to get [b', m'] in rotated system.
-  TVectorD beta = SolveGLS(X,y,Cinv);
-  double bp = beta(0), mp = beta(1);
+// if (m==5){X.Print(); y.Print(); betap.Print();}//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   // Rotate back to get y-intercept b of track in x=0 plane
   // and phi angle of track.
   double y0  = bp / (c - mp*s);
+  if (bc)
+    // Shift y0 back from ~ 0.0 to ~ beam y position.
+    y0 += bc[1];
+
   double phi = phirot + TMath::ATan(mp);
   if (phi < 0)
     phi += TMath::TwoPi();
@@ -198,6 +238,7 @@ TrackFitSResid(SvxGeoTrack &gt, double *pars)
     pars[1] = phi;
   }
 
+  // Assign residuals to hits
   for (int ihit=0; ihit<m; ihit++)
   {
     double x  = points(0, ihit);
@@ -209,11 +250,11 @@ TrackFitSResid(SvxGeoTrack &gt, double *pars)
 }
 
 void
-FitTrack(SvxGeoTrack &track)
+FitTrack(SvxGeoTrack &track, double *bc)
 {
   // Perform straight-line fit --> residuals, track parameters
   double pars[4] = {0}; /* y0, z0, phi, theta */
-  ZeroFieldResiduals(track, pars);
+  ZeroFieldResiduals(track, pars, bc);
   track.vy   = pars[0];
   track.vz   = pars[1];
   track.phi0 = pars[2];
@@ -222,23 +263,35 @@ FitTrack(SvxGeoTrack &track)
 }
 
 void
-FitTracks(geoTracks &tracks)
+FitTracks(geoTracks &tracks, double *bce, double *bcw)
 {
   cout << Form("Fitting %lu tracks...", tracks.size()) << flush;
   for (unsigned int i=0; i<tracks.size(); i++)
-    FitTrack(tracks[i]);
+  {
+    if (tracks[i].hits[0].x < 0.)
+      FitTrack(tracks[i], bce);
+    else
+      FitTrack(tracks[i], bcw);
+  }
 
   Printf("done.");
   return;
 }
 
 void
-FitTracks(geoEvents &events)
+FitTracks(geoEvents &events, double *bce, double *bcw)
 {
   cout << Form("Fitting tracks in %lu events...", events.size()) << flush;
   for (unsigned int ev=0; ev<events.size(); ev++)
     for (unsigned int t=0; t<events[ev].size(); t++)
-      FitTrack(events[ev][t]);
+    {
+      SvxGeoTrack trk = events[ev][t];
+      if (trk.hits[0].x < 0.)
+        FitTrack(trk, bce);
+      else
+        FitTrack(trk, bcw);
+      events[ev][t] = trk;
+    }
 
   Printf("done.");
   return;
