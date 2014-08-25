@@ -115,6 +115,7 @@ void CalcDCBeamCenter()
     float pc3dz;
     float bbcq;
     float bbcz;
+    float n0;
 
     //--
     TH1F *hdcz = new TH1F("hdcz", "; DC z_{vtx} [cm]", 150, -15, 15);
@@ -158,8 +159,9 @@ void CalcDCBeamCenter()
     ntp_CNT->SetBranchAddress("pc2dphi",    &pc2dphi);
     ntp_CNT->SetBranchAddress("pc2dz",      &pc2dz);
     ntp_CNT->SetBranchAddress("pc3dphi",    &pc3dphi);
-    ntp_CNT->SetBranchAddress("pc3dz",     &pc3dz);
+    ntp_CNT->SetBranchAddress("pc3dz",      &pc3dz);
     ntp_CNT->SetBranchAddress("dcarm",      &dcarm);
+    ntp_CNT->SetBranchAddress("n0",         &n0);
 
 
 
@@ -200,65 +202,66 @@ void CalcDCBeamCenter()
         if (itrk % 1000 == 0)
             printf("----> Analyzing entry %i \r", (int)itrk);
 
+        if (prevevent != event && itrk > 0)
+        {
+            // count the event
+            nevents++;
+            //if (nevents > 10) break;
+
+            //-- Analyze the results for the previous event
+            if (hdczvtx->GetEntries() > 40)
+            {
+                float zvtx = Median((TH1D *)hdczvtx);
+                //float zvtx = hdczvtx->GetMean();
+
+
+                cdczvtx->cd(2);
+                hdczvtx->Draw();
+                ldczvtx.DrawLatex(0.5, 0.95, Form("DC z_{vtx} = %.3f cm", zvtx));
+
+                for (int i = 0; i < 3; i++)
+                {
+                    cdczvtx->cd(i + 4);
+                    hpczres[i]->Draw();
+                }
+
+                if (nevents % 100 == 0)
+                    cdczvtx->Update();
+                //gPad->WaitPrimitive();
+
+                //fill event-wise histograms
+                hdcz->Fill(zvtx);
+                hdcbbcz->Fill(bbcz - zvtx);
+                hdcvtxz->Fill(vtx[2] - zvtx);
+            }
+
+            //-- Reset persistent information
+            hdczvtx->Reset();
+            for (int i = 0; i < 3; i++)
+                hpczres[i]->Reset();
+        }
+
+        //-- Accumulate information for all tracks in the event
         // Make track cuts
         if ( (dchquality == 31 || dchquality == 63)
                 && dcarm == 1 //West
-                /*
+                && n0 < 2
+                
                 && TMath::Abs(pc2dphi) < 0.015
                 && TMath::Abs(pc2dz) < 6
                 && TMath::Abs(pc3dphi) < 0.02
                 && TMath::Abs(pc3dz) < 12
-                */
+                
+                /*
                 && TMath::Abs(pc2dphi) < 990
                 && TMath::Abs(pc2dz) < 990
                 && TMath::Abs(pc3dphi) < 990
                 && TMath::Abs(pc3dz) < 990
-
+				*/
            )
         {
 
 
-            if (prevevent != event && itrk > 0)
-            {
-                // count the event
-                nevents++;
-                //if (nevents > 10) break;
-
-                //-- Analyze the results for the previous event
-                if (hdczvtx->GetEntries() > 40)
-                {
-                    float zvtx = Median((TH1D *)hdczvtx);
-                    //float zvtx = hdczvtx->GetMean();
-
-                    /*
-                    cdczvtx->cd(2);
-                    hdczvtx->Draw();
-                    ldczvtx.DrawLatex(0.5, 0.95, Form("DC z_{vtx} = %.3f cm", zvtx));
-
-                    for (int i = 0; i < 3; i++)
-                    {
-                        cdczvtx->cd(i + 4);
-                        hpczres[i]->Draw();
-                    }
-
-                    if (nevents % 100 == 0)
-                        cdczvtx->Update();
-                    //gPad->WaitPrimitive();
-					*/
-					
-                    //fill event-wise histograms
-                    hdcz->Fill(zvtx);
-                    hdcbbcz->Fill(bbcz - zvtx);
-                    hdcvtxz->Fill(vtx[2] - zvtx);
-                }
-
-                //-- Reset persistent information
-                hdczvtx->Reset();
-                for (int i = 0; i < 3; i++)
-                    hpczres[i]->Reset();
-            }
-
-            //-- Accumulate information for all tracks in the event
 
             //Fill the matrices and perform the fit
             int m = 3; //PC1, PC2, PC3
