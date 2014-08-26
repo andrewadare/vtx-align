@@ -67,7 +67,8 @@ void CalcDCBeamCenter()
     //==================================================//
 
     //-- input file containing ntp_CNT
-    const char *inFile = "testvtxproduction_0000411768-0001.root";
+    //const char *inFile = "testvtxproduction_0000411768-0001.root";
+    const char *inFile = "testvtxproduction_411768-0-0-central.root";
 
     //-- DC beam center [x, y]
     // run 411768 from Taebong
@@ -93,15 +94,15 @@ void CalcDCBeamCenter()
     // DECLARE VARIABLES
     //==================================================//
 
-    //-- Tree information
+    //--  Tree information
     TTree *ntp_CNT;
-    int run;
-    int event;
-    int dchindex;
+    int   run;
+    int   event;
+    int   dchindex;
     float dchquality;
     float the0;
     float phi0;
-    int dcarm;
+    int   dcarm;
     float zed;
     float phi;
     float vtx[3];
@@ -115,12 +116,31 @@ void CalcDCBeamCenter()
     float pc3dz;
     float bbcq;
     float bbcz;
-    float n0;
+    int   n0;
 
     //--
     TH1F *hdcz = new TH1F("hdcz", "; DC z_{vtx} [cm]", 150, -15, 15);
-    TH1F *hdcbbcz = new TH1F("hdcbbcz", "; DC - BBC z_{vtx} [cm]", 100, -15, 15);
-    TH1F *hdcvtxz = new TH1F("hdcvtxz", "; DC - VTX z_{vtx} [cm]", 100, -15, 15);
+    TH1F *hdcbbcz = new TH1F("hdcbbcz", "; DC - BBC z_{vtx} [cm]", 300, -3, 3);
+    TH1F *hdcvtxz = new TH1F("hdcvtxz", "; DC - VTX z_{vtx} [cm]", 300, -3, 3);
+    TH1F *htrackz_mindcz = new TH1F("htrackz_mindcz", ";DC-track z_{vtx}", 300, -3, 3);
+
+    TH1F *hpczres_tot[3];
+    for (int i = 0; i < 3; i++)
+    {
+        hpczres_tot[i] = new TH1F(
+            Form("hpczres_tot_%i", i),
+            Form(";PC%i z residual [cm]", i + 1),
+            200, -0.2, 0.2);
+    }
+
+    TH2F *hdczvbbcz = new TH2F("hdczvbbcz",
+                               ";DC z_{vtx} [cm];BBC z_{vtx}",
+                               100, -15, 15,
+                               100, -15, 15);
+    TH2F *hdczvvtxz = new TH2F("hdczvvtxz",
+                               ";DC z_{vtx} [cm];VTX z_{vtx}",
+                               100, -15, 15,
+                               100, -15, 15);
 
 
     //==================================================//
@@ -175,7 +195,7 @@ void CalcDCBeamCenter()
     cout << " Will loop over " << NTRKS << endl;
 
     //histogram to hold z_bc from tracks in each event
-    TH1F *hdczvtx = new TH1F("hdczvtx", ";DC z_{BC} [cm]", 150, -15, 15);
+    TH1F *hdczvtx = new TH1F("hdczvtx", ";DC z_{BC} [cm]", 600, -15, 15);
 
     TH1F *hpczres[3];
     for (int i = 0; i < 3; i++)
@@ -196,28 +216,43 @@ void CalcDCBeamCenter()
 
     int prevevent = -1;
     int nevents = 0;
+    float prevbbcz = -1;
+    float prevvtxz = -1;
     for (unsigned int itrk = 0; itrk < NTRKS; itrk++)
     {
         ntp_CNT->GetEntry(itrk);
         if (itrk % 1000 == 0)
-            printf("----> Analyzing entry %i \r", (int)itrk);
+            printf("----> Analyzing entry %i (%.1f%%) \r", (int)itrk, (float)itrk / (float)NTRKS * 100.);
 
         if (prevevent != event && itrk > 0)
         {
-            // count the event
-            nevents++;
-            //if (nevents > 10) break;
-
             //-- Analyze the results for the previous event
             if (hdczvtx->GetEntries() > 40)
             {
-                float zvtx = Median((TH1D *)hdczvtx);
-                //float zvtx = hdczvtx->GetMean();
+                // count the eventa
+                nevents++;
+                //if (nevents > 5000) break;
 
+                float zvtx = Median((TH1D *)hdczvtx);
+                float zvtx_mean = hdczvtx->GetMean();
+                float zvtx_mode = hdczvtx->GetXaxis()->GetBinCenter(hdczvtx->GetMaximumBin());
+
+                cdczvtx->Clear("D");
+
+                cdczvtx->cd(1);
+                ldczvtx.DrawLatex(0.5, 0.8, Form("DC (mean)     z_{vtx} = %.3f cm", zvtx_mean));
+                ldczvtx.DrawLatex(0.5, 0.7, Form("DC (median)*  z_{vtx} = %.3f cm", zvtx));
+                ldczvtx.DrawLatex(0.5, 0.6, Form("DC (mode)     z_{vtx} = %.3f cm", zvtx_mode));
+                ldczvtx.DrawLatex(0.5, 0.3, Form("BBC           z_{vtx} = %.3f cm", prevbbcz));
+                ldczvtx.DrawLatex(0.5, 0.2, Form("VTX           z_{vtx} = %.3f cm", prevvtxz));
 
                 cdczvtx->cd(2);
                 hdczvtx->Draw();
                 ldczvtx.DrawLatex(0.5, 0.95, Form("DC z_{vtx} = %.3f cm", zvtx));
+
+                cdczvtx->cd(3);
+                ldczvtx.DrawLatex(0.5, 0.6, Form("DC-BBC z_{vtx} = %.3f cm", zvtx - prevbbcz));
+                ldczvtx.DrawLatex(0.5, 0.3, Form("DC-VTX z_{vtx} = %.3f cm", zvtx - prevvtxz));
 
                 for (int i = 0; i < 3; i++)
                 {
@@ -225,14 +260,28 @@ void CalcDCBeamCenter()
                     hpczres[i]->Draw();
                 }
 
-                if (nevents % 100 == 0)
+                if (nevents % 1000 == 0)
                     cdczvtx->Update();
                 //gPad->WaitPrimitive();
 
                 //fill event-wise histograms
                 hdcz->Fill(zvtx);
-                hdcbbcz->Fill(bbcz - zvtx);
-                hdcvtxz->Fill(vtx[2] - zvtx);
+                hdcbbcz->Fill(zvtx - prevbbcz);
+                hdcvtxz->Fill(zvtx - prevvtxz);
+                for (int i = 0; i < 3; i++)
+                    hpczres_tot[i]->Add(hpczres[i]);
+                hdczvbbcz->Fill(zvtx, prevbbcz);
+                hdczvvtxz->Fill(zvtx, prevvtxz);
+                for (int ix = 1; ix < hdczvtx->GetNbinsX(); ix++)
+                {
+                    float x = hdczvtx->GetXaxis()->GetBinCenter(ix);
+                    int bc = hdczvtx->GetBinContent(ix);
+
+                    if (bc > 0)
+                    {
+                        htrackz_mindcz->Fill(zvtx - x, bc);
+                    }
+                }
             }
 
             //-- Reset persistent information
@@ -245,7 +294,7 @@ void CalcDCBeamCenter()
         // Make track cuts
         if ( (dchquality == 31 || dchquality == 63)
                 && dcarm == 1 //West
-                && n0 < 2
+                //&& n0 < 2
                 
                 && TMath::Abs(pc2dphi) < 0.015
                 && TMath::Abs(pc2dz) < 6
@@ -257,11 +306,19 @@ void CalcDCBeamCenter()
                 && TMath::Abs(pc2dz) < 990
                 && TMath::Abs(pc3dphi) < 990
                 && TMath::Abs(pc3dz) < 990
-				*/
+                */
            )
         {
 
+            //calculate the r position of each hit
+            float ppcr[3]; //[pc1,pc2,pc3]
 
+            ppcr[0] = TMath::Sqrt(TMath::Power(ppc1[0], 2) +
+                                  TMath::Power(ppc1[1], 2));
+            ppcr[1] = TMath::Sqrt(TMath::Power(ppc2[0], 2) +
+                                  TMath::Power(ppc2[1], 2));
+            ppcr[2] = TMath::Sqrt(TMath::Power(ppc3[0], 2) +
+                                  TMath::Power(ppc3[1], 2));
 
             //Fill the matrices and perform the fit
             int m = 3; //PC1, PC2, PC3
@@ -273,13 +330,10 @@ void CalcDCBeamCenter()
             for (int i = 0; i < 3; i++)
             {
                 X(i, 0) = 1;
-                X(i, 1) = pcr[i];
+                //X(i, 1) = pcr[i];
+                X(i, 1) = ppcr[i]; //use hit specific r value, rather than generic layer r
                 Cinv(i, i) = 1. / TMath::Power(pcres[i], 2);
-                //y(i) = pcr[i];
             }
-            //X(0, 1) = ppc1[2];
-            //X(1, 1) = ppc2[2];
-            //X(2, 1) = ppc3[2];
             y(0) = ppc1[2];
             y(1) = ppc2[2];
             y(2) = ppc3[2];
@@ -291,7 +345,7 @@ void CalcDCBeamCenter()
 
             resid[0] = beta(1) *
                        //TMath::Sqrt(ppc1[0] * ppc1[0] + ppc1[1] * ppc1[1])
-                       pcr[0]
+                       ppcr[0]
                        + beta(0);
             resid[0] -= ppc1[2];
             hpczres[0]->Fill(resid[0]);
@@ -299,7 +353,7 @@ void CalcDCBeamCenter()
 
             resid[1] = beta(1) *
                        //TMath::Sqrt(ppc2[0] * ppc2[0] + ppc2[1] * ppc2[1])
-                       pcr[1]
+                       ppcr[1]
                        + beta(0);
             resid[1] -= ppc2[2];
             hpczres[1]->Fill(resid[1]);
@@ -307,7 +361,7 @@ void CalcDCBeamCenter()
 
             resid[2] = beta(1) *
                        //TMath::Sqrt(ppc3[0] * ppc3[0] + ppc3[1] * ppc3[1])
-                       pcr[2]
+                       ppcr[2]
                        + beta(0);
             resid[2] -= ppc3[2];
             hpczres[2]->Fill(resid[2]);
@@ -339,11 +393,14 @@ void CalcDCBeamCenter()
                  << endl;
             */
             prevevent = event;
+            prevbbcz = bbcz;
+            prevvtxz = vtx[2];
 
 
         }
 
     }
+    cout << "----> Found " << nevents << " which passed cuts" << endl;
 
 
     //==================================================//
@@ -358,8 +415,8 @@ void CalcDCBeamCenter()
     //==================================================//
 
 
-    TCanvas *cz = new TCanvas("cz", "z vtx", 1200, 600);
-    cz->Divide(3, 1);
+    TCanvas *cz = new TCanvas("cz", "z vtx", 1200, 700);
+    cz->Divide(3, 2);
 
     cz->cd(1);
     hdcz->Draw();
@@ -370,6 +427,22 @@ void CalcDCBeamCenter()
     cz->cd(3);
     hdcvtxz->Draw();
 
+    cz->cd(4);
+    htrackz_mindcz->Draw("hist");
+
+    cz->cd(5);
+    hdczvbbcz->Draw("colz");
+
+    cz->cd(6);
+    hdczvvtxz->Draw("colz");
+
+    TCanvas *cres = new TCanvas("cres", "residuals", 1200, 600);
+    cres->Divide(3, 1);
+    for (int i = 0; i < 3; i++)
+    {
+        cres->cd(i + 1);
+        hpczres_tot[i]->Draw();
+    }
 
 
 
