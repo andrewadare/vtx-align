@@ -17,11 +17,16 @@ void WriteConfigFile(const char *filename,
 
 void CalcBeamCenter(int run = 411768,
                     int prod = 6,
-                    int subiter = 12)
+                    int subiter = 20)
 {
   bool write = true;
-  TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
-  TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
+
+  // Inputs:
+  TString rootFileIn = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
+  TString pisaFileIn = Form("geom/%d-%d-%d.par", run, prod, subiter);
+
+  // Outputs:
+  TString bcFileOut  = Form("rootfiles/bc-%d-%d-%d.root", run, prod, subiter);
   TString configFile = Form("production/config/config-%d-%d-%d.txt",
                             run, prod, subiter);
 
@@ -38,7 +43,7 @@ void CalcBeamCenter(int run = 411768,
   SvxTGeo *geo = VTXModel(pisaFileIn.Data());
 
   geoEvents events;
-  GetEventsFromTree(t, geo, events, -1);
+  GetEventsFromTree(t, geo, events, 500000);
   FitTracks(events);
 
   // Event multiplicity histograms
@@ -108,6 +113,12 @@ void CalcBeamCenter(int run = 411768,
 
   TVectorD bce(2); bce(0) = qxe[2]; bce(1) = qye[2];
   TVectorD bcw(2); bcw(0) = qxw[2]; bcw(1) = qyw[2];
+  TGraphErrors *gbc = new TGraphErrors();
+  gbc->SetTitle("Beamcenter from east arm (point 0) and west arm (point 1)");
+  gbc->SetPoint(0, bce(0), bce(1));
+  gbc->SetPoint(1, bcw(0), bcw(1));
+  gbc->SetPointError(0, 0.5*(qxe[3]-qxe[1]), 0.5*(qye[3]-qye[1]));
+  gbc->SetPointError(1, 0.5*(qxw[3]-qxw[1]), 0.5*(qyw[3]-qyw[1]));
 
   // Zoom in on beam spot, keeping 98% of the data in view.
   // Maintain a 1:1 aspect ratio.
@@ -130,6 +141,9 @@ void CalcBeamCenter(int run = 411768,
   hvw->GetXaxis()->SetRangeUser(x0, x1);
   hvw->GetYaxis()->SetRangeUser(y0, y1);
 
+  Printf("Refitting tracks using beam center...");
+  FitTracks(events, gbc);
+
   Printf("DCA x-y distribution...");
   x0 = -0.12;
   y0 = -0.12;
@@ -143,7 +157,7 @@ void CalcBeamCenter(int run = 411768,
   TH1D *hrw = new TH1D("hrw", "hrw", 100, 0, 0.5);
   hxye->SetLineColorAlpha(kRed+2, 0.4);
   hxyw->SetLineColorAlpha(kRed+2, 0.4);
-  DcaDist(events, "east", hxye, hre);
+  DcaDist(events, "east", hxye, hre); // DCA to primary vertex
   DcaDist(events, "west", hxyw, hrw);
 
   Printf("DCA to beam center vs phi");
@@ -160,7 +174,7 @@ void CalcBeamCenter(int run = 411768,
   bprof->BuildOptions(dmin, dmax, "g");
   DcaVsPhi(events, bce, bcw, hbp, bprof);
 
-  Printf("DCA vs phi...");
+  Printf("DCA to primary vertex (in each arm) vs phi...");
   TH2D *hdp = new TH2D("hdp", "", nphibins, 0, TMath::TwoPi(), 100, dmin, dmax);
   TProfile *dprof = new TProfile("dprof", "", nphibins, 0, TMath::TwoPi(), dmin, dmax);
   dprof->SetMarkerStyle(kFullCircle);
@@ -185,6 +199,7 @@ void CalcBeamCenter(int run = 411768,
   TVectorD cntdiff(3);
 
   if (write)
+  {
     WriteConfigFile(configFile.Data(),
                     run,
                     prod,
@@ -193,6 +208,13 @@ void CalcBeamCenter(int run = 411768,
                     ewdiff,
                     cntdiff,
                     "Using west beam center.");
+
+    TFile *bcf = new TFile(bcFileOut.Data(), "recreate");
+    gbc->Write("gbc");
+    hve->Write();
+    hvw->Write();
+    bcf->Close();
+  }
 
 
   // ---- ---- ---- ---- ---- ---- ----
@@ -256,7 +278,7 @@ void CalcBeamCenter(int run = 411768,
   SetHistProps(hrw,kOrange,kNone,kOrange);
   hre->SetLineWidth(2);
   hrw->SetLineWidth(2);
-  hrw->SetTitle("Beam center DCA #color[861]{ east}, #color[800]{ west};DCA [cm];");
+  hrw->SetTitle("Zero-field DCA #color[861]{ east}, #color[800]{ west};DCA [cm];");
   hrw->Draw("");
   hre->Draw("same");
   ltx.DrawLatex(0.2, 0.85, Form("East mean %.3f, std dev %.3f",

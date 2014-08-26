@@ -39,39 +39,6 @@ IPVec(SvxGeoTrack &t, TVectorD &p)
   return IPVec(a,n,p);
 }
 
-#if 0
-TGraph *
-DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
-{
-  // This function is no longer being used.
-  TTreeReader r(t->GetName(), f);
-  TTreeReaderValue<float> ty0(r, "y0");
-  TTreeReaderValue<float> phi(r, "phi");
-  TGraph *g = new TGraph();
-  g->SetMarkerStyle(kFullDotMedium);
-
-  int i=0;
-  while (r.Next())
-  {
-    double m = TMath::Tan(*phi);
-    if ((arm=="east" && East(*phi)) || (arm=="west" && !East(*phi)))
-    {
-      TVectorD a(2); a(1) = *ty0;
-      TVectorD n(2); n(0) = TMath::Cos(*phi); n(1) = TMath::Sin(*phi);
-      TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
-
-      if (i<ntracks)
-        g->SetPoint(i, d(0), d(1));
-      if (hr)
-        hr->Fill(TMath::Sqrt(d*d));
-
-      i++;
-    }
-  }
-  return g;
-}
-#endif
-
 TGraph *
 DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
 {
@@ -130,37 +97,6 @@ DcaDist(geoEvents &events, TString arm, TH2D *hxy, TH1D *hr)
 
   return;
 }
-// TGraph *
-// DcaDist(geoEvents &events, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
-// {
-//   int i = 0;
-//   TGraph *g = new TGraph(ntracks);
-//   g->SetMarkerStyle(kFullDotMedium);
-
-//   for (unsigned int ev=0; ev<events.size(); ev++)
-//     for (unsigned int t=0; t<events[ev].size(); t++)
-//     {
-//       SvxGeoTrack trk = events[ev][t];
-//       double phi = trk.phi0;
-//       if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
-//       {
-//         TVectorD a(2); a(1) = trk.vy;
-//         TVectorD n(2); n(0) = TMath::Cos(phi); n(1) = TMath::Sin(phi);
-//         TVectorD d = IPVec(a,n,bc);  // d = a - bc - ((a - bc)*n)*n;
-
-//         if (i<ntracks)
-//         {
-//           g->SetPoint(i, d(0), d(1));
-//           i++;
-//         }
-
-//         if (hr)
-//           hr->Fill(TMath::Sqrt(d*d));
-//       }
-//     }
-
-//   return g;
-// }
 
 void
 DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,

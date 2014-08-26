@@ -27,7 +27,7 @@ void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
               int prod = 6,        // Production step. Starts at 0.
-              int subiter = 11)    // Geometry update step. Starts at 0.
+              int subiter = 20)    // Geometry update step. Starts at 0.
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -36,9 +36,13 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
     gSystem->Exit(-1);
   }
 
-  TString rootFileIn  = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
+  // Inputs:
+  TString rootFileIn = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
+  TString pisaFileIn = Form("geom/%d-%d-%d.par", run, prod, subiter);
+  TString bcFileIn   = Form("rootfiles/bc-%d-%d-%d.root", run, prod, subiter);
+
+  // Outputs:
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, subiter + 1);
-  TString pisaFileIn  = Form("geom/%d-%d-%d.par", run, prod, subiter);
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, subiter + 1);
 
   vecs constfiles;
@@ -73,7 +77,15 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   if (nStdTracks > 0)
   {
     GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
-    FitTracks(vtxevents);
+
+    TFile *bcf = new TFile(bcFileIn.Data(), "read");
+    TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
+    
+    gbc->SetPointError(0, 10*gbc->GetEX()[0], 10*gbc->GetEY()[0]);
+    gbc->SetPointError(1, 10*gbc->GetEX()[1], 10*gbc->GetEY()[1]);
+
+    FitTracks(vtxevents, gbc);
+    // FitTracks(vtxevents, 0); ///////////////////////////////// = orig code
     EventLoop(pedeBinFileStd, vtxevents);
   }
   if (nCntTracks > 0)
@@ -214,8 +226,13 @@ EventLoop(string binfile, geoEvents &events, TString opt)
           float sdergl[2] = {1., dsdr}; // ds/ds, ds/dr
           float zdergl[2] = {1., dzdr}; // dz/dz, dz/dr
 
-          float sigs = hit.xsigma * sigma_s[hit.layer];
-          float sigz = hit.zsigma * sigma_z[hit.layer];
+          // Expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
+          float sigs = 10*hit.xsigma * ClusterXResolution(hit.layer);
+          float sigz = hit.zsigma * ClusterZResolution(hit.layer);
+
+          // Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
+          //        hit.ds, sigs, hit.dz, sigz);
+
           m.mille(4, sderlc, 2, sdergl, slabels, hit.ds, sigs);
           m.mille(4, zderlc, 2, zdergl, zlabels, hit.dz, sigz);
         }

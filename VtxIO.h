@@ -144,8 +144,8 @@ GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
     hit.x      = t->GetLeaf("gx")->GetValue();
     hit.y      = t->GetLeaf("gy")->GetValue();
     hit.z      = t->GetLeaf("gz")->GetValue();
-    hit.xsigma = t->GetLeaf("x_size")->GetValue();
-    hit.zsigma = t->GetLeaf("z_size")->GetValue();
+    hit.xsigma = t->GetLeaf("x_size")->GetValue(); // N.B. this is not sigma!
+    hit.zsigma = t->GetLeaf("z_size")->GetValue(); // N.B. this is not sigma!
     hit.dz     = t->GetLeaf("res_z")->GetValue();
     hit.ds     = t->GetLeaf("res_s")->GetValue();
     hit.trkid  = t->GetLeaf("trkid")->GetValue();
