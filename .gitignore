@@ -23,3 +23,9 @@ pdfs/*
 production/analyze/pdfs/*
 production/analyze/*.root
 production/analyze/*.pdf
+
+# Ignore generated condor job files
+*.job
+
+# Ignore any log files
+*.log
