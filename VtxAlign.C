@@ -80,12 +80,13 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
     TFile *bcf = new TFile(bcFileIn.Data(), "read");
     TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
-    
-    gbc->SetPointError(0, 10*gbc->GetEX()[0], 10*gbc->GetEY()[0]);
-    gbc->SetPointError(1, 10*gbc->GetEX()[1], 10*gbc->GetEY()[1]);
 
-    FitTracks(vtxevents, gbc);
-    // FitTracks(vtxevents, 0); ///////////////////////////////// = orig code
+    gbc->SetPointError(0, gbc->GetEX()[0], gbc->GetEY()[0]);
+    gbc->SetPointError(1, gbc->GetEX()[1], gbc->GetEY()[1]);
+
+    // FitTracks(vtxevents, gbc);// Uses beam center. Doesn't work as well.
+
+    FitTracks(vtxevents, 0);
     EventLoop(pedeBinFileStd, vtxevents);
   }
   if (nCntTracks > 0)
@@ -101,6 +102,10 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Key is label, value is correction.
   map<int, double> mpc;
   GetCorrections("millepede.res", mpc);
+
+  // Copy geometry adjustments (with their errors) to logs/ directory.
+  gSystem->Exec(Form("cp millepede.res logs/dp-%d-%d-%d.txt",
+                     run, prod, subiter));
 
   for (int i=0; i<tgeo->GetNLayers(); i++)
     for (int j=0; j<tgeo->GetNLadders(i); j++)
@@ -227,7 +232,7 @@ EventLoop(string binfile, geoEvents &events, TString opt)
           float zdergl[2] = {1., dzdr}; // dz/dz, dz/dr
 
           // Expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
-          float sigs = 10*hit.xsigma * ClusterXResolution(hit.layer);
+          float sigs = hit.xsigma * ClusterXResolution(hit.layer);
           float sigz = hit.zsigma * ClusterZResolution(hit.layer);
 
           // Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
