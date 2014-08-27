@@ -162,7 +162,7 @@ void CalcBeamCenter(int run = 411768,
 
   Printf("DCA to beam center vs phi");
   int nphibins = 200;
-  double dmin = 0.0, dmax = 0.1;
+  double dmin = 0.0, dmax = 0.05; // 500 um
   TH2D *hbp = new TH2D("hbp", "", nphibins, 0, TMath::TwoPi(), 100, dmin, dmax);
   TProfile *bprof = new TProfile("bprof", "", nphibins, 0, TMath::TwoPi(), dmin, dmax);
   bprof->SetMarkerStyle(kFullCircle);
