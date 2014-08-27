@@ -29,9 +29,8 @@ ClusterXResolution(int layer)
 {
   // Cluster position resolution estimates [cm] in layers 0-3.
   // Based on hardware specs + empirical studies.
-  double pix_xres = 50e-4/TMath::Sqrt(12.);
-  double str_xres = 2*pix_xres;
-  double xres[4] = {pix_xres, pix_xres, str_xres, str_xres};
+  double res = 50e-4/TMath::Sqrt(12.);
+  double xres[4] = {res, 1.2*res, 2*res, 2.4*res};
 
   return xres[layer];
 }
@@ -41,9 +40,8 @@ ClusterZResolution(int layer)
 {
   // Cluster position resolution estimates [cm] in layers 0-3.
   // Based on hardware specs + empirical studies.
-  double pix_zres = 425e-4/TMath::Sqrt(12.);
-  double str_zres = 2*pix_zres;
-  double zres[4] = {pix_zres, pix_zres, str_zres, str_zres};
+  double res = 425e-4/TMath::Sqrt(12.);
+  double zres[4] = {res, res, 2*res, 2*res};
 
   return zres[layer];
 }
