@@ -15,10 +15,10 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
 void SetupHist(TH1D *h, int stage);
 
 void DrawResults(int run = 411768,
-                 int prod1 = 0,
-                 int subit1 = 2,
-                 int prod2 = 0,
-                 int subit2 = 3)
+                 int prod1 = 6,
+                 int subit1 = 20,
+                 int prod2 = 6,
+                 int subit2 = 21)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
@@ -185,8 +185,8 @@ void DrawResults(int run = 411768,
       hds[lyr][stage]->SetYTitle("#Deltas [cm]");
       hdz[lyr][stage]->SetYTitle("#Deltaz [cm]");
 
-      hds[lyr][stage]->GetYaxis()->SetRangeUser(-0.07, 0.07);
-      hdz[lyr][stage]->GetYaxis()->SetRangeUser(-0.07, 0.07);
+      hds[lyr][stage]->GetYaxis()->SetRangeUser(-0.045, 0.045);
+      hdz[lyr][stage]->GetYaxis()->SetRangeUser(-0.045, 0.045);
 
       hds[lyr][stage]->GetXaxis()->SetNdivisions(210);
       hdz[lyr][stage]->GetXaxis()->SetNdivisions(210);
