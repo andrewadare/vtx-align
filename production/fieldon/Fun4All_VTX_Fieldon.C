@@ -51,6 +51,7 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     //  gSystem->Load("librecal");
     gSystem->Load("libSvxDstQA.so");
     //gSystem->Load("libSvxAlignment.so");
+    gSystem->Load("libProdEventCutter.so");
 
     gROOT->ProcessLine(".L OutputManager.C");
     gROOT->ProcessLine(".L rawdatacheck.C");
@@ -140,6 +141,10 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     SubsysReco *global_central  = new GlobalReco_central();
     //  SubsysReco *mpc     = new MpcReco();
 
+    SubsysReco *cutter = new ProdEventCutter();
+
+
+
     SvxParManager *svxpar = new SvxParManager();
     svxpar->set_BeamCenter(beamcenter_x, beamcenter_y);
     svxpar->set_OffsetVtxToCnt(vtxToCNT_x, vtxToCNT_y, vtxToCNT_z);
@@ -169,7 +174,7 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     SvxStandAloneReco *svxstandalone         = new SvxStandAloneReco();
     svxstandalone->setVertexRecoFlag(2);
 
-    SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
+    //SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
 
     SubsysReco *svxprimvtxfinder_west = new SvxPrimVertexFinder("SVXPRIMVTXFINDERW", 1);
 
@@ -214,13 +219,17 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
 
     se->registerSubsystem(global);
     se->registerSubsystem(global_central);
+    //se->registerSubsystem(cutter);
+
+
+    
     se->registerSubsystem(svxpar);
     se->registerSubsystem(svxdecode);
     se->registerSubsystem(svxhotdead);
     se->registerSubsystem(svxrec);
     se->registerSubsystem(svxvtxseedfinder);
     se->registerSubsystem(svxstandalone);
-    se->registerSubsystem(svxprimvtxfinder);
+    //se->registerSubsystem(svxprimvtxfinder);
     se->registerSubsystem(svxprimvtxfinder_east);
     se->registerSubsystem(svxprimvtxfinder_west);
 
@@ -293,6 +302,7 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
 
     /// SvxCentralTrackReco should be called after PHCentralTrack is reconstructed.
     SvxCentralTrackReco *svxcentraltrack = new SvxCentralTrackReco();
+    //svxcentraltrack->setSearchWindowFlag(2);
     se->registerSubsystem(svxcentraltrack);
 
 

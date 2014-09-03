@@ -12,7 +12,7 @@ void rootlogon()
          gSystem->HostName());
 
 
-  bool atrcf = false;
+  bool atrcf = true;
 
   if (atrcf)
     gSystem->Load("libsvxgeo"); // src: offline/packages/svxgeo
