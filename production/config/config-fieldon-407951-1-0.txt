@@ -1,0 +1,10 @@
+# Field on configuration based on config-411768-6-12.txt
+# Created by D. McGlinchey
+# On Wed Aug 20 15:40:04 MDT 2014
+# 
+# Using beamcenter & vtx-to-cnt from config-fieldon-407951-0-0.txt
+
+beamcenter: -0.120756 0.0741091
+east-to-west: -0.0222545 0.00719772 -0.154213
+vtx-to-cnt: -0.440047 0.0293153 0
+geomfile: 411768-6-12.par
