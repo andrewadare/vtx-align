@@ -9,6 +9,7 @@
 using namespace std;
 
 // Globals
+bool allowRShifts = false; // Switch to include radial degree of freedom
 const double BField = 0.0;
 const int nStdTracks = 999999;
 const int nCntTracks = 0;
@@ -115,7 +116,8 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
       // Longitudinal (z) correction
       tgeo->TranslateLadder(i, j, 0. ,0., mpc[Label(i,j,"z")]);
       // Radial correction
-      tgeo->MoveLadderRadially(i, j, mpc[Label(i,j,"r")]);
+      if (allowRShifts)
+        tgeo->MoveLadderRadially(i, j, mpc[Label(i,j,"r")]);
     }
 
   for (unsigned int ev=0; ev<vtxevents.size(); ev++)
@@ -291,7 +293,9 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
     for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
     {
-      double presig = 1e-4; // Smaller values --> stronger regularization
+      double presig = -1.; // Radial DOF fixed by default
+      if (allowRShifts)
+        presig = 1e-4; // Smaller (positive) values <-> stronger regularization
       fs << Form("%4d 0.0 %g ! B%dL%d(r)",
                  Label(lyr, ldr, "r"), presig, lyr, ldr) << endl;
     }
@@ -389,8 +393,13 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
     Ones(ez,excl,x);  AddConstraint(ez, x, fs, "East z translation");
     Ones(ws,excl,x);  AddConstraint(ws, x, fs, "West s translation");
     Ones(es,excl,x);  AddConstraint(es, x, fs, "East s translation");
-    Ones(wr,excl,x);  AddConstraint(wr, x, fs, "West r expansion/contraction");
-    Ones(er,excl,x);  AddConstraint(er, x, fs, "East r expansion/contraction");
+
+    // Only apply radial constraints if radial corrections are allowed
+    if (allowRShifts)
+    {
+      Ones(wr,excl,x);  AddConstraint(wr, x, fs, "West r expansion/contraction");
+      Ones(er,excl,x);  AddConstraint(er, x, fs, "East r expansion/contraction");
+    }
 
     // Prevent various shear distortions of an entire arm
     PhiAngles(wz,excl,geo,x); AddConstraint(wz, x, fs, "West z phi shear");
