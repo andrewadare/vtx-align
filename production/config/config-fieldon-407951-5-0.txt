@@ -1,0 +1,18 @@
+# Field on configuration based on config-411768-6-32.txt
+# Created by D. McGlinchey
+# On Wed Sep 03 15:52 MDT 2014
+# 
+# Using beamcenter (DC) from Taebong
+#
+# east-to-west from config-411768-6-32.txt
+#
+# Using the VTX West beamcenter from config-406541-1-0.txt
+#
+# vtx-to-cnt is DC beamcenter - VTX West beam center
+#   see config-fieldon-407951-0-0.txt for calculation
+#
+
+beamcenter: -0.120756 0.0741091
+east-to-west: -0.0358659 0.000199811 -0.155729
+vtx-to-cnt: -0.440047 0.0293153 0
+geomfile: 411768-6-32.par
