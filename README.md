@@ -14,3 +14,15 @@ The `DrawResults.C` script requires `UtilFns.h` which is available from `https:/
 The initial par file is from `svxDetectorGeo::Write_svxPISApar()` as run by the macro `GetParFile.C` in `offline/packages/svx/wrk/`.
 
 The `reformat.py` script uses `SvxTGeo` to read in and write a tidier version that is the same (it is numerically diffed to be sure.)
+
+# Naming Conventions
+
+Geometry files should be named with `<run>-<prod>-<itr>.par`, where `<run>` is the run number the data came from during the alignment, `<prod>` is an index dictating the production (starting at 0) and `<itr>` is an index following the alignment iteration.
+
+Production config files follow a similar naming convention: `config-<zf or fieldon>-<run>-<prod>-<itr>(_<idx>).txt`. `<prod>-<itr>` should indicate which par file is used. `<run>` should indicate which run will be produced. `<zf or fieldon>` indicates either a zerofield (zf) or field on (fieldon) production. `(_<idx>)` indicates an index, and should be reserved for changes in the beamcenter of offsets that occur without modifying the par file.
+
+Production directories follow: `<zf or fieldon>-<run>-<prod>-<itr>(_<idx>)/`, with the same meanings as the config file.
+
+Aggregated output from anavtxcluster (zerofield only) follows: `anavtxcluster_zf-<run>-<prod>-<itr>(_<idx>).root` with the same meanings as the directory it is in.
+
+Aggregated output from testvtxproduction (zf or fieldon) follows: `testvtxproduction_<zf or fieldon>-<run>-<prod>-<itr>(_<idx>).root` with the same meanings as the directory it is in.
