@@ -21,7 +21,7 @@ analyze_run14_test_prod_output(int nevents = 0,
     gSystem->Load("libsimreco.so");
     gSystem->Load("librecal.so");
 
-    gSystem->Load("libRun14EventTrigger.so");
+    //gSystem->Load("libRun14EventTrigger.so");
     //gSystem->Load("libRun11AuAuSvxCentralTrackTree.so");
     //gSystem->Load("libRun11AuAuSvxEventHists.so");
     //gSystem->Load("libRun11AuAuSvxEventTree.so");
