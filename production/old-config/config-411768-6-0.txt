@@ -1,15 +1,15 @@
 # This is /Users/adare/phenix/alignment/vtx-alignproduction/config/config-411768-6-0.txt
 # Created by user adare
-# On Tue Aug  5 15:32:50 MDT 2014 (geomfile subsequently hand-edited)
-# At rl1-1-156-208-dhcp.int.colorado.edu
+# On Tue Aug  5 18:37:23 MDT 2014
+# At Andrews-MacBook-Pro.local
 # Run number: 411768
 # Production step: 6
 # Sub-iteration step: 0
 # Source: https://git.racf.bnl.gov/phenix/git/vtx-align/vtx-align.git
-# Latest commit: 0a43fddaf90f743aaba4f2cfa346f0732fb44aee
+# Latest commit: 1da428b697d9b5b747896f300ed979b54077ef11
 # Notes: No alignment was done. Directly from production with ideal geom. Using west beam center (not avg, as previously done).
 
-beamcenter: 0.350682 0.0489355
-east-to-west: -0.015359 0.00324385 -0.144968
+beamcenter: 0.351569 0.049752
+east-to-west: -0.0150992 0.00310829 -0.160582
 vtx-to-cnt: 0 0 0
-geomfile: svxPISA-ideal.par
+geomfile: 411768-6-0.par

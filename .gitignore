@@ -6,6 +6,10 @@
 *.his
 *.bin
 
+# Generally don't need millepede constraint or steering files under version control
+pede-const.txt
+pede-steer.txt
+
 # Root libs and dictionary files
 *.d
 *.so
@@ -13,6 +17,10 @@
 
 # Exclude root files
 *.root
+
+# Exclude old stuff
+old-geom/*
+production/old-config/*
 
 # Exclude pdfs/ directory & pdfs
 pdfs/*
@@ -29,3 +37,4 @@ production/analyze/*.pdf
 
 # Ignore any log files
 *.log
+logs/*
