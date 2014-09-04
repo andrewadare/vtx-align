@@ -14,6 +14,10 @@
 # Exclude root files
 *.root
 
+# Exclude old stuff
+old-geom/*
+production/old-config/*
+
 # Exclude pdfs/ directory & pdfs
 pdfs/*
 *.pdf
@@ -29,3 +33,4 @@ production/analyze/*.pdf
 
 # Ignore any log files
 *.log
+logs/*
