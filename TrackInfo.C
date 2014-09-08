@@ -5,12 +5,12 @@
 #include "VtxVis.h"
 
 void ResidPlots(geoEvents &ev1, geoEvents &ev2, TObjArray *cList=0);
-void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2);
+void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord = "ds");
 double MeanPhi(SvxGeoTrack &trk, double *bc = 0);
 
 void TrackInfo(int run = 411768,
-               int prod = 6,
-               int subiter = 20)
+               int prod = 0,
+               int subiter = 1)
 {
   bool write = true;
   gStyle->SetOptStat(0);
@@ -32,7 +32,7 @@ void TrackInfo(int run = 411768,
   SvxTGeo *geo = VTXModel(pisaFileIn.Data());
 
   geoEvents vtx_evts;
-  GetEventsFromTree(vtxhits, geo, vtx_evts, 50000);
+  GetEventsFromTree(vtxhits, geo, vtx_evts, 100000);
   FitTracks(vtx_evts, gbc);
 
   geoEvents evs_nobc = vtx_evts;
@@ -159,9 +159,7 @@ void TrackInfo(int run = 411768,
   if (write)
   {
     PrintPDFs(cList, Form("pdfs"), "");
-    PrintPDF(cList, Form("pdfs/trackinfo"));
-    // PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
-    // PrintPDF(cList, Form("pdfs/beam-center-run%d-pro%d-sub%d", run, prod, subiter));
+    PrintPDF(cList, Form("pdfs/trackinfo-%d-%d", prod, subiter));
   }
 
   return;
@@ -191,10 +189,15 @@ ResidPlots(geoEvents &ev1, geoEvents &ev2, TObjArray *cList)
   const int nlayers = 4;
   const int nladders = 24;
   const int ntrees = 2;
+  const int narms = 2; // 0=east, 1=west
   int nLadders[4] = {10,20,16,24}; // ladders/layer
 
   // Create histograms
   TH1D *hr[nlayers][nladders][2];
+  TH1D *hls[nlayers][narms][2];
+  TH1D *hlz[nlayers][narms][2];
+
+  // Residuals for individual VTX ladders
   for (int lyr=0; lyr<nlayers; lyr++)
     for (int ldr=0; ldr<nLadders[lyr]; ldr++)
       for (int stage=0; stage<2; stage++)
@@ -206,15 +209,38 @@ ResidPlots(geoEvents &ev1, geoEvents &ev2, TObjArray *cList)
                                        nbins, -xmax, xmax);
       }
 
+  // Residuals for half-layer units
+  const char *armlabel[2] = {"E","W"};
+  for (int lyr=0; lyr<nlayers; lyr++)
+    for (int arm=0; arm<narms; arm++)
+      for (int stage=0; stage<2; stage++)
+      {
+        int nbins   = 200;
+        double xmax = 0.06;
+        hls[lyr][arm][stage] = new TH1D(Form("hls%d%d%d", lyr, arm, stage),
+                                        Form("B%d%s", lyr, armlabel[arm]),
+                                        nbins, -xmax, xmax);
+        hlz[lyr][arm][stage] = new TH1D(Form("hlz%d%d%d", lyr, arm, stage),
+                                        Form("B%d%s", lyr, armlabel[arm]),
+                                        nbins, -xmax, xmax);
+      }
+
+
   // Fill residuals from ev1
   for (unsigned int ev=0; ev<ev1.size(); ev++)
     for (unsigned int t=0; t<ev1[ev].size(); t++)
     {
       SvxGeoTrack trk = ev1[ev][t];
+      int arm = East(trk.phi0) ? 0 : 1;
       for (int ihit=0; ihit < trk.nhits; ihit++)
       {
         SvxGeoHit hit = trk.GetHit(ihit);
         hr[hit.layer][hit.ladder][0]->Fill(hit.ds);
+        if (trk.nhits == 4)
+        {
+          hls[hit.layer][arm][0]->Fill(hit.ds);
+          hlz[hit.layer][arm][0]->Fill(hit.dz);
+        }
       }
     }
   // Fill residuals from ev2
@@ -222,10 +248,16 @@ ResidPlots(geoEvents &ev1, geoEvents &ev2, TObjArray *cList)
     for (unsigned int t=0; t<ev2[ev].size(); t++)
     {
       SvxGeoTrack trk = ev2[ev][t];
+      int arm = East(trk.phi0) ? 0 : 1;
       for (int ihit=0; ihit < trk.nhits; ihit++)
       {
         SvxGeoHit hit = trk.GetHit(ihit);
         hr[hit.layer][hit.ladder][1]->Fill(hit.ds);
+        if (trk.nhits == 4)
+        {
+          hls[hit.layer][arm][1]->Fill(hit.ds);
+          hlz[hit.layer][arm][1]->Fill(hit.dz);
+        }
       }
     }
 
@@ -256,11 +288,42 @@ ResidPlots(geoEvents &ev1, geoEvents &ev2, TObjArray *cList)
       cList->Add(cs);
   }
 
+
+  TCanvas *cls = new TCanvas(Form("cls%d", 0), Form("%d", 0), 1200, 800);
+  cls->Divide(4, 2, 0.001, 0.001);
+  for (int lyr=0; lyr<4; lyr++)
+    for (int arm=0; arm<2; arm++)
+    {
+      cls->cd(arm*4 + lyr+1);
+      TH1D *h1 = hls[lyr][arm][0];
+      TH1D *h2 = hls[lyr][arm][1];
+      SetYMax(h1,h2);
+      h1->Draw("");
+      h2->Draw("same");
+      ModifyPad(gPad, h1, h2, "ds");
+    }
+  cList->Add(cls);
+
+  TCanvas *clz = new TCanvas(Form("clz%d", 0), Form("%d", 0), 1200, 800);
+  clz->Divide(4, 2, 0.001, 0.001);
+  for (int lyr=0; lyr<4; lyr++)
+    for (int arm=0; arm<2; arm++)
+    {
+      clz->cd(arm*4 + lyr+1);
+      TH1D *h1 = hlz[lyr][arm][0];
+      TH1D *h2 = hlz[lyr][arm][1];
+      SetYMax(h1,h2);
+      h1->Draw("");
+      h2->Draw("same");
+      ModifyPad(gPad, h1, h2, "dz");
+    }
+  cList->Add(clz);
+
   return;
 }
 
 void
-ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2)
+ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord)
 {
   pad->SetBottomMargin(0.15);
   pad->SetLeftMargin(0.2);
@@ -283,7 +346,7 @@ ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2)
   ltx.SetNDC();
   ltx.SetTextSize(0.07);
   ltx.DrawLatex(0.23, 0.92, h1->GetTitle());
-  ltx.DrawLatex(0.23, 0.85, "ds [cm]");
+  ltx.DrawLatex(0.23, 0.85, Form("%s [cm]", coord.Data()));
   ltx.SetTextSize(0.06);
   ltx.DrawLatex(0.62,0.93, Form("#color[%d]{%.0f (%.0f) #mum}",
                                 h1->GetLineColor(),
