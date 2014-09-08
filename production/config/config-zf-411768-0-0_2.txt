@@ -1,0 +1,25 @@
+# This is /Users/theok/temp_git/vtx-alignproduction/config/config-411768-0-0_2.txt
+# Created by user theok
+# On Fri Sep  5 11:50:47 MDT 2014
+# At rl1-1-153-98-dhcp.int.colorado.edu
+# Run number: 411768
+# Production step: 0
+# Sub-iteration step: 0
+# Source: https://git.racf.bnl.gov/phenix/git/vtx-align/vtx-align.git
+# Latest commit: b0b8cbc3c7290d16748a52563c622e9c9293f59d
+# Notes: 
+#
+# Beam Centers:
+#   W-VTX BC ( 0.351596, 0.0495349)
+#   W-DC  BC (-0.120756, 0.0741091) - from Taebong  
+#   W-DCZ - W-VTXZ = -0.2951 (CalcDCBeamCenter.C)
+# CNT to VTX Offset (DC - VTX):
+#   vtx-to-cnt X: -0.120756 - 0.351596 = -0.472352
+#   vtx-to-cnt Y:  0.0741091 - 0.0495349 = 0.0245742
+#   vtx-to-cnt Z: -0.2951
+# Use W-DC as beamcenter
+
+beamcenter: -0.120756 0.0741091
+east-to-west: -0.016217 0.00283031 -0.159643
+vtx-to-cnt: -0.472352 0.0245742 -0.2951
+geomfile: 411768-0-0.par
