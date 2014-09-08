@@ -15,7 +15,8 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
                 double maxres_s = 0.1,
-                double maxres_z = 0.1)
+                double maxres_z = 0.1,
+                int nevents = -1) // -1 = everything
 {
   TFile *inFile = new TFile(infilename, "read");
 
@@ -29,7 +30,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
   SvxTGeo *tgeo = VTXModel(pisafilename);
 
   geoEvents vtxevents;
-  GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
+  GetEventsFromTree(svxseg, tgeo, vtxevents, nevents);
   FitTracks(vtxevents);
   FilterData(vtxevents,
              vertexprobmin,
