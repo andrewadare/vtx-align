@@ -3,8 +3,8 @@ import os
 
 on = True # enable/disable execution
 run = 411768
-p = 6  # production step
-itersteps = [20, 21, 22]
+p = 0  # production step
+itersteps = [0, 1, 2]
 
 pat = '{}-{}-{}'.format(run, p, 0)
 g = 'geom/{}.par'.format(pat)

@@ -15,10 +15,10 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
 void SetupHist(TH1D *h, int stage);
 
 void DrawResults(int run = 411768,
-                 int prod1 = 6,
-                 int subit1 = 20,
-                 int prod2 = 6,
-                 int subit2 = 21)
+                 int prod1 = 0,
+                 int subit1 = 0,
+                 int prod2 = 0,
+                 int subit2 = 1)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);

@@ -16,8 +16,8 @@ void WriteConfigFile(const char *filename,
                      TString notes = "");
 
 void CalcBeamCenter(int run = 411768,
-                    int prod = 6,
-                    int subiter = 20)
+                    int prod = 0,
+                    int subiter = 0)
 {
   bool write = true;
 
