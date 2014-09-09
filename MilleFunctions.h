@@ -7,11 +7,15 @@
 
 using namespace std;
 
-void MilleVtxStandalone(Mille &m, SvxGeoTrack &trk);
-void MilleVtxExternal(Mille &m, SvxGeoTrack &trk);
+void MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
+              TGraphErrors *bc = 0);
+void MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
+              TGraphErrors *bc = 0);
+float GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
+                       TGraphErrors *bc = 0);
 
 void
-MilleVtxStandalone(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars)
+MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *bc)
 {
   // Mille::mille() is called once for each residual (so, twice per hit:
   // one for the s coordinate, one for z).
@@ -20,7 +24,7 @@ MilleVtxStandalone(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars)
   // respect to local (track) and global (detector position) parameters.
   // The actual fitting is performed afterward by the pede program.
 
-  // Get the number of global parameters for s and for z. This sets the number 
+  // Get the number of global parameters for s and for z. This sets the number
   // of derivatives ds/d* and dz/d* to be computed.
   int nsgp = sgpars.size();
   int nzgp = zgpars.size();
@@ -37,12 +41,12 @@ MilleVtxStandalone(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars)
     for (int k=0; k<nsgp; k++)
     {
       slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
-      sdergl.push_back(GlobalDerivative(trk, j, "s", sgpars[k], 0/*bc*/));
+      sdergl.push_back(GlobalDerivative(trk, j, "s", sgpars[k], bc));
     }
     for (int k=0; k<nzgp; k++)
     {
       zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
-      zdergl.push_back(GlobalDerivative(trk, j, "z", zgpars[k], 0/*bc*/));
+      zdergl.push_back(GlobalDerivative(trk, j, "z", zgpars[k], bc));
     }
 
     // Assign sigmas for denominator of chi square function.
@@ -133,21 +137,40 @@ MilleVtxStandalone(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars)
 // }
 
 void
-MilleVtxExternal(Mille &m, SvxGeoTrack &trk)
+MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *bc)
 {
+  // Get the number of global parameters for s and for z. This sets the number
+  // of derivatives ds/d* and dz/d* to be computed.
+  int nsgp = sgpars.size();
+  int nzgp = zgpars.size();
+
+  // Local derivatives
+  float sderlc[1] = {1.0};
+  float zderlc[1] = {1.0};
+
   for (int j=0; j<trk.nhits; j++)
   {
     SvxGeoHit hit = trk.GetHit(j);
-    int ls = Label(hit.layer, hit.ladder, "s");
-    int lz = Label(hit.layer, hit.ladder, "z");
-    int lr = Label(hit.layer, hit.ladder, "r");
-    int slabels[2] = {ls, lr};
-    int zlabels[2] = {lz, lr};
 
-    float sderlc[1] = {1.0}; // Local derivatives
-    float zderlc[1] = {1.0}; // Local derivatives
-    float sdergl[1] = {1.0}; // Global derivatives
-    float zdergl[1] = {1.0}; // Global derivatives
+    // Fill vectors of labels and global derivatives for s and z residuals
+    veci slabels;
+    veci zlabels;
+    vector<float> sdergl;
+    vector<float> zdergl;
+    for (int k=0; k<nsgp; k++)
+    {
+      string res = "s";
+      string par = sgpars[k];
+      slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
+      sdergl.push_back(GlobalDerivative(trk, j, res, par, bc));
+    }
+    for (int k=0; k<nzgp; k++)
+    {
+      string res = "z";
+      string par = zgpars[k];
+      zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
+      zdergl.push_back(GlobalDerivative(trk, j, res, par, bc));
+    }
 
     // Assign sigmas for denominator of chi square function.
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
@@ -158,16 +181,18 @@ MilleVtxExternal(Mille &m, SvxGeoTrack &trk)
 
     // Here, fit clusters individually. Each cluster is treated as
     // one "local fit object".
-    // Give s residual perfect resolution
-    m.mille(1, sderlc, 0, sdergl, slabels, 0, .000001);
-    m.mille(1, zderlc, 1, zdergl, zlabels, hit.dz, sigz);
+
+    // No global fit to s residual
+    m.mille(1, sderlc, 0, &sdergl[0], &slabels[0], 0, .000001);
+    m.mille(1, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
     m.end();
 
-    // Give z residual perfect resolution
-    m.mille(1, sderlc, 1, sdergl, slabels, hit.ds, sigs);
-    m.mille(1, zderlc, 0, zdergl, zlabels, 0, .000001);
+    // No global fit to z residual
+    m.mille(1, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
+    m.mille(1, zderlc, 0, &zdergl[0], &zlabels[0], 0, .000001);
     m.end();
   }
+
   return;
 }
 
