@@ -18,7 +18,7 @@ const char *pedeConstFile = "pede-const.txt";
 string pedeBinFileStd = "standalone.bin";
 string pedeBinFileCnt = "svxcnttrks.bin";
 
-void EventLoop(string binfile, geoEvents &events, TGraphErrors* bc = 0, 
+void EventLoop(string binfile, geoEvents &events, TGraphErrors *bc = 0,
                TString opt = "");
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
 void CorrectFromFile(const char *filename,
@@ -77,7 +77,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
   if (nStdTracks > 0)
   {
-    GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
+    GetEventsFromTree(svxseg, tgeo, vtxevents, -10000);
 
     TFile *bcf = new TFile(bcFileIn.Data(), "read");
     TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
@@ -143,7 +143,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 }
 
 void
-EventLoop(string binfile, geoEvents &events, TGraphErrors* bc, TString opt)
+EventLoop(string binfile, geoEvents &events, TGraphErrors *bc, TString opt)
 {
   // Call Mille::Mille() in a loop. See MilleFunctions.h
   // Options:
@@ -192,16 +192,17 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
     return;
   }
 
-  // Write linear constraints such that \sum_label w_label * p_label = c
-  // where w is the weight to be applied for each term.
-  //
-  // The format is as follows:
-  // Constraint c
-  // label w_label
-  // label w_label
-  // ...
+  fs << "! Write linear constraints such that sum_l (f_l * p_l) = c"
+     << endl;
+  fs << "! where the f_l factors provide coord. dependence to constrain shear."
+     << endl;
+  fs << "! The format is as follows:" << endl;
+  fs << "! Constraint c" << endl;
+  fs << "! 123 1.0   ! Add a p_123 * f_123 term" << endl;
+  fs << "! 234 2.345 ! Add a p_234 * f_234 term" << endl;
+  fs << "! ..." << endl;
 
-  // Fix ladders. Example: 104 0.0 -1
+  // Fix or regulate ladders. Example: 104 0.0 -1 (fixed)
   fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
      << endl;
   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
@@ -216,37 +217,16 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
       }
   fs << endl;
 
-  // // Apply presigma to regulate radial movement.
-  // // Only apply radial constraints if radial corrections are allowed.
-  // if (allowRShifts)
-  // {
-  //   fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
-  //      << endl;
-  //   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-  //     for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
-  //     {
-  //       double presig = -1.; // Radial DOF fixed by default
-  //       if (allowRShifts)
-  //         presig = 1e-4; // Smaller (positive) values <-> stronger regularization
-  //       fs << Form("%4d 0.0 %g ! B%dL%d(r)",
-  //                  Label(lyr, ldr, "r"), presig, lyr, ldr) << endl;
-  //     }
-  //   fs << endl;
-  // }
-
-  vecd x;
-
   // Global parameter labels for z and s coordinates in east and west arms
-  veci wz;
-  veci ws;
-  veci wr;
-  veci ez;
-  veci es;
-  veci er;
-  veci vtxr;
+  veci wz = LadderLabels(geo, "w", "z");
+  veci ws = LadderLabels(geo, "w", "s");
+  veci wr = LadderLabels(geo, "w", "r");
+  veci ez = LadderLabels(geo, "e", "z");
+  veci es = LadderLabels(geo, "e", "s");
+  veci er = LadderLabels(geo, "e", "r");
 
-  // Labels for global parameters to be excluded from sum constraints
-  veci excl;
+  // // Labels for global parameters to be excluded from sum constraints
+  // veci excl;
 
   bool constrainEdgeLadders = true;
 
@@ -277,84 +257,41 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
       ebs.push_back(Label(lyr, eb[lyr], "s")); // east bottom s
     }
 
-    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-    {
-      // West arm
-      for (int ldr=0; ldr<geo->GetNLadders(lyr)/2; ldr++)
-      {
-        ws.push_back(Label(lyr, ldr, "s"));
-        wz.push_back(Label(lyr, ldr, "z"));
-        wr.push_back(Label(lyr, ldr, "r"));
-        vtxr.push_back(Label(lyr, ldr, "r"));
-      }
-      // East arm
-      for (int ldr=geo->GetNLadders(lyr)/2; ldr < geo->GetNLadders(lyr); ldr++)
-      {
-        es.push_back(Label(lyr, ldr, "s"));
-        ez.push_back(Label(lyr, ldr, "z"));
-        er.push_back(Label(lyr, ldr, "r"));
-        vtxr.push_back(Label(lyr, ldr, "r"));
-      }
-    }
+    AddConstraint(wtz, geo, Radii, fs, "West top z r shear");
+    AddConstraint(etz, geo, Radii, fs, "East top z r shear");
+    AddConstraint(wts, geo, Radii, fs, "West top s r shear");
+    AddConstraint(ets, geo, Radii, fs, "East top s r shear");
+    AddConstraint(wbz, geo, Radii, fs, "West bottom z r shear");
+    AddConstraint(ebz, geo, Radii, fs, "East bottom z r shear");
+    AddConstraint(wbs, geo, Radii, fs, "West bottom s r shear");
+    AddConstraint(ebs, geo, Radii, fs, "East bottom s r shear");
 
-    Radii(wtz,excl,geo,x);  AddConstraint(wtz, x, fs, "West top z r shear");
-    Radii(etz,excl,geo,x);  AddConstraint(etz, x, fs, "East top z r shear");
-    Radii(wts,excl,geo,x);  AddConstraint(wts, x, fs, "West top s r shear");
-    Radii(ets,excl,geo,x);  AddConstraint(ets, x, fs, "East top s r shear");
-    Radii(wbz,excl,geo,x);  AddConstraint(wbz, x, fs, "West bottom z r shear");
-    Radii(ebz,excl,geo,x);  AddConstraint(ebz, x, fs, "East bottom z r shear");
-    Radii(wbs,excl,geo,x);  AddConstraint(wbs, x, fs, "West bottom s r shear");
-    Radii(ebs,excl,geo,x);  AddConstraint(ebs, x, fs, "East bottom s r shear");
   } // end constrainEdgeLadders block
 
-  // Fill vector of excluded ladders
-  for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-    for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
-      if (Dead(lyr,ldr) || Locked(lyr,ldr))
-      {
-        excl.push_back(Label(lyr, ldr, "z"));
-        excl.push_back(Label(lyr, ldr, "s"));
-      }
+  // Prevent net shift or rotation of an entire arm
+  AddConstraint(wz, geo, Ones, fs, "West z translation");
+  AddConstraint(ez, geo, Ones, fs, "East z translation");
+  AddConstraint(ws, geo, Ones, fs, "West s translation");
+  AddConstraint(es, geo, Ones, fs, "East s translation");
 
-  if (true)
-  {
-    // Prevent net radial displacement over all vtx ladders
-    // Ones(vtxr,excl,x);  AddConstraint(vtxr, x, fs, "Full-VTX radial expansion/contraction");
-
-    // Prevent net shift or rotation of an entire arm
-    Ones(wz,excl,x);  AddConstraint(wz, x, fs, "West z translation");
-    Ones(ez,excl,x);  AddConstraint(ez, x, fs, "East z translation");
-    Ones(ws,excl,x);  AddConstraint(ws, x, fs, "West s translation");
-    Ones(es,excl,x);  AddConstraint(es, x, fs, "East s translation");
-
-    // // Only apply radial constraints if radial corrections are allowed
-    // if (allowRShifts)
-    // {
-    //   Ones(wr,excl,x);  AddConstraint(wr, x, fs, "West r expansion/contraction");
-    //   Ones(er,excl,x);  AddConstraint(er, x, fs, "East r expansion/contraction");
-    // }
-
-    // Prevent various shear distortions of an entire arm
-    PhiAngles(wz,excl,geo,x); AddConstraint(wz, x, fs, "West z phi shear");
-    PhiAngles(ez,excl,geo,x); AddConstraint(ez, x, fs, "East z phi shear");
-    PhiAngles(ws,excl,geo,x); AddConstraint(ws, x, fs, "West s phi shear");
-    PhiAngles(es,excl,geo,x); AddConstraint(es, x, fs, "East s phi shear");
-    RPhi(wz,excl,geo,x);      AddConstraint(wz, x, fs, "West z r-phi shear");
-    RPhi(ez,excl,geo,x);      AddConstraint(ez, x, fs, "East z r-phi shear");
-    RPhi(ws,excl,geo,x);      AddConstraint(ws, x, fs, "West s r-phi shear");
-    RPhi(es,excl,geo,x);      AddConstraint(es, x, fs, "East s r-phi shear");
-    Radii(wz,excl,geo,x);     AddConstraint(wz, x, fs, "West z r shear");
-    Radii(ez,excl,geo,x);     AddConstraint(ez, x, fs, "East z r shear");
-    Radii(ws,excl,geo,x);     AddConstraint(ws, x, fs, "West s r shear");
-    Radii(es,excl,geo,x);     AddConstraint(es, x, fs, "East s r shear");
-  }
+  // Prevent various shear distortions of an entire arm
+  AddConstraint(wz, geo, PhiAngles, fs, "West z phi shear");
+  AddConstraint(ez, geo, PhiAngles, fs, "East z phi shear");
+  AddConstraint(ws, geo, PhiAngles, fs, "West s phi shear");
+  AddConstraint(es, geo, PhiAngles, fs, "East s phi shear");
+  AddConstraint(wz, geo, RPhi,      fs, "West z r-phi shear");
+  AddConstraint(ez, geo, RPhi,      fs, "East z r-phi shear");
+  AddConstraint(ws, geo, RPhi,      fs, "West s r-phi shear");
+  AddConstraint(es, geo, RPhi,      fs, "East s r-phi shear");
+  AddConstraint(wz, geo, Radii,     fs, "West z r shear");
+  AddConstraint(ez, geo, Radii,     fs, "East z r shear");
+  AddConstraint(ws, geo, Radii,     fs, "West s r shear");
+  AddConstraint(es, geo, Radii,     fs, "East s r shear");
 
   fs.close();
   Printf("done.");
   return;
 }
-
-
 
 void
 CorrectFromFile(const char *filename,
@@ -372,11 +309,6 @@ CorrectFromFile(const char *filename,
     {
       int l = -1;
 
-      // Phi correction from ds
-      l = Label(i,j,"s");
-      if (mpc.find(l) != mpc.end())
-        tgeo->RotateLadderRPhi(i, j, mpc[l]);
-
       // Pure translation corrections
       l = Label(i,j,"x");
       if (mpc.find(l) != mpc.end())
@@ -387,6 +319,11 @@ CorrectFromFile(const char *filename,
       l = Label(i,j,"z");
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateLadder(i, j, 0. ,0., mpc[l]);
+
+      // Phi correction from ds
+      l = Label(i,j,"s");
+      if (mpc.find(l) != mpc.end())
+        tgeo->RotateLadderRPhi(i, j, mpc[l]);
 
       // Radial correction
       l = Label(i,j,"r");
@@ -403,19 +340,3 @@ CorrectFromFile(const char *filename,
 
   return;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
