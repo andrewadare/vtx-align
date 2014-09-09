@@ -3,6 +3,7 @@
 
 #include "SvxTGeo.h"
 #include "ParameterDefs.h"
+#include "BadLadders.h"
 
 #include <fstream>
 #include <string>
@@ -11,12 +12,23 @@ typedef vector<double> vecd;
 typedef vector<int>    veci;
 
 bool In(int val, veci v);
-void Ones(veci &labels, veci &xlabels, vecd &x);
-void Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-void PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
-void RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x);
+veci LadderLabels(SvxTGeo *geo, string arm, string coord);
 void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
-                   string comment = "", double sumto=0.0);
+                   string comment = "", double sumto = 0.0);
+void AddConstraint(veci &labels, SvxTGeo *geo,
+                   void(*fl)(veci &, SvxTGeo *, vecd &),
+                   ofstream &fs, string comment = "", double sumto = 0.0);
+
+// Position querying callback functions: store current positions into x for the
+// provided labels.
+// These are used to provide the f_l factors in the global parameter
+// sum constraint equations of the form sum_l(f_l*p_l) = const.
+// See sec. 6 of the Millepede manual for some documentation.
+// They should all return void and take the same parameter list.
+void      Ones(veci &labels, SvxTGeo *geo, vecd &x);
+void     Radii(veci &labels, SvxTGeo *geo, vecd &x);
+void PhiAngles(veci &labels, SvxTGeo *geo, vecd &x);
+void      RPhi(veci &labels, SvxTGeo *geo, vecd &x);
 
 bool In(int val, veci v)
 {
@@ -26,17 +38,39 @@ bool In(int val, veci v)
   return false;
 }
 
+veci
+LadderLabels(SvxTGeo *geo, string arm, string coord)
+{
+  veci l;
+  if (arm == "W" || arm == "w" || arm == "all")    // West arm
+  {
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+      for (int ldr=0; ldr<geo->GetNLadders(lyr)/2; ldr++)
+        if (!Dead(lyr,ldr) && !Locked(lyr,ldr))
+          l.push_back(Label(lyr, ldr, coord));
+  }
+  if (arm == "E" || arm == "e" || arm == "all")    // East arm
+  {
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+      for (int ldr=geo->GetNLadders(lyr)/2; ldr < geo->GetNLadders(lyr); ldr++)
+        if (!Dead(lyr,ldr) && !Locked(lyr,ldr))
+          l.push_back(Label(lyr, ldr, coord));
+  }
+  return l;
+}
+
 void
-Ones(veci &labels, veci &xlabels, vecd &x)
+Ones(veci &labels, SvxTGeo * /*geo*/, vecd &x)
 {
   x.clear();
   x.resize(labels.size(), 0.0);
   for (unsigned int i=0; i<labels.size(); i++)
-    x[i] = In(labels[i], xlabels) ? 0.0 : 1.0;
+    x[i] = 1.0;
+    // x[i] = In(labels[i], xlabels) ? 0.0 : 1.0;
 }
 
 void
-Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
+Radii(veci &labels, SvxTGeo *geo, vecd &x)
 {
   x.clear();
   x.resize(labels.size(), 0.0);
@@ -45,12 +79,13 @@ Radii(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
   for (unsigned int i=0; i<labels.size(); i++)
   {
     ParInfo(labels[i], lyr, ldr, s);
-    x[i] = In(labels[i], xlabels) ? 0.0 : geo->SensorRadius(lyr, ldr, 0);
+    x[i] = geo->SensorRadius(lyr, ldr, 0);
+    // x[i] = In(labels[i], xlabels) ? 0.0 : geo->SensorRadius(lyr, ldr, 0);
   }
 }
 
 void
-PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
+PhiAngles(veci &labels, SvxTGeo *geo, vecd &x)
 {
   x.clear();
   x.resize(labels.size(), 0.0);
@@ -61,12 +96,13 @@ PhiAngles(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
     ParInfo(labels[i], lyr, ldr, s);
     float phi = TMath::PiOver2() + fmod(geo->SensorPhiRad(lyr, ldr, 0),
                                         TMath::TwoPi());
-    x[i] = In(labels[i], xlabels) ? 0.0 : phi;
+    x[i] = phi;
+    // x[i] = In(labels[i], xlabels) ? 0.0 : phi;
   }
 }
 
 void
-RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
+RPhi(veci &labels, SvxTGeo *geo, vecd &x)
 {
   x.clear();
   x.resize(labels.size(), 0.0);
@@ -78,7 +114,8 @@ RPhi(veci &labels, veci &xlabels, SvxTGeo *geo, vecd &x)
     float phi = TMath::PiOver2() + fmod(geo->SensorPhiRad(lyr, ldr, 0),
                                         TMath::TwoPi());
     float rphi = phi*geo->SensorRadius(lyr, ldr, 0);
-    x[i] = In(labels[i], xlabels) ? 0.0 : rphi;
+    x[i] = rphi;
+    // x[i] = In(labels[i], xlabels) ? 0.0 : rphi;
   }
 }
 
@@ -98,4 +135,17 @@ AddConstraint(veci &labels, vecd &coords, ofstream &fs, string comment, double s
 
   return;
 }
+
+void
+AddConstraint(veci &labels, SvxTGeo *geo,
+              void(*fl)(veci &, SvxTGeo *, vecd &),
+              ofstream &fs, string comment, double sumto)
+{
+  vecd x(labels.size(), 0.0);
+  fl(labels, geo, x);
+
+  AddConstraint(labels,x,fs,comment,sumto);
+  return;
+}
+
 #endif
