@@ -11,6 +11,8 @@ void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1,
                        TString opt = "");
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event = -1);
 void FillNTuple(geoEvents &events, TNtuple *ntuple);
+int GetCorrections(const char *resFile, std::map<int, double> &mpc);
+void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
 
 void
 GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
@@ -251,5 +253,62 @@ FillNTuple(geoEvents &events, TNtuple *ntuple)
 
   return;
 }
+
+int
+GetCorrections(const char *resFile, std::map<int, double> &mpc)
+{
+  // Load global parameter (i.e. position) corrections from pede output
+  // (called millepede.res by default) into the mpc map.
+
+  std::ifstream filein(resFile);
+  int label;
+  double p, col3, col4, col5;
+
+  if (!filein)
+  {
+    Error("GetCorrections() in VtxAlign.C", "Problem opening %s", resFile);
+    return -1;
+  }
+  else
+    for (std::string line; std::getline(filein, line);)
+    {
+      if (filein >> label >> p >> col3 >> col4 >> col5)
+        mpc[label] = p;
+    }
+
+  return (int)mpc.size();
+}
+
+void
+WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
+{
+  cout << "Writing " << filename << "..." << flush;
+
+  ofstream fs(filename);
+
+  fs << Form("* This is %s", filename) << endl;
+  fs << Form("* Pass this file to pede: pede %s", filename) << endl;
+  fs << endl;
+
+  fs << "Fortranfiles  ! Fortran/text inputs listed here:" << endl;
+  for (unsigned int i=0; i<constfiles.size(); i++)
+    fs << constfiles[i] << " ! constraints file" << endl;
+  fs << endl;
+
+  fs << "Cfiles  ! c/c++ binary input files listed here:" << endl;
+  for (unsigned int i=0; i<binfiles.size(); i++)
+    fs << binfiles[i] << " ! binary data file" << endl;
+  fs << endl;
+
+  fs << "method inversion 5 0.0001  ! Gauss. elim., #iterations, tol." << endl;
+  fs << "end" << endl;
+
+  fs.close();
+
+  Printf("done.");
+
+  return;
+}
+
 
 #endif
