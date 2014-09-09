@@ -2,6 +2,7 @@
 #include "VtxAlignBase.h"
 #include "GLSFitter.h"
 #include "ParameterDefs.h"
+#include "MilleFunctions.h"
 #include "ConstraintBuilder.h"
 #include "VtxIO.h"
 #include "VtxVis.h"
@@ -9,7 +10,6 @@
 using namespace std;
 
 // Globals
-bool allowRShifts = false;   // Switch to add radial d.o.f. to global pars
 const double BField = 0.0;
 const int nStdTracks = 999999;
 const int nCntTracks = 0;
@@ -18,18 +18,16 @@ const char *pedeConstFile = "pede-const.txt";
 string pedeBinFileStd = "standalone.bin";
 string pedeBinFileCnt = "svxcnttrks.bin";
 
-void TrackLoop(string binfile, geoTracks &tracks, TNtuple *hitTree = 0,
-               TNtuple *trkTree = 0, TString opt = "");
-void EventLoop(string binfile, geoEvents &events, TString opt = "");
+void EventLoop(string binfile, geoEvents &events, TGraphErrors* bc = 0, 
+               TString opt = "");
 void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
-void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
-int GetCorrections(const char *resFile, std::map<int, double> &mpc);
-void FilterTracks(geoTracks &a, geoTracks &b, double maxdca);
-void MilleVtxStandalone(Mille &m, SvxGeoTrack &trk);
-void MilleVtxExternal(Mille &m, SvxGeoTrack &trk);
+void CorrectFromFile(const char *filename,
+                     SvxTGeo *tgeo,
+                     geoEvents &vtxevents,
+                     geoEvents &cntevents);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 0,        // Production step. Starts at 0.
+              int prod = 100,        // Production step. Starts at 0.
               int subiter = 0)     // Geometry update step. Starts at 0.
 {
   // No point in continuing if Millepede II is not installed...
@@ -84,13 +82,12 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
     TFile *bcf = new TFile(bcFileIn.Data(), "read");
     TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
 
-    gbc->SetPointError(0, gbc->GetEX()[0], gbc->GetEY()[0]);
-    gbc->SetPointError(1, gbc->GetEX()[1], gbc->GetEY()[1]);
-
+    // gbc->SetPointError(0, gbc->GetEX()[0], gbc->GetEY()[0]);
+    // gbc->SetPointError(1, gbc->GetEX()[1], gbc->GetEY()[1]);
     // FitTracks(vtxevents, gbc);// Uses beam center. Doesn't work as well.
 
     FitTracks(vtxevents, 0);
-    EventLoop(pedeBinFileStd, vtxevents);
+    EventLoop(pedeBinFileStd, vtxevents, gbc);
   }
   if (nCntTracks > 0)
   {
@@ -101,33 +98,13 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Shell out to pede executable
   gSystem->Exec(Form("pede %s", pedeSteerFile));
 
-  // Retrieve Millepede's corrections to the global parameters
-  // Key is label, value is correction.
-  map<int, double> mpc;
-  GetCorrections("millepede.res", mpc);
-
   // Copy geometry adjustments (with their errors) to logs/ directory.
   gSystem->Exec(Form("cp millepede.res logs/dp-%d-%d-%d.txt",
                      run, prod, subiter));
 
-  for (int i=0; i<tgeo->GetNLayers(); i++)
-    for (int j=0; j<tgeo->GetNLadders(i); j++)
-    {
-      // Phi correction from ds
-      tgeo->RotateLadderRPhi(i, j, mpc[Label(i,j,"s")]);
-      // Longitudinal (z) correction
-      tgeo->TranslateLadder(i, j, 0. ,0., mpc[Label(i,j,"z")]);
-      // Radial correction
-      if (allowRShifts)
-        tgeo->MoveLadderRadially(i, j, mpc[Label(i,j,"r")]);
-    }
-
-  for (unsigned int ev=0; ev<vtxevents.size(); ev++)
-    for (unsigned int t=0; t<vtxevents[ev].size(); t++)
-      vtxevents[ev][t].UpdateHits();
-  for (unsigned int ev=0; ev<cntevents.size(); ev++)
-    for (unsigned int t=0; t<cntevents[ev].size(); t++)
-      cntevents[ev][t].UpdateHits();
+  // Apply position corrections from pede output file.
+  // Also update stored global positions in geoEvents vectors.
+  CorrectFromFile("millepede.res", tgeo, vtxevents, cntevents);
 
   // Record positions after alignment
   vecd x1; vecd y1; vecd z1;
@@ -166,108 +143,26 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 }
 
 void
-MilleVtxStandalone(Mille &m, SvxGeoTrack &trk)
+EventLoop(string binfile, geoEvents &events, TGraphErrors* bc, TString opt)
 {
-  // Mille::mille() is called once for each residual (so, twice per hit:
-  // one for the s coordinate, one for z).
-  // These calls fill a binary file (standalone.bin) with info on
-  // measured and expected residual sizes, and how the residuals change with
-  // respect to local (track) and global (detector position) parameters.
-  // The actual fitting is performed afterward by the pede program.
-
-  for (int j=0; j<trk.nhits; j++)
-  {
-    SvxGeoHit hit = trk.GetHit(j);
-    int ls = Label(hit.layer, hit.ladder, "s");
-    int lz = Label(hit.layer, hit.ladder, "z");
-    int lr = Label(hit.layer, hit.ladder, "r");
-    int slabels[2] = {ls, lr};
-    int zlabels[2] = {lz, lr};
-    float r = hit.x*hit.x + hit.y*hit.y;
-    float theta = TMath::ATan2(r, hit.z);
-
-    // Assign sigmas for denominator of chi square function.
-    // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
-    // If millepede complains that chi^2/ndf is away from 1.0,
-    // this is a good place to make adjustments.
-    float sigs = 4. * hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 4. * hit.zsigma * ClusterZResolution(hit.layer);
-
-    if (false)
-      Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
-             hit.ds, sigs, hit.dz, sigz);
-
-    // Local derivatives
-    // Split into two independent fits per track:
-    // 1. in the r-z plane: z = z0 + slope*r
-    // 2. in the x-y plane: y' = y0' + slope*r (where y' \perp r)
-    float sderlc[4] = {1.0,   r, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
-    float zderlc[4] = {0.0, 0.0, 1.0,   r}; // dz(r)/dz0, dz(r)/dslope
-
-    // Approximate global derivatives
-    float dsdr = hit.ds/r;
-    float dzdr = TMath::Tan(theta - TMath::PiOver2());
-
-    // Use ngd to control whether derivatives of residuals
-    // w.r.t. radial coordinate are included in global fit.
-    int ngd = allowRShifts ? 2 : 1;
-
-    float sdergl[2] = {1., dsdr}; // ds/ds, ds/dr
-    float zdergl[2] = {1., dzdr}; // dz/dz, dz/dr
-    m.mille(4, sderlc, ngd, sdergl, slabels, hit.ds, sigs);
-    m.mille(4, zderlc, ngd, zdergl, zlabels, hit.dz, sigz);
-  }
-
-  // Write residuals for this track to file & reset for next track.
-  m.end();
-
-  return;
-}
-
-void
-MilleVtxExternal(Mille &m, SvxGeoTrack &trk)
-{
-  for (int j=0; j<trk.nhits; j++)
-  {
-    SvxGeoHit hit = trk.GetHit(j);
-    int ls = Label(hit.layer, hit.ladder, "s");
-    int lz = Label(hit.layer, hit.ladder, "z");
-    int lr = Label(hit.layer, hit.ladder, "r");
-    int slabels[2] = {ls, lr};
-    int zlabels[2] = {lz, lr};
-
-    float sderlc[1] = {1.0}; // Local derivatives
-    float zderlc[1] = {1.0}; // Local derivatives
-    float sdergl[1] = {1.0}; // Global derivatives
-    float zdergl[1] = {1.0}; // Global derivatives
-
-    // Assign sigmas for denominator of chi square function.
-    // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
-    // If millepede complains that chi^2/ndf is away from 1.0,
-    // this is a good place to make adjustments.
-    float sigs = 4. * hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 4. * hit.zsigma * ClusterZResolution(hit.layer);
-
-    // Here, fit clusters individually. Each cluster is treated as 
-    // one "local fit object".
-    // Give s residual perfect resolution
-    m.mille(1, sderlc, 0, sdergl, slabels, 0, .000001);
-    m.mille(1, zderlc, 1, zdergl, zlabels, hit.dz, sigz);
-    m.end();
-
-    // Give z residual perfect resolution
-    m.mille(1, sderlc, 1, sdergl, slabels, hit.ds, sigs);
-    m.mille(1, zderlc, 0, zdergl, zlabels, 0, .000001);
-    m.end();
-  }
-  return;
-}
-
-void
-EventLoop(string binfile, geoEvents &events, TString opt)
-{
+  // Call Mille::Mille() in a loop. See MilleFunctions.h
   // Options:
   // - "ext": Assume residuals were computed from external information.
+
+  vecs sgpars;
+  vecs zgpars;
+
+  // Select global parameters and derivatives for s residuals here
+  if (true) sgpars.push_back("s");
+  if (true) sgpars.push_back("x");
+  if (true) sgpars.push_back("y");
+  if (false) sgpars.push_back("r");
+
+  // Select global parameters and derivatives for z residuals here
+  if (true) zgpars.push_back("x");
+  if (true) zgpars.push_back("y");
+  if (true) zgpars.push_back("z");
+  if (false) zgpars.push_back("r");
 
   Printf("Calling mille() in EventLoop(). Write to %s...", binfile.c_str());
   Mille m(binfile.c_str());
@@ -275,9 +170,10 @@ EventLoop(string binfile, geoEvents &events, TString opt)
     for (unsigned int t=0; t<events[ev].size(); t++)
     {
       SvxGeoTrack trk = events[ev][t];
-      MilleVtxStandalone(m, trk);
       if (opt.Contains("ext"))
-        MilleVtxExternal(m, trk);
+        MilleCnt(m, trk, sgpars, zgpars, bc);
+      else
+        MilleVtx(m, trk, sgpars, zgpars, bc);
     }
 
   // Mille object must go out of scope for output file to close properly.
@@ -320,23 +216,23 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
       }
   fs << endl;
 
-  // Apply presigma to regulate radial movement.
-  // Only apply radial constraints if radial corrections are allowed.
-  if (allowRShifts)
-  {
-    fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
-       << endl;
-    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-      for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
-      {
-        double presig = -1.; // Radial DOF fixed by default
-        if (allowRShifts)
-          presig = 1e-4; // Smaller (positive) values <-> stronger regularization
-        fs << Form("%4d 0.0 %g ! B%dL%d(r)",
-                   Label(lyr, ldr, "r"), presig, lyr, ldr) << endl;
-      }
-    fs << endl;
-  }
+  // // Apply presigma to regulate radial movement.
+  // // Only apply radial constraints if radial corrections are allowed.
+  // if (allowRShifts)
+  // {
+  //   fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
+  //      << endl;
+  //   for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+  //     for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
+  //     {
+  //       double presig = -1.; // Radial DOF fixed by default
+  //       if (allowRShifts)
+  //         presig = 1e-4; // Smaller (positive) values <-> stronger regularization
+  //       fs << Form("%4d 0.0 %g ! B%dL%d(r)",
+  //                  Label(lyr, ldr, "r"), presig, lyr, ldr) << endl;
+  //     }
+  //   fs << endl;
+  // }
 
   vecd x;
 
@@ -431,12 +327,12 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
     Ones(ws,excl,x);  AddConstraint(ws, x, fs, "West s translation");
     Ones(es,excl,x);  AddConstraint(es, x, fs, "East s translation");
 
-    // Only apply radial constraints if radial corrections are allowed
-    if (allowRShifts)
-    {
-      Ones(wr,excl,x);  AddConstraint(wr, x, fs, "West r expansion/contraction");
-      Ones(er,excl,x);  AddConstraint(er, x, fs, "East r expansion/contraction");
-    }
+    // // Only apply radial constraints if radial corrections are allowed
+    // if (allowRShifts)
+    // {
+    //   Ones(wr,excl,x);  AddConstraint(wr, x, fs, "West r expansion/contraction");
+    //   Ones(er,excl,x);  AddConstraint(er, x, fs, "East r expansion/contraction");
+    // }
 
     // Prevent various shear distortions of an entire arm
     PhiAngles(wz,excl,geo,x); AddConstraint(wz, x, fs, "West z phi shear");
@@ -458,55 +354,68 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   return;
 }
 
+
+
 void
-WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
+CorrectFromFile(const char *filename,
+                SvxTGeo *tgeo,
+                geoEvents &vtxevents,
+                geoEvents &cntevents)
 {
-  cout << "Writing " << filename << "..." << flush;
+  // Retrieve Millepede's corrections to the global parameters
+  // Key is label, value is correction.
+  map<int, double> mpc;
+  GetCorrections(filename, mpc);
 
-  ofstream fs(filename);
+  for (int i=0; i<tgeo->GetNLayers(); i++)
+    for (int j=0; j<tgeo->GetNLadders(i); j++)
+    {
+      int l = -1;
 
-  fs << Form("* This is %s created by %s", filename, "VtxAlign.C") << endl;
-  fs << Form("* Pass this file to pede: pede %s", filename) << endl;
-  fs << endl;
+      // Phi correction from ds
+      l = Label(i,j,"s");
+      if (mpc.find(l) != mpc.end())
+        tgeo->RotateLadderRPhi(i, j, mpc[l]);
 
-  fs << "Fortranfiles  ! Fortran/text inputs listed here:" << endl;
-  for (unsigned int i=0; i<constfiles.size(); i++)
-    fs << constfiles[i] << " ! constraints file" << endl;
-  fs << endl;
+      // Pure translation corrections
+      l = Label(i,j,"x");
+      if (mpc.find(l) != mpc.end())
+        tgeo->TranslateLadder(i, j, mpc[l], 0., 0.);
+      l = Label(i,j,"y");
+      if (mpc.find(l) != mpc.end())
+        tgeo->TranslateLadder(i, j, 0., mpc[l], 0.);
+      l = Label(i,j,"z");
+      if (mpc.find(l) != mpc.end())
+        tgeo->TranslateLadder(i, j, 0. ,0., mpc[l]);
 
-  fs << "Cfiles  ! c/c++ binary input files listed here:" << endl;
-  for (unsigned int i=0; i<binfiles.size(); i++)
-    fs << binfiles[i] << " ! binary data file" << endl;
-  fs << endl;
+      // Radial correction
+      l = Label(i,j,"r");
+      if (mpc.find(l) != mpc.end())
+        tgeo->MoveLadderRadially(i, j, mpc[l]);
+    }
 
-  fs << "method inversion 5 0.0001  ! Gauss. elim., #iterations, tol." << endl;
-  fs << "end" << endl;
-
-  fs.close();
-
-  Printf("done.");
+  for (unsigned int ev=0; ev<vtxevents.size(); ev++)
+    for (unsigned int t=0; t<vtxevents[ev].size(); t++)
+      vtxevents[ev][t].UpdateHits();
+  for (unsigned int ev=0; ev<cntevents.size(); ev++)
+    for (unsigned int t=0; t<cntevents[ev].size(); t++)
+      cntevents[ev][t].UpdateHits();
 
   return;
 }
 
-int
-GetCorrections(const char *resFile, std::map<int, double> &mpc)
-{
-  std::ifstream filein(resFile);
-  int label;
-  double p, col3, col4, col5;
 
-  if (!filein)
-  {
-    Error("GetCorrections() in VtxAlign.C", "Problem opening %s", resFile);
-    return -1;
-  }
-  else
-    for (std::string line; std::getline(filein, line);)
-    {
-      if (filein >> label >> p >> col3 >> col4 >> col5)
-        mpc[label] = p;
-    }
 
-  return (int)mpc.size();
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
