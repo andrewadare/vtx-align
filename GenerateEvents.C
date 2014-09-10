@@ -3,7 +3,7 @@
 
 void GenerateEvents()
 {
-  const int nevents = (int)5e4;
+  const int nevents = (int)1e4;
   SvxTGeo *tgeo = VTXModel("geom/svxPISA-ideal.par");
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", 123456, 0, 0);
 
@@ -13,8 +13,8 @@ void GenerateEvents()
   TVectorD vertex(3);
   for (int n=0; n<nevents; n++)
   {
-    vertex(0) = 0.006*ran.Gaus();
-    vertex(1) = 0.006*ran.Gaus();
+    vertex(0) = 0.010*ran.Gaus();
+    vertex(1) = 0.010*ran.Gaus();
     vertex(2) = 2*ran.Gaus();
 
     geoTracks tracks;
@@ -24,6 +24,12 @@ void GenerateEvents()
   }
 
   Printf("%lu events generated.", events.size());
+
+  // Here, fit tracks to (re)assign residuals, angles, and intercepts.
+  // This puts the tracks on the same footing as the post-aligned refit sample.
+  // Without this step, a comparison of residuals before and after alignment 
+  // would not be apples-to-apples.
+  FitTracks(events);
 
   cout << "Filling output tree(s)..." << flush;
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
