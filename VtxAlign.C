@@ -18,9 +18,10 @@ const char *pedeConstFile = "pede-const.txt";
 string pedeBinFileStd = "standalone.bin";
 string pedeBinFileCnt = "svxcnttrks.bin";
 
-void EventLoop(string binfile, geoEvents &events, TGraphErrors *bc = 0,
-               TString opt = "");
-void WriteConstFile(const char *filename, SvxTGeo *geo, TString opt = "");
+void EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
+               TGraphErrors *bc = 0, TString opt = "");
+void WriteConstFile(const char *filename, vecs &sgpars, vecs &zgpars,
+                    SvxTGeo *geo, TString opt = "");
 void CorrectFromFile(const char *filename,
                      SvxTGeo *tgeo,
                      geoEvents &vtxevents,
@@ -46,6 +47,20 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, subiter + 1);
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, subiter + 1);
 
+  // Select global parameters and derivatives for s residuals
+  vecs sgpars;
+  if (true) sgpars.push_back("s");
+  if (false) sgpars.push_back("x");
+  if (false) sgpars.push_back("y");
+  if (false) sgpars.push_back("r");
+
+  // Select global parameters and derivatives for z residuals
+  vecs zgpars;
+  if (false) zgpars.push_back("x");
+  if (false) zgpars.push_back("y");
+  if (true) zgpars.push_back("z");
+  if (false) zgpars.push_back("r");
+
   vecs constfiles;
   vecs binfiles;
   constfiles.push_back(pedeConstFile);
@@ -54,7 +69,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   if (nCntTracks > 0)
     binfiles.push_back(pedeBinFileCnt);
 
-  TFile *inFile  = new TFile(rootFileIn.Data(), "read");
+  TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
 
   TNtuple *svxseg = (TNtuple *)inFile->Get("vtxhits");
@@ -65,7 +80,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
   SvxTGeo *tgeo = VTXModel(pisaFileIn.Data());
 
-  WriteConstFile(pedeConstFile, tgeo, ""); // "empty" writes empty file
+  WriteConstFile(pedeConstFile, sgpars, zgpars, tgeo, ""); // "empty" writes empty file
   WriteSteerFile(pedeSteerFile, binfiles, constfiles);
 
   // Original ladder positions
@@ -77,7 +92,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
   if (nStdTracks > 0)
   {
-    GetEventsFromTree(svxseg, tgeo, vtxevents, -10000);
+    GetEventsFromTree(svxseg, tgeo, vtxevents, 10000);
 
     TFile *bcf = new TFile(bcFileIn.Data(), "read");
     TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
@@ -87,12 +102,12 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
     // FitTracks(vtxevents, gbc);// Uses beam center. Doesn't work as well.
 
     FitTracks(vtxevents, 0);
-    EventLoop(pedeBinFileStd, vtxevents, gbc);
+    EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc);
   }
   if (nCntTracks > 0)
   {
     GetEventsFromTree(svxcnt, tgeo, cntevents);
-    EventLoop(pedeBinFileCnt, cntevents);
+    EventLoop(pedeBinFileCnt, cntevents, sgpars, zgpars);
   }
 
   // Shell out to pede executable
@@ -143,26 +158,12 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 }
 
 void
-EventLoop(string binfile, geoEvents &events, TGraphErrors *bc, TString opt)
+EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
+          TGraphErrors *bc, TString opt)
 {
   // Call Mille::Mille() in a loop. See MilleFunctions.h
   // Options:
   // - "ext": Assume residuals were computed from external information.
-
-  vecs sgpars;
-  vecs zgpars;
-
-  // Select global parameters and derivatives for s residuals here
-  if (true) sgpars.push_back("s");
-  if (true) sgpars.push_back("x");
-  if (true) sgpars.push_back("y");
-  if (false) sgpars.push_back("r");
-
-  // Select global parameters and derivatives for z residuals here
-  if (true) zgpars.push_back("x");
-  if (true) zgpars.push_back("y");
-  if (true) zgpars.push_back("z");
-  if (false) zgpars.push_back("r");
 
   Printf("Calling mille() in EventLoop(). Write to %s...", binfile.c_str());
   Mille m(binfile.c_str());
@@ -181,7 +182,8 @@ EventLoop(string binfile, geoEvents &events, TGraphErrors *bc, TString opt)
 }
 
 void
-WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
+WriteConstFile(const char *filename, vecs &sgpars, vecs &zgpars,
+               SvxTGeo *geo, TString opt)
 {
   cout << "Writing " << filename << "..." << flush;
   ofstream fs(filename);
@@ -191,6 +193,9 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
     fs.close();
     return;
   }
+
+  bool xdof = In(string("x"), sgpars) || In(string("x"), zgpars);
+  bool ydof = In(string("y"), sgpars) || In(string("y"), zgpars);
 
   fs << "! Write linear constraints such that sum_l (f_l * p_l) = c"
      << endl;
@@ -218,18 +223,19 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
   fs << endl;
 
   // Global parameter labels for z and s coordinates in east and west arms
+  veci wx = LadderLabels(geo, "w", "x");
+  veci wy = LadderLabels(geo, "w", "y");
   veci wz = LadderLabels(geo, "w", "z");
   veci ws = LadderLabels(geo, "w", "s");
   veci wr = LadderLabels(geo, "w", "r");
+
+  veci ex = LadderLabels(geo, "e", "x");
+  veci ey = LadderLabels(geo, "e", "y");
   veci ez = LadderLabels(geo, "e", "z");
   veci es = LadderLabels(geo, "e", "s");
   veci er = LadderLabels(geo, "e", "r");
 
-  // // Labels for global parameters to be excluded from sum constraints
-  // veci excl;
-
   bool constrainEdgeLadders = true;
-
   if (constrainEdgeLadders)
   {
     // Boundary "wedge" units - sequences of 4 edge ladders at top and bottom
@@ -268,9 +274,22 @@ WriteConstFile(const char *filename, SvxTGeo *geo, TString opt)
 
   } // end constrainEdgeLadders block
 
-  // Prevent net shift or rotation of an entire arm
+  // Prevent net shift or rotation of an entire arm,
+  // but only if the coordinate is being used as a global parameter
+  // (otherwise the system will be overconstrained and rank-deficient)
+  if (xdof)
+  {
+    AddConstraint(wx, geo, Ones, fs, "West x translation");
+    AddConstraint(ex, geo, Ones, fs, "East x translation");
+  }
+  if (ydof)
+  {
+    AddConstraint(wy, geo, Ones, fs, "West y translation");
+    AddConstraint(ey, geo, Ones, fs, "East y translation");
+  }
   AddConstraint(wz, geo, Ones, fs, "West z translation");
   AddConstraint(ez, geo, Ones, fs, "East z translation");
+
   AddConstraint(ws, geo, Ones, fs, "West s translation");
   AddConstraint(es, geo, Ones, fs, "East s translation");
 
