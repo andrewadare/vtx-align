@@ -11,7 +11,7 @@
 typedef vector<double> vecd;
 typedef vector<int>    veci;
 
-bool In(int val, veci v);
+template<typename T> bool In(T val, vector<T> &v);
 veci LadderLabels(SvxTGeo *geo, string arm, string coord);
 void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
                    string comment = "", double sumto = 0.0);
@@ -30,11 +30,13 @@ void     Radii(veci &labels, SvxTGeo *geo, vecd &x);
 void PhiAngles(veci &labels, SvxTGeo *geo, vecd &x);
 void      RPhi(veci &labels, SvxTGeo *geo, vecd &x);
 
-bool In(int val, veci v)
+template<typename T> 
+bool In(T val, vector<T> &v)
 {
-  for (unsigned int j=0; j<v.size(); j++)
-    if (val==v[j])
-      return true;
+  // Check for membership in a vector.
+  // Just a less verbose wrapper for std::find().
+  if (find(v.begin(), v.end(), val) != v.end())
+    return true;
   return false;
 }
 
@@ -66,7 +68,6 @@ Ones(veci &labels, SvxTGeo * /*geo*/, vecd &x)
   x.resize(labels.size(), 0.0);
   for (unsigned int i=0; i<labels.size(); i++)
     x[i] = 1.0;
-    // x[i] = In(labels[i], xlabels) ? 0.0 : 1.0;
 }
 
 void
@@ -80,7 +81,6 @@ Radii(veci &labels, SvxTGeo *geo, vecd &x)
   {
     ParInfo(labels[i], lyr, ldr, s);
     x[i] = geo->SensorRadius(lyr, ldr, 0);
-    // x[i] = In(labels[i], xlabels) ? 0.0 : geo->SensorRadius(lyr, ldr, 0);
   }
 }
 
@@ -97,7 +97,6 @@ PhiAngles(veci &labels, SvxTGeo *geo, vecd &x)
     float phi = TMath::PiOver2() + fmod(geo->SensorPhiRad(lyr, ldr, 0),
                                         TMath::TwoPi());
     x[i] = phi;
-    // x[i] = In(labels[i], xlabels) ? 0.0 : phi;
   }
 }
 
@@ -115,7 +114,6 @@ RPhi(veci &labels, SvxTGeo *geo, vecd &x)
                                         TMath::TwoPi());
     float rphi = phi*geo->SensorRadius(lyr, ldr, 0);
     x[i] = rphi;
-    // x[i] = In(labels[i], xlabels) ? 0.0 : rphi;
   }
 }
 
