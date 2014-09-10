@@ -86,6 +86,7 @@ AddHitNoise(SvxGeoTrack &t, TVectorD &xsigma, TVectorD &zsigma)
     double dx = t.hits[j].xsigma*xsigma(hit.layer)*ran3.Gaus();
     double dz = t.hits[j].xsigma*zsigma(hit.layer)*ran3.Gaus();
 
+
     // t.hits[j].xsigma = xsigma(hit.layer);
     // t.hits[j].zsigma = zsigma(hit.layer);
     // double dx = t.hits[j].xsigma*ran3.Gaus();
@@ -97,7 +98,7 @@ AddHitNoise(SvxGeoTrack &t, TVectorD &xsigma, TVectorD &zsigma)
     t.hits[j].ds = dx;
     t.hits[j].dz = dz;
 
-    double lxyz[3] = {hit.xs, hit.ys, hit.zs};
+    double lxyz[3] = {t.hits[j].xs, t.hits[j].ys, t.hits[j].zs};
     double gxyz[3] = {0};
     TGeoNode *s = hit.node;
     if (s)
