@@ -113,6 +113,10 @@ FilterData(geoEvents &events,
           SvxGeoHit hit = trk.GetHit(j);
           if (TMath::Abs(hit.ds) > maxres_s || TMath::Abs(hit.dz) > maxres_z)
             reject = true;
+
+          // Reject tracks with suspiciously large clusters
+          if (hit.xsigma > 10 || hit.zsigma > 10)
+            reject = true;
         }
         if (!reject)
           FillNTuple(trk, ntuple, ev);
