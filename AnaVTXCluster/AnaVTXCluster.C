@@ -314,103 +314,121 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
     //    std::cout<<"n cnt tracks: "<<svxcnttrklist->get_nCentralTracks()<<std::endl;
     if (svxcnttrklist && phcnttrk)
     {
-
-        cnt_tracks_per_event->Fill(svxcnttrklist->get_nCentralTracks());
-        for (int itrk = 0; itrk < svxcnttrklist->get_nCentralTracks(); itrk++)
+      int ngood_cent_tracks = 0;
+      
+      for (int itrk = 0; itrk < svxcnttrklist->get_nCentralTracks(); itrk++)
         {
-            SvxCentralTrack *svxtrk = svxcnttrklist->getCentralTrack(itrk);
-
-            unsigned int cntindex = svxtrk->getDchIndex();
-            if (cntindex >= phcnttrk->get_npart())
+	  SvxCentralTrack *svxtrk = svxcnttrklist->getCentralTrack(itrk);
+	  
+	  unsigned int cntindex = svxtrk->getDchIndex();
+	  if (cntindex >= phcnttrk->get_npart())
+	    {
+	      std::cout << "WARNING No cnt track for index = " << itrk
+			<< " (cntindex = " << cntindex << ")" << std::endl;
+	      continue;
+	    }
+	  
+	  int dchqual = phcnttrk->get_quality(cntindex);
+	  float the0  = phcnttrk->get_the0(cntindex);
+	  float phi0  = phcnttrk->get_phi0(cntindex);
+	  // float mom   = phcnttrk->get_mom(cntindex);
+	  // float px    = mom * sin(the0) * cos(phi0);
+	  // float py    = mom * sin(the0) * sin(phi0);
+	  // float pt    = sqrt(px * px + py * py);
+	  // int nhits   = svxtrk->getNhits();
+	  int score   = svxtrk->getLinkScore();
+	  int ndf     = svxtrk->getNDF();
+	  float chi2  = ndf < 1 ? 1e9 : svxtrk->getChiSquare() / ndf;
+	  int Nclus = svxtrk->getNhits();
+	  
+	  if ((dchqual == 31 || dchqual == 63) && /*pt > 0.5 && */score > 70 && chi2 < 4)
             {
-                std::cout << "WARNING No cnt track for index = " << itrk
-                          << " (cntindex = " << cntindex << ")" << std::endl;
-                continue;
-            }
-
-            int dchqual = phcnttrk->get_quality(cntindex);
-            float the0  = phcnttrk->get_the0(cntindex);
-            float phi0  = phcnttrk->get_phi0(cntindex);
-            // float mom   = phcnttrk->get_mom(cntindex);
-            // float px    = mom * sin(the0) * cos(phi0);
-            // float py    = mom * sin(the0) * sin(phi0);
-            // float pt    = sqrt(px * px + py * py);
-            // int nhits   = svxtrk->getNhits();
-            int score   = svxtrk->getLinkScore();
-            int ndf     = svxtrk->getNDF();
-            float chi2  = ndf < 1 ? 1e9 : svxtrk->getChiSquare() / ndf;
-            int Nclus = svxtrk->getNhits();
-
-            if ((dchqual == 31 || dchqual == 63) && /*pt > 0.5 && */score > 70 && chi2 < 4)
-            {
-                //      std::cout<<"found a good central track"<<std::endl;
-                for (int ihit = 0; ihit < Nclus; ihit++)
-                {
-                    SvxClusterInfo *svxclusinfo = svxtrk->getClusterInfo(ihit);
-
-                    if (!svxclusinfo)
+	      //      std::cout<<"found a good central track"<<std::endl;
+	      bool clusters_bad = false;
+	      for (int ihit = 0; ihit < Nclus; ihit++)
+		{
+		  SvxClusterInfo *svxclusinfo = svxtrk->getClusterInfo(ihit);
+		  int clusxsize = svxclusinfo->getXZSize(0);
+		  int cluszsize = svxclusinfo->getXZSize(1);
+		  if(clusxsize > 5 || cluszsize > 5)
+		    {
+		      clusters_bad = true;
+		      break;
+		    }
+		}
+	      
+	      if(clusters_bad) continue;
+	      
+	      ngood_cent_tracks++;
+	      
+	      for (int ihit = 0; ihit < Nclus; ihit++)
+		{
+		  SvxClusterInfo *svxclusinfo = svxtrk->getClusterInfo(ihit);
+		  
+		  if (!svxclusinfo)
                     {
-                        std::cout << "ERROR: No ClusInfo Central Track" << std::endl;
-                        continue;
+		      std::cout << "ERROR: No ClusInfo Central Track" << std::endl;
+		      continue;
                     }
-                    float cx   = svxclusinfo->getPosition(0);
-                    float cy   = svxclusinfo->getPosition(1);
-                    float cz   = svxclusinfo->getPosition(2);
-                    float rcyl = sqrt(cx * cx + cy * cy);
-                    float zp   = svxclusinfo->getdphi();
-                    float zs   = rcyl * zp;
-                    float zz   = svxclusinfo->getdz();
-                    int layer  = svxclusinfo->getLayer();
-                    int ladder = svxclusinfo->getLadder();
-                    int sensor = svxclusinfo->getSensor();
-                    int clusxsize = svxclusinfo->getXZSize(0);
-                    int cluszsize = svxclusinfo->getXZSize(1);
-
-                    SvxCluster *svxclus = svxcluslist->get_Cluster(svxclusinfo->getClusterId());
-                    if (!svxclus)
+		  float cx   = svxclusinfo->getPosition(0);
+		  float cy   = svxclusinfo->getPosition(1);
+		  float cz   = svxclusinfo->getPosition(2);
+		  float rcyl = sqrt(cx * cx + cy * cy);
+		  float zp   = svxclusinfo->getdphi();
+		  float zs   = rcyl * zp;
+		  float zz   = svxclusinfo->getdz();
+		  int layer  = svxclusinfo->getLayer();
+		  int ladder = svxclusinfo->getLadder();
+		  int sensor = svxclusinfo->getSensor();
+		  int clusxsize = svxclusinfo->getXZSize(0);
+		  int cluszsize = svxclusinfo->getXZSize(1);
+		  
+		  SvxCluster *svxclus = svxcluslist->get_Cluster(svxclusinfo->getClusterId());
+		  if (!svxclus)
                     {
-                        std::cout << "ERROR: No Clus Central Track" << std::endl;
-                        continue;
+		      std::cout << "ERROR: No Clus Central Track" << std::endl;
+		      continue;
                     }
-                    float clx  = svxclus->get_xyz_local(0);
-                    float cly  = svxclus->get_xyz_local(1);
-                    float clz  = svxclus->get_xyz_local(2);
-
-                    float varr[17] =
+		  float clx  = svxclus->get_xyz_local(0);
+		  float cly  = svxclus->get_xyz_local(1);
+		  float clz  = svxclus->get_xyz_local(2);
+		  
+		  float varr[17] =
                     {
-                        layer,
-                        ladder,
-                        sensor,
-                        clx,
-                        cly,
-                        clz,
-                        cx,
-                        cy,
-                        cz,
-                        clusxsize,
-                        cluszsize,
-                        zz,
-                        zs,
-                        cnt_trkid,
-                        phi0,
-                        the0,
-                        nEvent
+		      layer,
+		      ladder,
+		      sensor,
+		      clx,
+		      cly,
+		      clz,
+		      cx,
+		      cy,
+		      cz,
+		      clusxsize,
+		      cluszsize,
+		      zz,
+		      zs,
+		      cnt_trkid,
+		      phi0,
+		      the0,
+		      nEvent
                     };
-                    //std::cout<<"filling cnt_clusntuple"<<std::endl;
-                    cnt_clusntuple->Fill(varr);
+		  //std::cout<<"filling cnt_clusntuple"<<std::endl;
+		  cnt_clusntuple->Fill(varr);
                 }
             }
             cnt_trkid++;
         }
+        cnt_tracks_per_event->Fill(ngood_cent_tracks);
     }
-
+    
 
     //---------------------------------------------//
     // Fill Ntuple for clusters associated
     // with SvxSegments
     //---------------------------------------------//
 
-    standalone_tracks_per_event->Fill(svxseglist->get_nSegments());
+    int ngood_seg_tracks = 0;
     //std::cout<<"n segments: "<<svxseglist->get_nSegments()<<std::endl;
     for (int itrk = 0; itrk < svxseglist->get_nSegments(); itrk++)
     {
@@ -424,56 +442,84 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
         if ( score < 70 )
             continue;
 
+	bool clusters_bad = false;
+	
+        for (int ilayer = 0; ilayer < 4; ilayer++)
+	  {
+	    if (svxseg->getNhits(ilayer) == 1)
+	      {
+
+		SvxCluster *svxclus = svxcluslist->get_Cluster(svxseg->getClusterID(ilayer, 0));
+		if (!svxclus)
+		  {
+		    std::cout << "ERROR: No Clus Segment" << std::endl;
+		    continue;
+		  }
+		
+		float clusxsize = svxclus->get_xz_size(0);
+		float cluszsize = svxclus->get_xz_size(1);		
+	
+		if(clusxsize > 5 || cluszsize > 5)
+		  {
+		    clusters_bad = true;
+		    break;
+		  }
+	      }
+	  }
+	
+	if(clusters_bad) continue;
+
+	ngood_seg_tracks++;
+
         for (int ilayer = 0; ilayer < 4; ilayer++)
         {
             if (svxseg->getNhits(ilayer) == 1)
             {
-                SvxCluster *svxclus = svxcluslist->get_Cluster(svxseg->getClusterID(ilayer, 0));
-                if (!svxclus)
+                    
+	      SvxCluster *svxclus = svxcluslist->get_Cluster(svxseg->getClusterID(ilayer, 0));
+	      if (!svxclus)
                 {
-                    std::cout << "ERROR: No Clus Segment" << std::endl;
-                    continue;
+		  std::cout << "ERROR: No Clus Segment" << std::endl;
+		  continue;
                 }
-                float ladder = svxclus->get_ladder();
-                float sensor = svxclus->get_sensor();
-                float clx = svxclus->get_xyz_local(0);
-                float cly = svxclus->get_xyz_local(1);
-                float clz = svxclus->get_xyz_local(2);
-                float cx = svxclus->get_xyz_global(0);
-                float cy = svxclus->get_xyz_global(1);
-                float cz = svxclus->get_xyz_global(2);
-                float clusxsize = svxclus->get_xz_size(0);
-                float cluszsize = svxclus->get_xz_size(1);
-
-                float varr[15] =
+	      float ladder = svxclus->get_ladder();
+	      float sensor = svxclus->get_sensor();
+	      float clx = svxclus->get_xyz_local(0);
+	      float cly = svxclus->get_xyz_local(1);
+	      float clz = svxclus->get_xyz_local(2);
+	      float cx = svxclus->get_xyz_global(0);
+	      float cy = svxclus->get_xyz_global(1);
+	      float cz = svxclus->get_xyz_global(2);
+	      float clusxsize = svxclus->get_xz_size(0);
+	      float cluszsize = svxclus->get_xz_size(1);
+	      
+	      float varr[15] =
                 {
-                    ilayer,
-                    ladder,
-                    sensor,
-                    clx,
-                    cly,
-                    clz,
-                    cx,
-                    cy,
-                    cz,
-                    clusxsize,
-                    cluszsize,
-                    0,
-                    0,
-                    seg_trkid,
-                    nEvent
+		  ilayer,
+		  ladder,
+		  sensor,
+		  clx,
+		  cly,
+		  clz,
+		  cx,
+		  cy,
+		  cz,
+		  clusxsize,
+		  cluszsize,
+		  0,
+		  0,
+		  seg_trkid,
+		  nEvent
                 };
-                seg_clusntuple->Fill(varr);
+	      seg_clusntuple->Fill(varr);
             }
-
+	    
         }
         seg_trkid++;
     }
-
-
-
-
-
+    standalone_tracks_per_event->Fill(ngood_seg_tracks);
+    
+    
     return 0;
 }
 
