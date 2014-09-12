@@ -269,24 +269,44 @@ WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
   bool xdof = In(string("x"), sgpars) || In(string("x"), zgpars);
   bool ydof = In(string("y"), sgpars) || In(string("y"), zgpars);
   bool zdof = In(string("z"), zgpars);
-  bool pdof = In(string("phi"), sgpars);
+  bool sdof = In(string("s"), sgpars);
 
   fs << "! * Half-layer constraints file for input to pede *" << endl;
 
   veci hlx = HalfLayerLabels(geo, "all", "x");
   veci hly = HalfLayerLabels(geo, "all", "y");
   veci hlz = HalfLayerLabels(geo, "all", "z");
+  veci hls = HalfLayerLabels(geo, "all", "s");
+
+  veci ex = HalfLayerLabels(geo, "e", "x");
+  veci ey = HalfLayerLabels(geo, "e", "y");
+  veci ez = HalfLayerLabels(geo, "e", "z");
+  veci es = HalfLayerLabels(geo, "e", "s");
+
+  veci wx = HalfLayerLabels(geo, "w", "x");
+  veci wy = HalfLayerLabels(geo, "w", "y");
+  veci wz = HalfLayerLabels(geo, "w", "z");
+  veci ws = HalfLayerLabels(geo, "w", "s");
+
   if (xdof)
   {
     AddConstraint(hlx, geo, Ones, fs, "Total x translation");
+    AddConstraints(wx, ex, geo, Radii, fs, "x r shear");
   }
   if (ydof)
   {
     AddConstraint(hly, geo, Ones, fs, "Total y translation");
+    AddConstraints(wy, ey, geo, Radii, fs, "y r shear");
   }
   if (zdof)
   {
     AddConstraint(hlz, geo, Ones, fs, "Total z translation");
+    AddConstraints(wz, ez, geo, Radii, fs, "z r shear");
+  }
+  if (sdof)
+  {
+    AddConstraint(hls, geo, Ones, fs, "Total s translation");
+    AddConstraints(ws, es, geo, Radii, fs, "s r shear");
   }
 
   fs.close();
