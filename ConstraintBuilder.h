@@ -14,6 +14,8 @@ typedef vector<int>    veci;
 template<typename T> bool In(T val, vector<T> &v);
 veci LadderLabels(SvxTGeo *geo, string arm, string coord);
 veci EdgeLadderLabels(SvxTGeo *geo, string arm, string coord, string t_or_b);
+veci HalfLayerLabels(SvxTGeo *geo, string arm, string coord);
+
 void AddConstraint(veci &labels, vecd &coords, ofstream &fs,
                    string comment = "", double sumto = 0.0);
 void AddConstraint(veci &labels, SvxTGeo *geo,
@@ -22,6 +24,10 @@ void AddConstraint(veci &labels, SvxTGeo *geo,
 void AddConstraints(veci &wlabels, veci &elabels, SvxTGeo *geo,
                     void(*fl)(veci &, SvxTGeo *, vecd &),
                     ofstream &fs, string comment, double sumto = 0.0);
+void WriteLadderConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+                            SvxTGeo *geo, TString opt = "");
+void WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+                        SvxTGeo *geo, TString opt = "");
 
 // Position querying callback functions: store current positions into x for the
 // provided labels.
@@ -89,9 +95,26 @@ LadderLabels(SvxTGeo *geo, string arm, string coord)
   if (arm == "E" || arm == "e" || arm == "all")    // East arm
   {
     for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-      for (int ldr=geo->GetNLadders(lyr)/2; ldr < geo->GetNLadders(lyr); ldr++)
+      for (int ldr=geo->GetNLadders(lyr)/2; ldr<geo->GetNLadders(lyr); ldr++)
         if (!Dead(lyr,ldr) && !Locked(lyr,ldr))
           l.push_back(Label(lyr, ldr, coord));
+  }
+  return l;
+}
+
+veci
+HalfLayerLabels(SvxTGeo *geo, string arm, string coord)
+{
+  veci l;
+  if (arm == "E" || arm == "e" || arm == "all")    // East arm (0)
+  {
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+      l.push_back(HalfLayerLabel(lyr, 0, coord));
+  }
+  if (arm == "W" || arm == "w" || arm == "all")    // West arm (1)
+  {
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+      l.push_back(HalfLayerLabel(lyr, 1, coord));
   }
   return l;
 }
@@ -227,6 +250,157 @@ AddConstraints(veci &wlabels, veci &elabels, SvxTGeo *geo,
   fl(elabels, geo, ex);
   AddConstraint(elabels, ex, fs, string("East " + comment), sumto);
 
+  return;
+}
+
+void
+WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+                   SvxTGeo *geo, TString opt)
+{
+  cout << "Writing " << filename << "..." << flush;
+  ofstream fs(filename);
+
+  if (opt.Contains("empty"))
+  {
+    fs.close();
+    return;
+  }
+
+  bool xdof = In(string("x"), sgpars) || In(string("x"), zgpars);
+  bool ydof = In(string("y"), sgpars) || In(string("y"), zgpars);
+  bool zdof = In(string("z"), zgpars);
+  bool pdof = In(string("phi"), sgpars);
+
+  fs << "! * Half-layer constraints file for input to pede *" << endl;
+
+  veci hlx = HalfLayerLabels(geo, "all", "x");
+  veci hly = HalfLayerLabels(geo, "all", "y");
+  veci hlz = HalfLayerLabels(geo, "all", "z");
+  if (xdof)
+  {
+    AddConstraint(hlx, geo, Ones, fs, "Total x translation");
+  }
+  if (ydof)
+  {
+    AddConstraint(hly, geo, Ones, fs, "Total y translation");
+  }
+  if (zdof)
+  {
+    AddConstraint(hlz, geo, Ones, fs, "Total z translation");
+  }
+
+  fs.close();
+  Printf("done.");
+  return;
+}
+
+void
+WriteLadderConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+                       SvxTGeo *geo, TString opt)
+{
+  cout << "Writing " << filename << "..." << flush;
+  ofstream fs(filename);
+
+  if (opt.Contains("empty"))
+  {
+    fs.close();
+    return;
+  }
+
+  bool sdof = In(string("s"), sgpars);
+  bool zdof = In(string("z"), zgpars);
+  bool xdof = In(string("x"), sgpars) || In(string("x"), zgpars);
+  bool ydof = In(string("y"), sgpars) || In(string("y"), zgpars);
+  bool rdof = In(string("r"), sgpars) || In(string("r"), zgpars);
+
+  fs << "! * Ladder constraints file for input to pede *" << endl;
+  fs << "! Write linear constraints such that sum_l (f_l * p_l) = c" << endl;
+  fs << "! where the f_l factors provide coord. dependence to constrain shear." << endl;
+  fs << "! The format is as follows:" << endl;
+  fs << "! Constraint c" << endl;
+  fs << "! 123 1.0   ! Add a p_123 * f_123 term" << endl;
+  fs << "! 234 2.345 ! Add a p_234 * f_234 term" << endl;
+  fs << "! ..." << endl;
+
+  /*
+    // Fix or regulate ladders. Example: 104 0.0 -1 (fixed)
+    fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
+       << endl;
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+      for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
+        if (Locked(lyr,ldr))
+        {
+          double presig = 1e-4; // Smaller values --> stronger regularization
+          fs << Form("%4d 0.0 %g ! B%dL%d(s)",
+                     Label(lyr, ldr, "s"), presig, lyr, ldr) << endl;
+          fs << Form("%4d 0.0 %g ! B%dL%d(z)",
+                     Label(lyr, ldr, "z"), presig, lyr, ldr) << endl;
+        }
+    fs << endl;
+  */
+  // Global parameter labels for z and s coordinates in east and west arms
+  veci wx = LadderLabels(geo, "w", "x");
+  veci wy = LadderLabels(geo, "w", "y");
+  veci wz = LadderLabels(geo, "w", "z");
+  veci ws = LadderLabels(geo, "w", "s");
+  veci wr = LadderLabels(geo, "w", "r");
+  veci ex = LadderLabels(geo, "e", "x");
+  veci ey = LadderLabels(geo, "e", "y");
+  veci ez = LadderLabels(geo, "e", "z");
+  veci es = LadderLabels(geo, "e", "s");
+  veci er = LadderLabels(geo, "e", "r");
+
+  veci wtz = EdgeLadderLabels(geo, "w", "z", "top");
+  veci wts = EdgeLadderLabels(geo, "w", "s", "top");
+  veci wbz = EdgeLadderLabels(geo, "w", "z", "bottom");
+  veci wbs = EdgeLadderLabels(geo, "w", "s", "bottom");
+  veci etz = EdgeLadderLabels(geo, "e", "z", "top");
+  veci ets = EdgeLadderLabels(geo, "e", "s", "top");
+  veci ebz = EdgeLadderLabels(geo, "e", "z", "bottom");
+  veci ebs = EdgeLadderLabels(geo, "e", "s", "bottom");
+
+  // Prevent net displacements/distortions, but only if the coordinate
+  // is being used as a global parameter (otherwise the system will be
+  // rank-deficient)
+  if (sdof)
+  {
+    AddConstraints(ws, es, geo, Ones,      fs, "s translation");
+    AddConstraints(ws, es, geo, PhiAngles, fs, "s phi shear");
+    AddConstraints(ws, es, geo, RPhi,      fs, "s r-phi shear");
+    AddConstraints(ws, es, geo, Radii,     fs, "s r shear");
+    AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
+    AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
+  }
+  if (xdof)
+  {
+    AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
+    AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
+    AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
+    AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
+  }
+  if (ydof)
+  {
+    AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
+    AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
+    AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
+    AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
+  }
+  if (zdof)
+  {
+    AddConstraints(wz, ez, geo, Ones,      fs, "z translation");
+    AddConstraints(wz, ez, geo, PhiAngles, fs, "z phi shear");
+    AddConstraints(wz, ez, geo, RPhi,      fs, "z r-phi shear");
+    AddConstraints(wz, ez, geo, Radii,     fs, "z r shear");
+    AddConstraints(wtz, etz, geo, Radii,   fs, "top z r shear");
+    AddConstraints(wbz, ebz, geo, Radii,   fs, "bottom z r shear");
+  }
+  if (rdof)
+  {
+    AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
+  }
+
+  fs.close();
+  Printf("done.");
   return;
 }
 
