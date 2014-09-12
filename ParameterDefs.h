@@ -45,7 +45,7 @@ HalfLayerLabel(int layer, int arm, string coord)
     ic = 1;
   if (coord.compare("z") == 0)
     ic = 2;
-  if (coord.compare("phi") == 0)
+  if (coord.compare("s") == 0)
     ic = 3;
 
   return 1000 + 100*layer + 10*arm + ic;
@@ -84,7 +84,7 @@ ParInfo(int label, int &layer, int &ladder, string &coord)
 void
 HalfLayerParInfo(int label, int &layer, int &arm, string &coord)
 {
-  const char *coords[4] = {"x", "y", "z", "phi"};
+  const char *coords[4] = {"x", "y", "z", "s"};
 
   layer = (label%1000 - label%100)/100;
   arm   = (label%100 - label%10)/10;

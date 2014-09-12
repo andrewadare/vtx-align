@@ -28,7 +28,8 @@ void CorrectFromFile(const char *filename,
 
 void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
-              int subiter = 0)     // Geometry update step. Starts at 0.
+              int subiter = 0,     // Geometry update step. Starts at 0.
+              TString alignMode = "halflayer") // "ladder" or "halflayer"
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -36,8 +37,6 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     Printf("\"which pede\" returns nothing. Exiting.");
     gSystem->Exit(-1);
   }
-
-  TString alignMode = "halflayer"; // Choose "ladder" or "halflayer"
 
   // Inputs:
   TString rootFileIn = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
@@ -52,13 +51,13 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // Mixing rotation (s) and translation (x,y) is not recommended. They do not
   // commute and should be handled as mutually exclusive.
   vecs sgpars;
-  if (0) sgpars.push_back("s");
-  if (1) sgpars.push_back("x");
+  if (1) sgpars.push_back("s");
+  if (0) sgpars.push_back("x");
   if (0) sgpars.push_back("y");
   if (0) sgpars.push_back("r");
 
   vecs zgpars;
-  if (1) zgpars.push_back("x");
+  if (0) zgpars.push_back("x");
   if (0) zgpars.push_back("y");
   if (1) zgpars.push_back("z");
   if (0) zgpars.push_back("r");
@@ -87,7 +86,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     constfiles.push_back(ladderConstFile);
     WriteLadderConstraints(ladderConstFile, sgpars, zgpars, tgeo);
   }
-  
+
   // Write Millepede steering file
   if (nStdTracks > 0)
     binfiles.push_back(pedeBinFileStd);
@@ -248,10 +247,11 @@ CorrectFromFile(const char *filename,
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateHalfLayer(i, j, 0. ,0., mpc[l]);
 
-      // Half-ladder phi correction
-      l = Label(i,j,"phi");
+      // Half-ladder phi correction from ds
+      // s is converted to phi which is used for the half-layer rotation
+      l = Label(i,j,"s");
       if (mpc.find(l) != mpc.end())
-        tgeo->RotateHalfLayer(i, j, 0., 0., mpc[l]);
+        tgeo->RotateHalfLayerRPhi(i, j, mpc[l]);
     }
 
   for (unsigned int ev=0; ev<vtxevents.size(); ev++)
