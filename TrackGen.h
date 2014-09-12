@@ -23,7 +23,7 @@ GenerateEvent(SvxTGeo *geo, int ntracks, TVectorD &vertex, geoTracks &tracks)
     TVectorD zsig(4);
     for (int j=0; j<4; j++)
     {
-      xsig(j) = ClusterXResolution(j);
+      xsig(j) = 2*ClusterXResolution(j);
       zsig(j) = ClusterZResolution(j);
     }
     AddHitNoise(trk, xsig, zsig);
