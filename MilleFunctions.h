@@ -53,8 +53,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *b
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 4. * hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 4. * hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = hit.zsigma * ClusterZResolution(hit.layer);
 
     if (false)
       Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
@@ -224,9 +224,9 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
     if (par == "r")
       return hit.ds/r;
 
-    // d(Delta_s)/ds
+    // d(Delta_s)/ds -- account for 13 degree tilt in pixel layers
     if (par == "s")
-      return 1.0;
+      return hit.layer < 2 ? 0.9741 : 1.0;
 
     // d(Delta_s)/dx
     if (par == "x")
