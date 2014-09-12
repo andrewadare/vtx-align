@@ -14,14 +14,13 @@ const double BField = 0.0;
 const int nStdTracks = 999999;
 const int nCntTracks = 0;
 const char *pedeSteerFile = "pede-steer.txt";
-const char *pedeConstFile = "pede-const.txt";
+const char *ladderConstFile = "ladder_constraints.txt";
+const char *hluConstFile = "halflayer_constraints.txt";
 string pedeBinFileStd = "standalone.bin";
 string pedeBinFileCnt = "svxcnttrks.bin";
 
 void EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
                TGraphErrors *bc = 0, TString opt = "");
-void WriteConstFile(const char *filename, vecs &sgpars, vecs &zgpars,
-                    SvxTGeo *geo, TString opt = "");
 void CorrectFromFile(const char *filename,
                      SvxTGeo *tgeo,
                      geoEvents &vtxevents,
@@ -38,6 +37,8 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     gSystem->Exit(-1);
   }
 
+  TString alignMode = "halflayer"; // Choose "ladder" or "halflayer"
+
   // Inputs:
   TString rootFileIn = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn = Form("geom/%d-%d-%d.par", run, prod, subiter);
@@ -48,26 +49,19 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, subiter + 1);
 
   // Select global parameters and derivatives for s residuals
+  // Mixing rotation (s) and translation (x,y) is not recommended. They do not
+  // commute and should be handled as mutually exclusive.
   vecs sgpars;
   if (0) sgpars.push_back("s");
   if (1) sgpars.push_back("x");
   if (0) sgpars.push_back("y");
   if (0) sgpars.push_back("r");
 
-  // Select global parameters and derivatives for z residuals
   vecs zgpars;
   if (1) zgpars.push_back("x");
   if (0) zgpars.push_back("y");
   if (1) zgpars.push_back("z");
   if (0) zgpars.push_back("r");
-
-  vecs constfiles;
-  vecs binfiles;
-  constfiles.push_back(pedeConstFile);
-  if (nStdTracks > 0)
-    binfiles.push_back(pedeBinFileStd);
-  if (nCntTracks > 0)
-    binfiles.push_back(pedeBinFileCnt);
 
   TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
@@ -80,7 +74,25 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
 
   SvxTGeo *tgeo = VTXModel(pisaFileIn.Data());
 
-  WriteConstFile(pedeConstFile, sgpars, zgpars, tgeo, ""); // "empty" writes empty file
+  // Write constraints to text file
+  vecs constfiles;
+  vecs binfiles;
+  if (alignMode == "halflayer")
+  {
+    constfiles.push_back(hluConstFile);
+    WriteHLConstraints(hluConstFile, sgpars, zgpars, tgeo);
+  }
+  else if (alignMode == "ladder")
+  {
+    constfiles.push_back(ladderConstFile);
+    WriteLadderConstraints(ladderConstFile, sgpars, zgpars, tgeo);
+  }
+  
+  // Write Millepede steering file
+  if (nStdTracks > 0)
+    binfiles.push_back(pedeBinFileStd);
+  if (nCntTracks > 0)
+    binfiles.push_back(pedeBinFileCnt);
   WriteSteerFile(pedeSteerFile, binfiles, constfiles);
 
   // Original ladder positions
@@ -102,7 +114,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     // FitTracks(vtxevents, gbc);// Uses beam center. Doesn't work as well.
 
     FitTracks(vtxevents);
-    EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc);
+    EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc, alignMode);
   }
   if (nCntTracks > 0)
   {
@@ -163,6 +175,7 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
   // Call Mille::Mille() in a loop. See MilleFunctions.h
   // Options:
   // - "ext": Assume residuals were computed from external information.
+  // - "halflayer": Align half-layer positions instead of ladders.
 
   Printf("Calling mille() in EventLoop(). Write to %s...", binfile.c_str());
   Mille m(binfile.c_str());
@@ -173,121 +186,10 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
       if (opt.Contains("ext"))
         MilleCnt(m, trk, sgpars, zgpars, bc);
       else
-        MilleVtx(m, trk, sgpars, zgpars, bc);
+        MilleVtx(m, trk, sgpars, zgpars, bc, opt);
     }
 
   // Mille object must go out of scope for output file to close properly.
-  return;
-}
-
-void
-WriteConstFile(const char *filename, vecs &sgpars, vecs &zgpars,
-               SvxTGeo *geo, TString opt)
-{
-  cout << "Writing " << filename << "..." << flush;
-  ofstream fs(filename);
-
-  if (opt.Contains("empty"))
-  {
-    fs.close();
-    return;
-  }
-
-  bool sdof = In(string("s"), sgpars);
-  bool zdof = In(string("z"), zgpars);
-  bool xdof = In(string("x"), sgpars) || In(string("x"), zgpars);
-  bool ydof = In(string("y"), sgpars) || In(string("y"), zgpars);
-  bool rdof = In(string("r"), sgpars) || In(string("r"), zgpars);
-
-  fs << "! Write linear constraints such that sum_l (f_l * p_l) = c"
-     << endl;
-  fs << "! where the f_l factors provide coord. dependence to constrain shear."
-     << endl;
-  fs << "! The format is as follows:" << endl;
-  fs << "! Constraint c" << endl;
-  fs << "! 123 1.0   ! Add a p_123 * f_123 term" << endl;
-  fs << "! 234 2.345 ! Add a p_234 * f_234 term" << endl;
-  fs << "! ..." << endl;
-
-  /*
-    // Fix or regulate ladders. Example: 104 0.0 -1 (fixed)
-    fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
-       << endl;
-    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-      for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
-        if (Locked(lyr,ldr))
-        {
-          double presig = 1e-4; // Smaller values --> stronger regularization
-          fs << Form("%4d 0.0 %g ! B%dL%d(s)",
-                     Label(lyr, ldr, "s"), presig, lyr, ldr) << endl;
-          fs << Form("%4d 0.0 %g ! B%dL%d(z)",
-                     Label(lyr, ldr, "z"), presig, lyr, ldr) << endl;
-        }
-    fs << endl;
-  */
-  // Global parameter labels for z and s coordinates in east and west arms
-  veci wx = LadderLabels(geo, "w", "x");
-  veci wy = LadderLabels(geo, "w", "y");
-  veci wz = LadderLabels(geo, "w", "z");
-  veci ws = LadderLabels(geo, "w", "s");
-  veci wr = LadderLabels(geo, "w", "r");
-  veci ex = LadderLabels(geo, "e", "x");
-  veci ey = LadderLabels(geo, "e", "y");
-  veci ez = LadderLabels(geo, "e", "z");
-  veci es = LadderLabels(geo, "e", "s");
-  veci er = LadderLabels(geo, "e", "r");
-
-  veci wtz = EdgeLadderLabels(geo, "w", "z", "top");
-  veci wts = EdgeLadderLabels(geo, "w", "s", "top");
-  veci wbz = EdgeLadderLabels(geo, "w", "z", "bottom");
-  veci wbs = EdgeLadderLabels(geo, "w", "s", "bottom");
-  veci etz = EdgeLadderLabels(geo, "e", "z", "top");
-  veci ets = EdgeLadderLabels(geo, "e", "s", "top");
-  veci ebz = EdgeLadderLabels(geo, "e", "z", "bottom");
-  veci ebs = EdgeLadderLabels(geo, "e", "s", "bottom");
-
-  // Prevent net displacements/distortions, but only if the coordinate 
-  // is being used as a global parameter (otherwise the system will be 
-  // rank-deficient)
-  if (sdof)
-  {
-    AddConstraints(ws, es, geo, Ones,      fs, "s translation");
-    AddConstraints(ws, es, geo, PhiAngles, fs, "s phi shear");
-    AddConstraints(ws, es, geo, RPhi,      fs, "s r-phi shear");
-    AddConstraints(ws, es, geo, Radii,     fs, "s r shear");
-    AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
-    AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
-  }
-  if (xdof)
-  {
-    AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
-    AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
-    AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
-    AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
-  }
-  if (ydof)
-  {
-    AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
-    AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
-    AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
-    AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
-  }
-  if (zdof)
-  {
-    AddConstraints(wz, ez, geo, Ones,      fs, "z translation");
-    AddConstraints(wz, ez, geo, PhiAngles, fs, "z phi shear");
-    AddConstraints(wz, ez, geo, RPhi,      fs, "z r-phi shear");
-    AddConstraints(wz, ez, geo, Radii,     fs, "z r shear");
-    AddConstraints(wtz, etz, geo, Radii,   fs, "top z r shear");
-    AddConstraints(wbz, ebz, geo, Radii,   fs, "bottom z r shear");
-  }
-  if (rdof)
-  {
-    AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
-  }
-
-  fs.close();
-  Printf("done.");
   return;
 }
 
@@ -302,12 +204,13 @@ CorrectFromFile(const char *filename,
   map<int, double> mpc;
   GetCorrections(filename, mpc);
 
+  // Ladder position corrections
   for (int i=0; i<tgeo->GetNLayers(); i++)
     for (int j=0; j<tgeo->GetNLadders(i); j++)
     {
       int l = -1;
 
-      // Pure translation corrections
+      // Ladder translation corrections
       l = Label(i,j,"x");
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateLadder(i, j, mpc[l], 0., 0.);
@@ -318,15 +221,37 @@ CorrectFromFile(const char *filename,
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateLadder(i, j, 0. ,0., mpc[l]);
 
-      // Phi correction from ds
+      // Ladder Phi correction from ds
       l = Label(i,j,"s");
       if (mpc.find(l) != mpc.end())
         tgeo->RotateLadderRPhi(i, j, mpc[l]);
 
-      // Radial correction
+      // Ladder Radial correction
       l = Label(i,j,"r");
       if (mpc.find(l) != mpc.end())
         tgeo->MoveLadderRadially(i, j, mpc[l]);
+    }
+
+  // Half-layer position corrections
+  for (int i=0; i<tgeo->GetNLayers(); i++)
+    for (int j=0; j<2; j++) // Arm. 0 = E; 1 = W.
+    {
+      int l = -1;
+      // Half-layer translation corrections
+      l = HalfLayerLabel(i,j,"x");
+      if (mpc.find(l) != mpc.end())
+        tgeo->TranslateHalfLayer(i, j, mpc[l], 0., 0.);
+      l = HalfLayerLabel(i,j,"y");
+      if (mpc.find(l) != mpc.end())
+        tgeo->TranslateHalfLayer(i, j, 0., mpc[l], 0.);
+      l = HalfLayerLabel(i,j,"z");
+      if (mpc.find(l) != mpc.end())
+        tgeo->TranslateHalfLayer(i, j, 0. ,0., mpc[l]);
+
+      // Half-ladder phi correction
+      l = Label(i,j,"phi");
+      if (mpc.find(l) != mpc.end())
+        tgeo->RotateHalfLayer(i, j, 0., 0., mpc[l]);
     }
 
   for (unsigned int ev=0; ev<vtxevents.size(); ev++)
