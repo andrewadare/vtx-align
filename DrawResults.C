@@ -6,15 +6,20 @@
 #include <TTreeReaderValue.h>
 
 const int nlayers = 4;
+const int narms = 2; // 0=east, 1=west
 const int nladders = 24;
 const int ntrees = 2;
 
 void FillHists(TH1D *hs[nlayers][nladders][ntrees],
                TH1D *hz[nlayers][nladders][ntrees],
+               TH1D *hls[nlayers][narms][ntrees],
+               TH1D *hlz[nlayers][narms][ntrees],
                TFile *f, const char *treename, int stage);
-void SetupHist(TH1D *h, int stage);
 
-void DrawResults(int run = 411768,
+void SetupHist(TH1D *h, int stage);
+void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord);
+
+void DrawResults(int run = 123456,
                  int prod1 = 0,
                  int subit1 = 0,
                  int prod2 = 0,
@@ -73,8 +78,26 @@ void DrawResults(int run = 411768,
                                        nbins, -xmax, xmax);
       }
 
-  FillHists(hs, hz, inFile1, "vtxhits", 0);
-  FillHists(hs, hz, inFile2, "vtxhits", 1);
+  // Residuals for half-layer units
+  const char *armlabel[narms] = {"E","W"};
+  TH1D *hls[nlayers][narms][ntrees];
+  TH1D *hlz[nlayers][narms][ntrees];
+  for (int lyr=0; lyr<nlayers; lyr++)
+    for (int arm=0; arm<narms; arm++)
+      for (int stage=0; stage<ntrees; stage++)
+      {
+        int nbins   = 200;
+        double xmax = 0.06;
+        hls[lyr][arm][stage] = new TH1D(Form("hls%d%d%d", lyr, arm, stage),
+                                        Form("B%d%s", lyr, armlabel[arm]),
+                                        nbins, -xmax, xmax);
+        hlz[lyr][arm][stage] = new TH1D(Form("hlz%d%d%d", lyr, arm, stage),
+                                        Form("B%d%s", lyr, armlabel[arm]),
+                                        nbins, -xmax, xmax);
+      }
+
+  FillHists(hs, hz, hls, hlz, inFile1, "vtxhits", 0);
+  FillHists(hs, hz, hls, hlz, inFile2, "vtxhits", 1);
 
   for (int lyr=0; lyr<nlayers; lyr++)
     for (int ldr=0; ldr<nLadders[lyr]; ldr++)
@@ -83,6 +106,40 @@ void DrawResults(int run = 411768,
         SetupHist(hs[lyr][ldr][stage], stage);
         SetupHist(hz[lyr][ldr][stage], stage);
       }
+
+  TCanvas *cls = new TCanvas(Form("cls%d", 0), Form("%d", 0), 1200, 800);
+  cls->Divide(4, 2, 0.001, 0.001);
+  for (int lyr=0; lyr<4; lyr++)
+    for (int arm=0; arm<2; arm++)
+    {
+      cls->cd(arm*4 + lyr+1);
+      TH1D *h1 = hls[lyr][arm][0];
+      TH1D *h2 = hls[lyr][arm][1];
+      SetYMax(h1,h2);
+      h1->Draw("");
+      h2->Draw("same");
+      SetupHist(h1, 0);
+      SetupHist(h2, 1);
+      ModifyPad(gPad, h1, h2, "ds");
+    }
+  cList->Add(cls);
+
+  TCanvas *clz = new TCanvas(Form("clz%d", 0), Form("%d", 0), 1200, 800);
+  clz->Divide(4, 2, 0.001, 0.001);
+  for (int lyr=0; lyr<4; lyr++)
+    for (int arm=0; arm<2; arm++)
+    {
+      clz->cd(arm*4 + lyr+1);
+      TH1D *h1 = hlz[lyr][arm][0];
+      TH1D *h2 = hlz[lyr][arm][1];
+      SetYMax(h1,h2);
+      h1->Draw("");
+      h2->Draw("same");
+      SetupHist(h1, 0);
+      SetupHist(h2, 1);
+      ModifyPad(gPad, h1, h2, "dz");
+    }
+  cList->Add(clz);
 
   // Draw individual residual distributions on sub-pads
   for (int lyr=0; lyr<4; lyr++)
@@ -103,44 +160,17 @@ void DrawResults(int run = 411768,
     for (int ldr=0; ldr<nl; ldr++)
     {
       cs->cd(ldr+1);
-
       SetYMax(hs[lyr][ldr][0], hs[lyr][ldr][1]);
       for (int stage=0; stage<ntrees; stage++)
         hs[lyr][ldr][stage]->Draw(stage==0?"":"same");
+      ModifyPad(gPad, hs[lyr][ldr][0], hs[lyr][ldr][1], "ds");
 
-      gPad->SetBottomMargin(0.15);
-      gPad->SetLeftMargin(0.2);
-      gPad->SetRightMargin(0.01);
-      gPad->SetTopMargin(0.01);
-      ltx.SetTextSize(0.07);
-      ltx.DrawLatex(0.23, 0.92, hs[lyr][ldr][1]->GetTitle());
-      ltx.DrawLatex(0.23, 0.85, "ds [cm]");
-      ltx.SetTextSize(0.06);
-      ltx.DrawLatex(0.62,0.93, Form("%.0f (%.0f) #mum",
-                                    1e4*hs[lyr][ldr][0]->GetMean(),
-                                    1e4*hs[lyr][ldr][0]->GetRMS()));
-      ltx.DrawLatex(0.62,0.87, Form("#color[419]{%.0f (%.0f) #mum}",
-                                    1e4*hs[lyr][ldr][1]->GetMean(),
-                                    1e4*hs[lyr][ldr][1]->GetRMS()));
       cz->cd(ldr+1);
       SetYMax(hz[lyr][ldr][0], hz[lyr][ldr][1]);
       for (int stage=0; stage<ntrees; stage++)
         hz[lyr][ldr][stage]->Draw(stage==0?"":"same");
+      ModifyPad(gPad, hz[lyr][ldr][0], hz[lyr][ldr][1], "dz");
 
-      gPad->SetBottomMargin(0.15);
-      gPad->SetLeftMargin(0.2);
-      gPad->SetRightMargin(0.01);
-      gPad->SetTopMargin(0.01);
-      ltx.SetTextSize(0.07);
-      ltx.DrawLatex(0.23, 0.92, hz[lyr][ldr][1]->GetTitle());
-      ltx.DrawLatex(0.23, 0.85, "dz [cm]");
-      ltx.SetTextSize(0.06);
-      ltx.DrawLatex(0.62,0.93, Form("%.0f (%.0f) #mum",
-                                    1e4*hz[lyr][ldr][0]->GetMean(),
-                                    1e4*hz[lyr][ldr][0]->GetRMS()));
-      ltx.DrawLatex(0.62,0.87, Form("#color[862]{%.0f (%.0f) #mum}",
-                                    1e4*hz[lyr][ldr][1]->GetMean(),
-                                    1e4*hz[lyr][ldr][1]->GetRMS()));
       if (Dead(lyr,ldr))
       {
         TLatex l;
@@ -247,6 +277,10 @@ SetupHist(TH1D *h, int stage)
     h->SetLineColor(kGreen+3);
   else if (TString(h->GetName()).Contains("hz"))
     h->SetLineColor(kAzure+2);
+  else if (TString(h->GetName()).Contains("hls"))
+    h->SetLineColor(kGreen+3);
+  else if (TString(h->GetName()).Contains("hlz"))
+    h->SetLineColor(kAzure+2);
 
   TAxis *ax = h->GetXaxis();
   TAxis *ay = h->GetYaxis();
@@ -262,6 +296,8 @@ SetupHist(TH1D *h, int stage)
 void
 FillHists(TH1D *hs[nlayers][nladders][ntrees],
           TH1D *hz[nlayers][nladders][ntrees],
+          TH1D *hls[nlayers][narms][ntrees],
+          TH1D *hlz[nlayers][narms][ntrees],
           TFile *f, const char *treename, int stage)
 {
   TTreeReader r(treename, f);
@@ -269,6 +305,7 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
   TTreeReaderValue<float> dz(r, "res_z");
   TTreeReaderValue<float> layer(r, "layer");
   TTreeReaderValue<float> ladder(r, "ladder");
+  TTreeReaderValue<float> gx(r, "gx");
 
   while (r.Next())
   {
@@ -276,6 +313,8 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
     int ldr = *ladder;
     float s = *ds;
     float z = *dz;
+    float x = *gx;
+    int arm = (x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
     // Printf("%s %d %d %d %f %f %x",
     //        treename, lyr, ldr, stage, s, z, hs[lyr][ldr][stage]);
@@ -283,8 +322,35 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
     {
       hs[lyr][ldr][stage]->Fill(s);
       hz[lyr][ldr][stage]->Fill(z);
+      hls[lyr][arm][stage]->Fill(s);
+      hlz[lyr][arm][stage]->Fill(z);
     }
   }
 
+  return;
+}
+
+void
+ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord)
+{
+  pad->SetBottomMargin(0.15);
+  pad->SetLeftMargin(0.2);
+  pad->SetRightMargin(0.01);
+  pad->SetTopMargin(0.01);
+
+  TLatex ltx;
+  ltx.SetNDC();
+  ltx.SetTextSize(0.07);
+  ltx.DrawLatex(0.23, 0.92, h1->GetTitle());
+  ltx.DrawLatex(0.23, 0.85, Form("%s [cm]", coord.Data()));
+  ltx.SetTextSize(0.06);
+  ltx.DrawLatex(0.62,0.93, Form("#color[%d]{%.0f (%.0f) #mum}",
+                                kBlack /*h1->GetLineColor()*/,
+                                1e4*h1->GetMean(),
+                                1e4*h1->GetRMS()));
+  ltx.DrawLatex(0.62,0.87, Form("#color[%d]{%.0f (%.0f) #mum}",
+                                h2->GetLineColor(),
+                                1e4*h2->GetMean(),
+                                1e4*h2->GetRMS()));
   return;
 }
