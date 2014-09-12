@@ -8,14 +8,15 @@
 using namespace std;
 
 void MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
-              TGraphErrors *bc = 0);
+              TGraphErrors *bc = 0, TString opt = "");
 void MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
               TGraphErrors *bc = 0);
 float GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
                        TGraphErrors *bc = 0);
 
 void
-MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *bc)
+MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
+         TGraphErrors *bc, TString opt)
 {
   // Mille::mille() is called once for each residual (so, twice per hit:
   // one for the s coordinate, one for z).
@@ -28,6 +29,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *b
   // of derivatives ds/d* and dz/d* to be computed.
   int nsgp = sgpars.size();
   int nzgp = zgpars.size();
+  int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
   for (int j=0; j<trk.nhits; j++)
   {
@@ -40,12 +42,18 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *b
     vector<float> zdergl;
     for (int k=0; k<nsgp; k++)
     {
-      slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
+      if (opt.Contains("halflayer"))
+        slabels.push_back(HalfLayerLabel(hit.layer, arm, sgpars[k]));
+      else
+        slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
       sdergl.push_back(GlobalDerivative(trk, j, "s", sgpars[k], bc));
     }
     for (int k=0; k<nzgp; k++)
     {
-      zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
+      if (opt.Contains("halflayer"))
+        zlabels.push_back(HalfLayerLabel(hit.layer, arm, zgpars[k]));
+      else
+        zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
       zdergl.push_back(GlobalDerivative(trk, j, "z", zgpars[k], bc));
     }
 
@@ -77,64 +85,6 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *b
 
   return;
 }
-// void
-// MilleVtxStandalone(Mille &m, SvxGeoTrack &trk)
-// {
-//   // Mille::mille() is called once for each residual (so, twice per hit:
-//   // one for the s coordinate, one for z).
-//   // These calls fill a binary file (standalone.bin) with info on
-//   // measured and expected residual sizes, and how the residuals change with
-//   // respect to local (track) and global (detector position) parameters.
-//   // The actual fitting is performed afterward by the pede program.
-
-//   for (int j=0; j<trk.nhits; j++)
-//   {
-//     SvxGeoHit hit = trk.GetHit(j);
-//     int ls = Label(hit.layer, hit.ladder, "s");
-//     int lz = Label(hit.layer, hit.ladder, "z");
-//     int lr = Label(hit.layer, hit.ladder, "r");
-//     int slabels[2] = {ls, lr};
-//     int zlabels[2] = {lz, lr};
-//     float r = hit.x*hit.x + hit.y*hit.y;
-//     //float theta = TMath::ATan2(r, hit.z);
-
-//     // Assign sigmas for denominator of chi square function.
-//     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
-//     // If millepede complains that chi^2/ndf is away from 1.0,
-//     // this is a good place to make adjustments.
-//     float sigs = 4. * hit.xsigma * ClusterXResolution(hit.layer);
-//     float sigz = 4. * hit.zsigma * ClusterZResolution(hit.layer);
-
-//     if (false)
-//       Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
-//              hit.ds, sigs, hit.dz, sigz);
-
-//     // Local derivatives
-//     // Split into two independent fits per track:
-//     // 1. in the r-z plane: z = z0 + slope*r
-//     // 2. in the x-y plane: y' = y0' + slope*r (where y' \perp r)
-//     float sderlc[4] = {1.0,   r, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
-//     float zderlc[4] = {0.0, 0.0, 1.0,   r}; // dz(r)/dz0, dz(r)/dslope
-
-//     // Approximate global derivatives
-//     float dsdr = hit.ds/r;
-//     float dzdr = TMath::Tan(trk.the0 - TMath::PiOver2());
-
-//     // Use ngd to control whether derivatives of residuals
-//     // w.r.t. radial coordinate are included in global fit.
-//     int ngd = allowRShifts ? 2 : 1;
-
-//     float sdergl[2] = {1., dsdr}; // ds/ds, ds/dr
-//     float zdergl[2] = {1., dzdr}; // dz/dz, dz/dr
-//     m.mille(4, sderlc, ngd, sdergl, slabels, hit.ds, sigs);
-//     m.mille(4, zderlc, ngd, zdergl, zlabels, hit.dz, sigz);
-//   }
-
-//   // Write residuals for this track to file & reset for next track.
-//   m.end();
-
-//   return;
-// }
 
 void
 MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *bc)
