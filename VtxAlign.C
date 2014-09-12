@@ -149,7 +149,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   const int NC = 3;
   TCanvas *c[NC];
   c[0] = DrawXY(tgeo, "vtx_xy", "VTX ladders", "L, dead");
-  c[1] = DrawXY(tgeo, "millepede_ds", "#Deltas corrections", "L, dead, faint");
+  c[1] = DrawXY(tgeo, "millepede_ds", "#Delta(x,y) corrections", "L, dead, faint");
   DrawDiffs(x0,y0,z0,x1,y1,z1,"s");
   c[2] = DrawXY(tgeo, "millepede_dz", "#Deltaz corrections", "L, dead, faint");
   DrawDiffs(x0,y0,z0,x1,y1,z1,"z");
