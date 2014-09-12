@@ -175,17 +175,19 @@ DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
     double r2 = TMath::Sqrt(x2[i]*x2[i] + y2[i]*y2[i]);
     double phi1 = TMath::ATan2(y1[i], x1[i]);
     double phi2 = TMath::ATan2(y2[i], x2[i]);
+    double dphi = fmod(phi2-phi1, TMath::TwoPi());
+    // if (dphi < 0) dphi += TMath::TwoPi();
 
     std::map<TString, double> delta;
     delta["x"] = x2[i] - x1[i];
     delta["y"] = y2[i] - y1[i];
     delta["z"] = z2[i] - z1[i];
     delta["r"] = r2 - r1;
-    // delta["s"] = r2*phi2 - r1*phi1;
+    delta["s"] = 0.5*(r1+r2)*dphi;
 
-    delta["s"] = TMath::Sqrt(delta["x"]*delta["x"] + delta["y"]*delta["y"]);
-    if (phi2 < phi1)
-      delta["s"] *= -1;
+    // delta["s"] = TMath::Sqrt(delta["x"]*delta["x"] + delta["y"]*delta["y"]);
+    // if (phi2 < phi1)
+    //   delta["s"] *= -1;
 
     g->SetPoint(i, (double)i, delta[coord]);
     if (delta[coord] > 0.0)
