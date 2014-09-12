@@ -27,8 +27,8 @@ void CorrectFromFile(const char *filename,
                      geoEvents &vtxevents,
                      geoEvents &cntevents);
 
-void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 100,        // Production step. Starts at 0.
+void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
+              int prod = 0,        // Production step. Starts at 0.
               int subiter = 0)     // Geometry update step. Starts at 0.
 {
   // No point in continuing if Millepede II is not installed...
@@ -49,17 +49,17 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
   // Select global parameters and derivatives for s residuals
   vecs sgpars;
-  if (true) sgpars.push_back("s");
-  if (false) sgpars.push_back("x");
-  if (false) sgpars.push_back("y");
-  if (false) sgpars.push_back("r");
+  if (0) sgpars.push_back("s");
+  if (1) sgpars.push_back("x");
+  if (0) sgpars.push_back("y");
+  if (0) sgpars.push_back("r");
 
   // Select global parameters and derivatives for z residuals
   vecs zgpars;
-  if (false) zgpars.push_back("x");
-  if (false) zgpars.push_back("y");
-  if (true) zgpars.push_back("z");
-  if (false) zgpars.push_back("r");
+  if (1) zgpars.push_back("x");
+  if (0) zgpars.push_back("y");
+  if (1) zgpars.push_back("z");
+  if (0) zgpars.push_back("r");
 
   vecs constfiles;
   vecs binfiles;
@@ -92,7 +92,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
   if (nStdTracks > 0)
   {
-    GetEventsFromTree(svxseg, tgeo, vtxevents, 10000);
+    GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
 
     TFile *bcf = new TFile(bcFileIn.Data(), "read");
     TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
@@ -101,7 +101,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
     // gbc->SetPointError(1, gbc->GetEX()[1], gbc->GetEY()[1]);
     // FitTracks(vtxevents, gbc);// Uses beam center. Doesn't work as well.
 
-    FitTracks(vtxevents, 0);
+    FitTracks(vtxevents);
     EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc);
   }
   if (nCntTracks > 0)
@@ -127,7 +127,6 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
   Printf("Refitting in post-alignment geometry to get updated residuals.");
   FitTracks(vtxevents);
-
   cout << "Filling output tree(s)..." << flush;
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
   TNtuple *ht = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
@@ -194,8 +193,11 @@ WriteConstFile(const char *filename, vecs &sgpars, vecs &zgpars,
     return;
   }
 
+  bool sdof = In(string("s"), sgpars);
+  bool zdof = In(string("z"), zgpars);
   bool xdof = In(string("x"), sgpars) || In(string("x"), zgpars);
   bool ydof = In(string("y"), sgpars) || In(string("y"), zgpars);
+  bool rdof = In(string("r"), sgpars) || In(string("r"), zgpars);
 
   fs << "! Write linear constraints such that sum_l (f_l * p_l) = c"
      << endl;
@@ -207,105 +209,82 @@ WriteConstFile(const char *filename, vecs &sgpars, vecs &zgpars,
   fs << "! 234 2.345 ! Add a p_234 * f_234 term" << endl;
   fs << "! ..." << endl;
 
-  // Fix or regulate ladders. Example: 104 0.0 -1 (fixed)
-  fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
-     << endl;
-  for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-    for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
-      if (Locked(lyr,ldr))
-      {
-        double presig = 1e-4; // Smaller values --> stronger regularization
-        fs << Form("%4d 0.0 %g ! B%dL%d(s)",
-                   Label(lyr, ldr, "s"), presig, lyr, ldr) << endl;
-        fs << Form("%4d 0.0 %g ! B%dL%d(z)",
-                   Label(lyr, ldr, "z"), presig, lyr, ldr) << endl;
-      }
-  fs << endl;
-
+  /*
+    // Fix or regulate ladders. Example: 104 0.0 -1 (fixed)
+    fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
+       << endl;
+    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
+      for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
+        if (Locked(lyr,ldr))
+        {
+          double presig = 1e-4; // Smaller values --> stronger regularization
+          fs << Form("%4d 0.0 %g ! B%dL%d(s)",
+                     Label(lyr, ldr, "s"), presig, lyr, ldr) << endl;
+          fs << Form("%4d 0.0 %g ! B%dL%d(z)",
+                     Label(lyr, ldr, "z"), presig, lyr, ldr) << endl;
+        }
+    fs << endl;
+  */
   // Global parameter labels for z and s coordinates in east and west arms
   veci wx = LadderLabels(geo, "w", "x");
   veci wy = LadderLabels(geo, "w", "y");
   veci wz = LadderLabels(geo, "w", "z");
   veci ws = LadderLabels(geo, "w", "s");
   veci wr = LadderLabels(geo, "w", "r");
-
   veci ex = LadderLabels(geo, "e", "x");
   veci ey = LadderLabels(geo, "e", "y");
   veci ez = LadderLabels(geo, "e", "z");
   veci es = LadderLabels(geo, "e", "s");
   veci er = LadderLabels(geo, "e", "r");
 
-  bool constrainEdgeLadders = true;
-  if (constrainEdgeLadders)
+  veci wtz = EdgeLadderLabels(geo, "w", "z", "top");
+  veci wts = EdgeLadderLabels(geo, "w", "s", "top");
+  veci wbz = EdgeLadderLabels(geo, "w", "z", "bottom");
+  veci wbs = EdgeLadderLabels(geo, "w", "s", "bottom");
+  veci etz = EdgeLadderLabels(geo, "e", "z", "top");
+  veci ets = EdgeLadderLabels(geo, "e", "s", "top");
+  veci ebz = EdgeLadderLabels(geo, "e", "z", "bottom");
+  veci ebs = EdgeLadderLabels(geo, "e", "s", "bottom");
+
+  // Prevent net displacements/distortions, but only if the coordinate 
+  // is being used as a global parameter (otherwise the system will be 
+  // rank-deficient)
+  if (sdof)
   {
-    // Boundary "wedge" units - sequences of 4 edge ladders at top and bottom
-    int wb[4] = {0,0,0,0};
-    int wt[4] = {4,9,7,11};
-    int et[4] = {5,10,8,12};
-    int eb[4] = {9,19,15,23};
-    veci wtz; // west top z
-    veci wts; // west top s
-    veci wbz; // west bottom z
-    veci wbs; // west bottom s
-    veci etz; // east top z
-    veci ets; // east top s
-    veci ebz; // east bottom z
-    veci ebs; // east bottom s
-    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-    {
-      wtz.push_back(Label(lyr, wt[lyr], "z")); // west top z
-      wts.push_back(Label(lyr, wt[lyr], "s")); // west top s
-      wbz.push_back(Label(lyr, wb[lyr], "z")); // west bottom z
-      wbs.push_back(Label(lyr, wb[lyr], "s")); // west bottom s
-      etz.push_back(Label(lyr, et[lyr], "z")); // east top z
-      ets.push_back(Label(lyr, et[lyr], "s")); // east top s
-      ebz.push_back(Label(lyr, eb[lyr], "z")); // east bottom z
-      ebs.push_back(Label(lyr, eb[lyr], "s")); // east bottom s
-    }
-
-    AddConstraint(wtz, geo, Radii, fs, "West top z r shear");
-    AddConstraint(etz, geo, Radii, fs, "East top z r shear");
-    AddConstraint(wts, geo, Radii, fs, "West top s r shear");
-    AddConstraint(ets, geo, Radii, fs, "East top s r shear");
-    AddConstraint(wbz, geo, Radii, fs, "West bottom z r shear");
-    AddConstraint(ebz, geo, Radii, fs, "East bottom z r shear");
-    AddConstraint(wbs, geo, Radii, fs, "West bottom s r shear");
-    AddConstraint(ebs, geo, Radii, fs, "East bottom s r shear");
-
-  } // end constrainEdgeLadders block
-
-  // Prevent net shift or rotation of an entire arm,
-  // but only if the coordinate is being used as a global parameter
-  // (otherwise the system will be overconstrained and rank-deficient)
+    AddConstraints(ws, es, geo, Ones,      fs, "s translation");
+    AddConstraints(ws, es, geo, PhiAngles, fs, "s phi shear");
+    AddConstraints(ws, es, geo, RPhi,      fs, "s r-phi shear");
+    AddConstraints(ws, es, geo, Radii,     fs, "s r shear");
+    AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
+    AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
+  }
   if (xdof)
   {
-    AddConstraint(wx, geo, Ones, fs, "West x translation");
-    AddConstraint(ex, geo, Ones, fs, "East x translation");
+    AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
+    AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
+    AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
+    AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
   }
   if (ydof)
   {
-    AddConstraint(wy, geo, Ones, fs, "West y translation");
-    AddConstraint(ey, geo, Ones, fs, "East y translation");
+    AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
+    AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
+    AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
+    AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
   }
-  AddConstraint(wz, geo, Ones, fs, "West z translation");
-  AddConstraint(ez, geo, Ones, fs, "East z translation");
-
-  AddConstraint(ws, geo, Ones, fs, "West s translation");
-  AddConstraint(es, geo, Ones, fs, "East s translation");
-
-  // Prevent various shear distortions of an entire arm
-  AddConstraint(wz, geo, PhiAngles, fs, "West z phi shear");
-  AddConstraint(ez, geo, PhiAngles, fs, "East z phi shear");
-  AddConstraint(ws, geo, PhiAngles, fs, "West s phi shear");
-  AddConstraint(es, geo, PhiAngles, fs, "East s phi shear");
-  AddConstraint(wz, geo, RPhi,      fs, "West z r-phi shear");
-  AddConstraint(ez, geo, RPhi,      fs, "East z r-phi shear");
-  AddConstraint(ws, geo, RPhi,      fs, "West s r-phi shear");
-  AddConstraint(es, geo, RPhi,      fs, "East s r-phi shear");
-  AddConstraint(wz, geo, Radii,     fs, "West z r shear");
-  AddConstraint(ez, geo, Radii,     fs, "East z r shear");
-  AddConstraint(ws, geo, Radii,     fs, "West s r shear");
-  AddConstraint(es, geo, Radii,     fs, "East s r shear");
+  if (zdof)
+  {
+    AddConstraints(wz, ez, geo, Ones,      fs, "z translation");
+    AddConstraints(wz, ez, geo, PhiAngles, fs, "z phi shear");
+    AddConstraints(wz, ez, geo, RPhi,      fs, "z r-phi shear");
+    AddConstraints(wz, ez, geo, Radii,     fs, "z r shear");
+    AddConstraints(wtz, etz, geo, Radii,   fs, "top z r shear");
+    AddConstraints(wbz, ebz, geo, Radii,   fs, "bottom z r shear");
+  }
+  if (rdof)
+  {
+    AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
+  }
 
   fs.close();
   Printf("done.");
