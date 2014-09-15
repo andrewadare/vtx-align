@@ -291,21 +291,25 @@ WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
   if (xdof)
   {
     // AddConstraint(hlx, geo, Ones, fs, "Total x translation");
+    // AddConstraints(wx, ex, geo, Ones,  fs, "x translation");
     AddConstraints(wx, ex, geo, Radii, fs, "x r shear");
   }
   if (ydof)
   {
     // AddConstraint(hly, geo, Ones, fs, "Total y translation");
+    // AddConstraints(wy, ey, geo, Ones,  fs, "y translation");
     AddConstraints(wy, ey, geo, Radii, fs, "y r shear");
   }
   if (zdof)
   {
     // AddConstraint(hlz, geo, Ones, fs, "Total z translation");
+    // AddConstraints(wz, ez, geo, Ones,  fs, "z translation");
     AddConstraints(wz, ez, geo, Radii, fs, "z r shear");
   }
   if (sdof)
   {
     // AddConstraint(hls, geo, Ones, fs, "Total s translation");
+    // AddConstraints(ws, es, geo, Ones,  fs, "s translation");
     AddConstraints(ws, es, geo, Radii, fs, "s r shear");
   }
 
