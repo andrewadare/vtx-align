@@ -161,35 +161,28 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
   }
 
   SvxGeoHit hit = trk.GetHit(ihit);
-  float r = hit.x*hit.x + hit.y*hit.y;
-  float xp = bcx + r*TMath::Cos(trk.phi0);
-  float yp = bcy + r*TMath::Sin(trk.phi0) + trk.vy; // vy is y-intercept from fit not vertex
-  double dx = xp - hit.x;
-  double dy = yp - hit.y;
-  double dxy = TMath::Sqrt(dx*dx + dy*dy);
-
+  float r = TMath::Sqrt(hit.x*hit.x + hit.y*hit.y);
   if (res == "s")
   {
     // d(Delta_s)/dr
     if (par == "r")
       return hit.ds/r;
 
-    // d(Delta_s)/ds -- account for 13 degree tilt in pixel layers
+    // d(Delta_s)/ds -- 0.974 accounts for 13 degree tilt in pixel layers
     if (par == "s")
       return hit.layer < 2 ? 0.9741 : 1.0;
 
     // d(Delta_s)/dx
     if (par == "x")
-      return dx/dxy;
+      return hit.layer < 2 ? -0.9741*hit.y/r : -hit.y/r;
 
     // d(Delta_s)/dy
     if (par == "y")
-      return dy/dxy;
+      return hit.layer < 2 ? 0.9741*hit.x/r : hit.x/r;
 
     // d(Delta_s)/dz
     if (par == "z")
       return 0.0;
-
   }
 
   if (res == "z")
@@ -213,7 +206,6 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
     // d(Delta_z)/dz
     if (par == "z")
       return 1.0;
-
   }
 
   Printf("WARNING from GlobalDerivative() in MilleFunctions.h: "
