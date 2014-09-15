@@ -51,14 +51,14 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // Mixing rotation (s) and translation (x,y) is not recommended. They do not
   // commute and should be handled as mutually exclusive.
   vecs sgpars;
-  if (1) sgpars.push_back("s");
-  if (0) sgpars.push_back("x");
-  if (0) sgpars.push_back("y");
+  if (0) sgpars.push_back("s");
+  if (1) sgpars.push_back("x");
+  if (1) sgpars.push_back("y");
   if (0) sgpars.push_back("r");
 
   vecs zgpars;
-  if (0) zgpars.push_back("x");
-  if (0) zgpars.push_back("y");
+  if (1) zgpars.push_back("x");
+  if (1) zgpars.push_back("y");
   if (1) zgpars.push_back("z");
   if (0) zgpars.push_back("r");
 
@@ -249,7 +249,7 @@ CorrectFromFile(const char *filename,
 
       // Half-ladder phi correction from ds
       // s is converted to phi which is used for the half-layer rotation
-      l = Label(i,j,"s");
+      l = HalfLayerLabel(i,j,"s");
       if (mpc.find(l) != mpc.end())
         tgeo->RotateHalfLayerRPhi(i, j, mpc[l]);
     }
