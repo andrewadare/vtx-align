@@ -11,7 +11,7 @@ using namespace std;
 
 // Globals
 const double BField = 0.0;
-const bool useVtxTracks = false;
+const bool useVtxTracks = true;
 const bool useCntTracks = true;
 const char *pedeSteerFile = "pede-steer.txt";
 const char *ladderConstFile = "ladder_constraints.txt";
@@ -76,7 +76,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // Write constraints to text file
   vecs constfiles;
   vecs binfiles;
-  if (alignMode == "halflayer")
+  if (alignMode == "halflayer" && useCntTracks == false)
   {
     constfiles.push_back(hluConstFile);
     WriteHLConstraints(hluConstFile, sgpars, zgpars, tgeo);

@@ -130,26 +130,18 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 4. * hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 4. * hit.zsigma * ClusterZResolution(hit.layer);
-
-    if (false)
-      Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
-             hit.ds, sigs, hit.dz, sigz);
-    if (false)
-      Printf("%d %d", slabels.back(), zlabels.back());
+    float sigs = hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = hit.zsigma * ClusterZResolution(hit.layer);
 
     // Here, fit clusters individually. Each cluster is treated as
     // one "local fit object".
 
-    // No global fit to s residual
-    m.mille(1, sderlc, 0, &sdergl[0], &slabels[0], 0, .000001);
-    m.mille(1, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
+    m.mille(1, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
+    m.mille(1, zderlc, 0,    &zdergl[0], &zlabels[0], 0,  0.000001);
     m.end();
 
-    // No global fit to z residual
-    m.mille(1, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
-    m.mille(1, zderlc, 0, &zdergl[0], &zlabels[0], 0, .000001);
+    m.mille(1, sderlc, 0,    &sdergl[0], &slabels[0], 0,  0.000001);
+    m.mille(1, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
     m.end();
   }
 
