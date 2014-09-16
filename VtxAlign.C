@@ -11,8 +11,8 @@ using namespace std;
 
 // Globals
 const double BField = 0.0;
-const int nStdTracks = 999999;
-const int nCntTracks = 0;
+const bool useVtxTracks = false;
+const bool useCntTracks = true;
 const char *pedeSteerFile = "pede-steer.txt";
 const char *ladderConstFile = "ladder_constraints.txt";
 const char *hluConstFile = "halflayer_constraints.txt";
@@ -66,9 +66,9 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   assert(inFile);
 
   TNtuple *svxseg = (TNtuple *)inFile->Get("vtxhits");
-  TNtuple *svxcnt = (TNtuple *)inFile->Get("cnt_clusntuple");
+  TNtuple *svxcnt = (TNtuple *)inFile->Get("cnthits");
   assert(svxseg);
-  if (nCntTracks>0)
+  if (useCntTracks>0)
     assert(svxcnt);
 
   SvxTGeo *tgeo = VTXModel(pisaFileIn.Data());
@@ -88,9 +88,9 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   }
 
   // Write Millepede steering file
-  if (nStdTracks > 0)
+  if (useVtxTracks)
     binfiles.push_back(pedeBinFileStd);
-  if (nCntTracks > 0)
+  if (useCntTracks)
     binfiles.push_back(pedeBinFileCnt);
   WriteSteerFile(pedeSteerFile, binfiles, constfiles);
 
@@ -101,7 +101,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   geoEvents vtxevents; // Events containing SVX standalone tracks
   geoEvents cntevents; // Events containing SvxCentralTracks
 
-  if (nStdTracks > 0)
+  if (useVtxTracks)
   {
     GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
 
@@ -115,10 +115,11 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     FitTracks(vtxevents);
     EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc, alignMode);
   }
-  if (nCntTracks > 0)
+  if (useCntTracks)
   {
     GetEventsFromTree(svxcnt, tgeo, cntevents);
-    EventLoop(pedeBinFileCnt, cntevents, sgpars, zgpars);
+    EventLoop(pedeBinFileCnt, cntevents, sgpars, zgpars, 0, 
+              alignMode + ", ext");
   }
 
   // Shell out to pede executable
@@ -176,18 +177,19 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
   // - "ext": Assume residuals were computed from external information.
   // - "halflayer": Align half-layer positions instead of ladders.
 
-  Printf("Calling mille() in EventLoop(). Write to %s...", binfile.c_str());
+  Printf("Calling mille() in EventLoop().\n Requested options: %s", opt.Data());
   Mille m(binfile.c_str());
   for (unsigned int ev=0; ev<events.size(); ev++)
     for (unsigned int t=0; t<events[ev].size(); t++)
     {
       SvxGeoTrack trk = events[ev][t];
       if (opt.Contains("ext"))
-        MilleCnt(m, trk, sgpars, zgpars, bc);
+        MilleCnt(m, trk, sgpars, zgpars, bc, opt);
       else
         MilleVtx(m, trk, sgpars, zgpars, bc, opt);
     }
 
+  Printf("Writing to %s...", binfile.c_str());
   // Mille object must go out of scope for output file to close properly.
   return;
 }

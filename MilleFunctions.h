@@ -10,10 +10,9 @@ using namespace std;
 void MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
               TGraphErrors *bc = 0, TString opt = "");
 void MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
-              TGraphErrors *bc = 0);
+              TGraphErrors *bc = 0, TString opt = "");
 float GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
                        TGraphErrors *bc = 0);
-
 void
 MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
          TGraphErrors *bc, TString opt)
@@ -87,12 +86,14 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
 }
 
 void
-MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *bc)
+MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, 
+         TGraphErrors *bc, TString opt)
 {
   // Get the number of global parameters for s and for z. This sets the number
   // of derivatives ds/d* and dz/d* to be computed.
   int nsgp = sgpars.size();
   int nzgp = zgpars.size();
+  int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
   // Local derivatives
   float sderlc[1] = {1.0};
@@ -107,19 +108,22 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *b
     veci zlabels;
     vector<float> sdergl;
     vector<float> zdergl;
+
     for (int k=0; k<nsgp; k++)
     {
-      string res = "s";
-      string par = sgpars[k];
-      slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
-      sdergl.push_back(GlobalDerivative(trk, j, res, par, bc));
+      if (opt.Contains("halflayer"))
+        slabels.push_back(HalfLayerLabel(hit.layer, arm, sgpars[k]));
+      else
+        slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
+      sdergl.push_back(GlobalDerivative(trk, j, "s", sgpars[k], bc));
     }
     for (int k=0; k<nzgp; k++)
     {
-      string res = "z";
-      string par = zgpars[k];
-      zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
-      zdergl.push_back(GlobalDerivative(trk, j, res, par, bc));
+      if (opt.Contains("halflayer"))
+        zlabels.push_back(HalfLayerLabel(hit.layer, arm, zgpars[k]));
+      else
+        zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
+      zdergl.push_back(GlobalDerivative(trk, j, "z", zgpars[k], bc));
     }
 
     // Assign sigmas for denominator of chi square function.
@@ -128,6 +132,12 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, TGraphErrors *b
     // this is a good place to make adjustments.
     float sigs = 4. * hit.xsigma * ClusterXResolution(hit.layer);
     float sigz = 4. * hit.zsigma * ClusterZResolution(hit.layer);
+
+    if (false)
+      Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
+             hit.ds, sigs, hit.dz, sigz);
+    if (false)
+      Printf("%d %d", slabels.back(), zlabels.back());
 
     // Here, fit clusters individually. Each cluster is treated as
     // one "local fit object".
@@ -151,7 +161,6 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
                  TGraphErrors *bc)
 {
   // Return first derivative of residual with respect to global parameter.
-  float deriv = 0.0;
   double bcx = 0., bcy = 0.;
   if (bc) // Include beam position in track fit. Rotate about (bcx,bcy).
   {
@@ -210,7 +219,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
 
   Printf("WARNING from GlobalDerivative() in MilleFunctions.h: "
          "No derivative d(Delta_%s)/d%s", res.c_str(), par.c_str());
-  return deriv;
+  return 0.0;
 }
 
 #endif
