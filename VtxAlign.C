@@ -11,7 +11,7 @@ using namespace std;
 
 // Globals
 const double BField = 0.0;
-const bool useVtxTracks = true;
+const bool useVtxTracks = false;
 const bool useCntTracks = true;
 const char *pedeSteerFile = "pede-steer.txt";
 const char *ladderConstFile = "ladder_constraints.txt";
@@ -51,14 +51,14 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // Mixing rotation (s) and translation (x,y) is not recommended. They do not
   // commute and should be handled as mutually exclusive.
   vecs sgpars;
-  if (0) sgpars.push_back("s");
-  if (1) sgpars.push_back("x");
-  if (1) sgpars.push_back("y");
+  if (1) sgpars.push_back("s");
+  if (0) sgpars.push_back("x");
+  if (0) sgpars.push_back("y");
   if (0) sgpars.push_back("r");
 
   vecs zgpars;
-  if (1) zgpars.push_back("x");
-  if (1) zgpars.push_back("y");
+  if (0) zgpars.push_back("x");
+  if (0) zgpars.push_back("y");
   if (1) zgpars.push_back("z");
   if (0) zgpars.push_back("r");
 
@@ -118,7 +118,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   if (useCntTracks)
   {
     GetEventsFromTree(svxcnt, tgeo, cntevents);
-    EventLoop(pedeBinFileCnt, cntevents, sgpars, zgpars, 0, 
+    EventLoop(pedeBinFileCnt, cntevents, sgpars, zgpars, 0,
               alignMode + ", ext");
   }
 
@@ -139,11 +139,13 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
 
   Printf("Refitting in post-alignment geometry to get updated residuals.");
   FitTracks(vtxevents);
+
   cout << "Filling output tree(s)..." << flush;
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
-  TNtuple *ht = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
-  FillNTuple(vtxevents, ht);
-  FillNTuple(cntevents, ht); // Eventually: use a different tree
+  TNtuple *vtxhits = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
+  TNtuple *cnthits = new TNtuple("cnthits", "CNT hit variables", HITVARS);
+  FillNTuple(vtxevents, vtxhits);
+  FillNTuple(cntevents, cnthits); // Eventually: use a different tree
   Printf("done.");
 
   // Draw changes in ladder positions
@@ -261,7 +263,11 @@ CorrectFromFile(const char *filename,
       vtxevents[ev][t].UpdateHits();
   for (unsigned int ev=0; ev<cntevents.size(); ev++)
     for (unsigned int t=0; t<cntevents[ev].size(); t++)
-      cntevents[ev][t].UpdateHits();
+    {
+      for (int ihit=0; ihit<cntevents[ev][t].nhits; ihit++)
+        cntevents[ev][t].hits[ihit].UpdateResiduals();
 
+      cntevents[ev][t].UpdateHits();
+    }
   return;
 }

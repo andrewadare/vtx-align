@@ -86,7 +86,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
 }
 
 void
-MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars, 
+MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
          TGraphErrors *bc, TString opt)
 {
   // Get the number of global parameters for s and for z. This sets the number
@@ -130,18 +130,19 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = 1.6*hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = 1.6*hit.zsigma * ClusterZResolution(hit.layer);
 
     // Here, fit clusters individually. Each cluster is treated as
     // one "local fit object".
 
-    m.mille(1, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
-    m.mille(1, zderlc, 0,    &zdergl[0], &zlabels[0], 0,  0.000001);
+    m.mille(0, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
+    m.mille(1, sderlc,    0, &sdergl[0], &slabels[0],      0, sigs);
+    // m.mille(nsgp, &sdergl[0], 0,    &sdergl[0], &slabels[0], 0, sigs);
     m.end();
 
-    m.mille(1, sderlc, 0,    &sdergl[0], &slabels[0], 0,  0.000001);
-    m.mille(1, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
+    m.mille(0, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
+    m.mille(1, zderlc,    0, &zdergl[0], &zlabels[0],      0, sigz);
     m.end();
   }
 
@@ -171,7 +172,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
 
     // d(Delta_s)/ds -- 0.974 accounts for 13 degree tilt in pixel layers
     if (par == "s")
-      return hit.layer < 2 ? 0.9741 : 1.0;
+      return hit.layer < 2 ? -0.9741 : -1.0;
 
     // d(Delta_s)/dx
     if (par == "x")
