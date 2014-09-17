@@ -46,22 +46,28 @@ void GenerateEvents()
   Printf("%lu CNT events generated.", cntevents.size());
 
   // ** Apply misalignments here **
-  tgeo->TranslateHalfLayer(1, 0, -0.02, 0.0, 0.0);
+  tgeo->TranslateHalfLayer(1, 0, 0.02, 0.02, 0.0);
 
   // Update global hit positions to reflect misalignments.
   // Local hit positions (x,z on sensor) remain unchanged.
   for (unsigned int ev=0; ev<vtxevents.size(); ev++)
     for (unsigned int t=0; t<vtxevents[ev].size(); t++)
       vtxevents[ev][t].UpdateHits();
+
   for (unsigned int ev=0; ev<cntevents.size(); ev++)
     for (unsigned int t=0; t<cntevents[ev].size(); t++)
+    {
+      for (int ihit=0; ihit<cntevents[ev][t].nhits; ihit++)
+        cntevents[ev][t].hits[ihit].UpdateResiduals();
+      
       cntevents[ev][t].UpdateHits();
+    }
 
   // Fit VTX tracks to (re)assign residuals, angles, and intercepts.
   // This puts the tracks on the same footing as the post-aligned refit sample.
   // Without this step, a comparison of residuals before and after alignment
   // would not be apples-to-apples.
-  // CNT tracks are not fit here--their parameters are determined externally. 
+  // CNT tracks are not fit here--their parameters are determined externally.
   FitTracks(vtxevents);
 
   // Write out (misaligned) geometry to par file
