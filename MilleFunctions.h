@@ -138,7 +138,6 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
 
     m.mille(0, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
     m.mille(1, sderlc,    0, &sdergl[0], &slabels[0],      0, sigs);
-    // m.mille(nsgp, &sdergl[0], 0,    &sdergl[0], &slabels[0], 0, sigs);
     m.end();
 
     m.mille(0, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
