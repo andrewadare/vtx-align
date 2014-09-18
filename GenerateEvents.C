@@ -46,7 +46,10 @@ void GenerateEvents()
   Printf("%lu CNT events generated.", cntevents.size());
 
   // ** Apply misalignments here **
-  tgeo->TranslateHalfLayer(1, 0, 0.02, 0.02, 0.0);
+  int layer = 1;
+  int arm = 1; // East = 0, West = 1
+  // tgeo->TranslateHalfLayer(layer, arm, 0.02, 0.02, 0.0);
+  tgeo->RotateHalfLayerRPhi(layer, arm, 0.04);
 
   // Update global hit positions to reflect misalignments.
   // Local hit positions (x,z on sensor) remain unchanged.
