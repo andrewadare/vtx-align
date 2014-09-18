@@ -172,7 +172,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
 
     // d(Delta_s)/ds -- 0.974 accounts for 13 degree tilt in pixel layers
     if (par == "s")
-      return hit.layer < 2 ? -0.9741 : -1.0;
+      return hit.layer < 2 ? 0.9741 : 1.0;
 
     // d(Delta_s)/dx
     if (par == "x")
