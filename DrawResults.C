@@ -40,9 +40,6 @@ void DrawResults(int run = 123456,
   assert(inFile1);
   assert(inFile2);
 
-  // TNtuple *ht[ntrees] = {0};
-  // ht[0] = (TNtuple *) inFile1->Get("vtxhits");
-  // ht[1] = (TNtuple *) inFile2->Get("vtxhits");
 
   TGraphErrors *gdead[nlayers];
   for (int lyr=0; lyr<nlayers; lyr++)
@@ -96,8 +93,8 @@ void DrawResults(int run = 123456,
                                         nbins, -xmax, xmax);
       }
 
-  FillHists(hs, hz, hls, hlz, inFile1, "vtxhits", 0);
-  FillHists(hs, hz, hls, hlz, inFile2, "vtxhits", 1);
+  FillHists(hs, hz, hls, hlz, inFile1, "cnthits", 0);
+  FillHists(hs, hz, hls, hlz, inFile2, "cnthits", 1);
 
   for (int lyr=0; lyr<nlayers; lyr++)
     for (int ldr=0; ldr<nLadders[lyr]; ldr++)
@@ -244,25 +241,17 @@ void DrawResults(int run = 123456,
   ltx.SetTextSize(0.06);
   ltx.SetTextFont(42);
 
-  if (prod1==prod2)
-  {
-    const int nxyp = 3;
-    const char *xyplots[nxyp] = {"vtx_xy","millepede_ds","millepede_dz"};
-    for (int i=0; i<nxyp; i++)
-    {
-      TCanvas *c = (TCanvas *) inFile2->Get(xyplots[i]);
-      assert(c);
-      c->Draw();
-      ltx.DrawLatex(0.15, 0.92, gPad->GetTitle());
-      cList->Add(c);
-    }
-  }
-
   PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d",
                         run, prod1, subit1, prod2, subit2), "");
   PrintPDF(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d",
                        run, prod1, subit1, prod2, subit2), "");
-  // PrintPDF(cList, Form("pdfs/self-align-iter%d", iter));
+
+  gStyle->SetOptTitle(1);
+  const char *parfile1 = Form("geom/%d-%d-%d.par", run, prod1, subit1);
+  const char *parfile2 = Form("geom/%d-%d-%d.par", run, prod2, subit2);
+  gROOT->Macro(Form("DiffGeometry.C(\"%s\", \"%s\")", parfile1, parfile2));
+
+  return;
 }
 
 void
