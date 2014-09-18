@@ -47,13 +47,20 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, subiter + 1);
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, subiter + 1);
 
-  // Select global parameters and derivatives for s residuals
-  // Mixing rotation (s) and translation (x,y) is not recommended. They do not
-  // commute and should be handled as mutually exclusive.
+  // Select global parameters and derivatives for s and z residuals
+  // ==============================================================
+  // Best combinations (mainly based on trial & error):
+  //      Delta s  |  Delta z
+  // --------------+------------
+  // 1.      s     |     z       <-- for rotational misalignments
+  // 2.     x,y    |     z       <-- for translational misalignments
+  // --------------+------------
+  // Other combinations can be explored, but many lead to rank deficiencies.
+
   vecs sgpars;
-  if (1) sgpars.push_back("s");
-  if (0) sgpars.push_back("x");
-  if (0) sgpars.push_back("y");
+  if (0) sgpars.push_back("s");
+  if (1) sgpars.push_back("x");
+  if (1) sgpars.push_back("y");
   if (0) sgpars.push_back("r");
 
   vecs zgpars;
