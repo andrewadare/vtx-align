@@ -1,11 +1,9 @@
-
 #include "VtxAlignBase.h"
 #include "GLSFitter.h"
 #include "ParameterDefs.h"
 #include "MilleFunctions.h"
 #include "ConstraintBuilder.h"
 #include "VtxIO.h"
-#include "VtxVis.h"
 
 using namespace std;
 
@@ -58,9 +56,9 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // Other combinations can be explored, but many lead to rank deficiencies.
 
   vecs sgpars;
-  if (0) sgpars.push_back("s");
-  if (1) sgpars.push_back("x");
-  if (1) sgpars.push_back("y");
+  if (1) sgpars.push_back("s");
+  if (0) sgpars.push_back("x");
+  if (0) sgpars.push_back("y");
   if (0) sgpars.push_back("r");
 
   vecs zgpars;
@@ -101,10 +99,6 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     binfiles.push_back(pedeBinFileCnt);
   WriteSteerFile(pedeSteerFile, binfiles, constfiles);
 
-  // Original ladder positions
-  vecd x0; vecd y0; vecd z0;
-  GetLadderXYZ(tgeo, x0, y0, z0);
-
   geoEvents vtxevents; // Events containing SVX standalone tracks
   geoEvents cntevents; // Events containing SvxCentralTracks
 
@@ -115,11 +109,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     TFile *bcf = new TFile(bcFileIn.Data(), "read");
     TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
 
-    // gbc->SetPointError(0, gbc->GetEX()[0], gbc->GetEY()[0]);
-    // gbc->SetPointError(1, gbc->GetEX()[1], gbc->GetEY()[1]);
-    // FitTracks(vtxevents, gbc);// Uses beam center. Doesn't work as well.
-
-    FitTracks(vtxevents);
+    FitTracks(vtxevents, 0);
     EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc, alignMode);
   }
   if (useCntTracks)
@@ -136,15 +126,13 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   gSystem->Exec(Form("cp millepede.res logs/dp-%d-%d-%d.txt",
                      run, prod, subiter));
 
-  // Apply position corrections from pede output file.
-  // Also update stored global positions in geoEvents vectors.
+  // 1. Change geometry: apply position corrections from pede output file.
+  // 2. Update stored global hit (x,y,z) positions in geoEvents vectors.
+  // 3. Update residuals on all hits:
+  //  - CNT track residuals are updated in CorrectFromFile().
+  //  - VTX track residuals are updated by refitting.
   CorrectFromFile("millepede.res", tgeo, vtxevents, cntevents);
-
-  // Record positions after alignment
-  vecd x1; vecd y1; vecd z1;
-  GetLadderXYZ(tgeo, x1, y1, z1);
-
-  Printf("Refitting in post-alignment geometry to get updated residuals.");
+  Printf("Refitting in post-alignment geometry to update residuals.");
   FitTracks(vtxevents);
 
   cout << "Filling output tree(s)..." << flush;
@@ -152,17 +140,8 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   TNtuple *vtxhits = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
   TNtuple *cnthits = new TNtuple("cnthits", "CNT hit variables", HITVARS);
   FillNTuple(vtxevents, vtxhits);
-  FillNTuple(cntevents, cnthits); // Eventually: use a different tree
+  FillNTuple(cntevents, cnthits);
   Printf("done.");
-
-  // Draw changes in ladder positions
-  const int NC = 3;
-  TCanvas *c[NC];
-  c[0] = DrawXY(tgeo, "vtx_xy", "VTX ladders", "L, dead");
-  c[1] = DrawXY(tgeo, "millepede_ds", "#Delta(x,y) corrections", "L, dead, faint");
-  DrawDiffs(x0,y0,z0,x1,y1,z1,"s");
-  c[2] = DrawXY(tgeo, "millepede_dz", "#Deltaz corrections", "L, dead, faint");
-  DrawDiffs(x0,y0,z0,x1,y1,z1,"z");
 
   Printf("Writing %s", pisaFileOut.Data());
   tgeo->WriteParFile(pisaFileOut.Data());
@@ -170,10 +149,9 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   Printf("Writing %s", rootFileOut.Data());
   outFile->cd();
   outFile->Write(0, TObject::kOverwrite);
-  for (int i=0; i<NC; i++)
-    c[i]->Write();
 
   Printf("Done!");
+
   return;
 }
 
