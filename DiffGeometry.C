@@ -3,16 +3,18 @@
 #include "ParameterDefs.h"
 #include "BadLadders.h"
 #include "VtxVis.h"
+#include "UtilFns.h"
 
 void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z);
 
-void DiffGeometry(const char *pfa = "geom/411768-0-0.par",
-                  const char *pfb = "geom/411768-3-3.par")
+void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
+                  const char *pfb = "geom/taebong-run14p10.par")
 {
   TLatex ltx;
   ltx.SetNDC();
   ltx.SetTextFont(42);
   ltx.SetTextSize(0.03);
+  TObjArray *cList = new TObjArray();
 
   // Get ladder positions in "a" and "b" geometry
   vecd xa; vecd ya; vecd za;
@@ -25,39 +27,49 @@ void DiffGeometry(const char *pfa = "geom/411768-0-0.par",
   TString a = TString(gSystem->BaseName(pfa)).ReplaceAll(".par", "");
   TString b = TString(gSystem->BaseName(pfb)).ReplaceAll(".par", "");
   TString ab = Form("%s-vs-%s", a.Data(), b.Data());
+  const char *fa = gSystem->BaseName(pfa);
+  const char *fb = gSystem->BaseName(pfb);
 
-  DrawXY(geo, "s_diff", "#Deltas_{ab}", "L, dead, faint");
+  DrawXY(geo, "s_diff", "#Delta(x,y)_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "s");
-  ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",fa,fb));
   gPad->Print(Form("pdfs/dsxy%s.pdf",ab.Data()));
+  cList->Add(gPad);
 
   DrawXY(geo, "z_diff", "#Deltaz_{ab}", "L, dead, faint");
   DrawDiffs(xa, ya, za, xb, yb, zb, "z");
-  ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  ltx.DrawLatex(0.6, 0.95, Form("#splitline{a: %s}{b: %s}",fa,fb));
   gPad->Print(Form("pdfs/dzxy%s.pdf",ab.Data()));
+  cList->Add(gPad);
 
   ltx.SetTextSize(0.05);
 
-  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "xdiff", "#Delta x", "x"/*, 0.028*/);
-  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "xdiff", "#Delta x", "x");
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",fa,fb));
   gPad->Print(Form("pdfs/dx%s.pdf",ab.Data()));
+  cList->Add(gPad);
 
-  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "ydiff", "#Delta y", "y"/*, 0.028*/);
-  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "ydiff", "#Delta y", "y");
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",fa,fb));
   gPad->Print(Form("pdfs/dy%s.pdf",ab.Data()));
+  cList->Add(gPad);
 
-  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "zdiff", "#Delta z", "z"/*, 0.028*/);
-  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "zdiff", "#Delta z", "z");
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",fa,fb));
   gPad->Print(Form("pdfs/dz%s.pdf",ab.Data()));
+  cList->Add(gPad);
 
-  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "sdiff", "#Delta s", "s"/*, 0.083*/);
-  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "sdiff", "#Delta s", "s");
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",fa,fb));
   gPad->Print(Form("pdfs/ds%s.pdf",ab.Data()));
+  cList->Add(gPad);
 
-  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "rdiff", "#Delta r", "r"/*, 0.083*/);
-  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",pfa,pfb));
+  DrawDiffsLinear(xa, ya, za, xb, yb, zb, "rdiff", "#Delta r", "r");
+  ltx.DrawLatex(0.655, 0.92, Form("#splitline{a: %s}{b: %s}",fa,fb));
   gPad->Print(Form("pdfs/dr%s.pdf",ab.Data()));
+  cList->Add(gPad);
 
+  PrintPDF(cList, Form("pdfs/%s", ab.Data()), "");
   return;
 }
 
