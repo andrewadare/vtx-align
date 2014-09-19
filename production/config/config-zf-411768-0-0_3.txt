@@ -15,11 +15,17 @@
 #
 # Updating vtx-to-cnt based on production output:
 #   z residual in B0: -0.0144
-#   its DC - VTX
-#   z = -0.2951 - (-0.0144) = -0.3095
+#      its DC - VTX
+#      z = -0.2951 - (-0.0144) = -0.3095
+#   vtx-x reconstructed BC = -0.1130
+#      x = (-0.1208 - -0.1130) = -0.0078
+#      vtx-to-cnt x = -0.4723 + -0.0078 = -0.4801 
+#   vtx-y reconstructed BC =  0.0670
+#      y = (0.0741 - 0.0670) = 0.0071
+#      vtx-to-cnt y = 0.0246 + 0.0071 = 0.0317
 # Also changed all values to micron lvl precision
 
 beamcenter: -0.1208 0.0741
 east-to-west: -0.0183 -0.0071 -0.1475
-vtx-to-cnt: -0.4723 0.0246 -0.3095
+vtx-to-cnt: -0.4801 0.0317 -0.3095
 geomfile: 411768-0-0.par
