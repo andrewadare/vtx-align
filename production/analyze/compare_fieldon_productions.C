@@ -41,7 +41,7 @@ void compare_fieldon_productions()
 
     bool print_plots = true;
 
-    const int NFILES = 3;
+    const int NFILES = 5;
     const char *fileName[] =
     {
 
@@ -62,6 +62,8 @@ void compare_fieldon_productions()
         //"/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-0-4-Wpvtx-WW/ntuple/testvtxproduction_407951-0-2-Wpvtx-WW.root",
         "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-0-0-Wpvtx/ntuple/testvtxproduction_407951-0-0-Wpvtx.root",
         "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-0-Wpvtx/ntuple/testvtxproduction_407951-1-0-Wpvtx.root",
+        "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-4-0-Wpvtx/ntuple/testvtxproduction_407951-4-0-Wpvtx.root",
+        "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-5-0-Wpvtx/ntuple/testvtxproduction_407951-5-0-Wpvtx.root",
     };
     const char *fileLabel[] =
     {
@@ -82,6 +84,8 @@ void compare_fieldon_productions()
         //"407951-0-4 Wpvtx-WW",
         "407951-0-0 Wpvtx",
         "407951-1-0 Wpvtx",
+        "407951-4-0 Wpvtx",
+        "407951-5-0 Wpvtx",
     };
     int color[] =
     {
