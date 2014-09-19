@@ -128,7 +128,9 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     SubsysReco *global_central  = new GlobalReco_central();
     //  SubsysReco *mpc     = new MpcReco();
 
-    SubsysReco *cutter = new ProdEventCutter();
+    ProdEventCutter *cutter = new ProdEventCutter();
+    cutter->SetCentral(true);
+    cutter->SetBBCqCut(800);
     //cutter->Verbosity(1);
 
     //////////////////////////////////////////
@@ -180,7 +182,7 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     //svxstandalone->setProjectionFlag(false);
     svxstandalone->setZerofieldFlag(true);
     //svxstandalone->setVertexRecoFlag(2);
-    svxstandalone->setPPFlag(true);
+    //svxstandalone->setPPFlag(true);
     //svxstandalone->setWindowScale(20.0);
     SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
 
