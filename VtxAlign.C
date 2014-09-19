@@ -9,8 +9,15 @@ using namespace std;
 
 // Globals
 const double BField = 0.0;
-const bool useVtxTracks = false;
-const bool useCntTracks = true;
+const bool useVtxTracks = true;
+const bool useCntTracks = false;
+const double regFactor = 1.0;
+
+// Global "presigma" for regularization. Smaller = stronger reg (but 0=none).
+// Written to steering file.
+// Entries in constraints file(s) take precedence over this.
+const double defaultPreSigma = 0.01;
+
 const char *pedeSteerFile = "pede-steer.txt";
 const char *ladderConstFile = "ladder_constraints.txt";
 const char *hluConstFile = "halflayer_constraints.txt";
@@ -24,9 +31,9 @@ void CorrectFromFile(const char *filename,
                      geoEvents &vtxevents,
                      geoEvents &cntevents);
 
-void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
+void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
-              int subiter = 0,     // Geometry update step. Starts at 0.
+              int subiter = 1,     // Geometry update step. Starts at 0.
               TString alignMode = "halflayer") // "ladder" or "halflayer"
 {
   // No point in continuing if Millepede II is not installed...
@@ -55,17 +62,16 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // --------------+------------
   // Other combinations can be explored, but many lead to rank deficiencies.
 
-  vecs sgpars;
-  if (1) sgpars.push_back("s");
-  if (0) sgpars.push_back("x");
-  if (0) sgpars.push_back("y");
-  if (0) sgpars.push_back("r");
+  // Assign free global parameter coords for ds=r*dphi residuals here
+  // Set includes "s", "x", "y", "r".
+  // Also assign presigma list for these coordinates (trumps defaultPreSigma).
+  vecs sgpars {"x", "y"};
+  vecd sgpresigma {1e-4, 1e-4};
 
-  vecs zgpars;
-  if (0) zgpars.push_back("x");
-  if (0) zgpars.push_back("y");
-  if (1) zgpars.push_back("z");
-  if (0) zgpars.push_back("r");
+  // Assign free global parameter coords for dz residuals here
+  // Set includes "x", "y", "z", "r".
+  vecs zgpars {"z"};
+  vecd zgpresigma {1e-3};
 
   TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
@@ -84,12 +90,14 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   if (alignMode == "halflayer" && useCntTracks == false)
   {
     constfiles.push_back(hluConstFile);
-    WriteHLConstraints(hluConstFile, sgpars, zgpars, tgeo);
+    WriteHLConstraints(hluConstFile, sgpars, zgpars,
+                       sgpresigma, zgpresigma, tgeo);
   }
   else if (alignMode == "ladder")
   {
     constfiles.push_back(ladderConstFile);
-    WriteLadderConstraints(ladderConstFile, sgpars, zgpars, tgeo);
+    WriteLadderConstraints(ladderConstFile, sgpars, zgpars,
+                           sgpresigma, zgpresigma, tgeo);
   }
 
   // Write Millepede steering file
@@ -97,7 +105,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     binfiles.push_back(pedeBinFileStd);
   if (useCntTracks)
     binfiles.push_back(pedeBinFileCnt);
-  WriteSteerFile(pedeSteerFile, binfiles, constfiles);
+  WriteSteerFile(pedeSteerFile, binfiles, constfiles, regFactor, defaultPreSigma);
 
   geoEvents vtxevents; // Events containing SVX standalone tracks
   geoEvents cntevents; // Events containing SvxCentralTracks
@@ -164,8 +172,29 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
   // - "ext": Assume residuals were computed from external information.
   // - "halflayer": Align half-layer positions instead of ladders.
 
-  Printf("Calling mille() in EventLoop().\n Requested options: %s", opt.Data());
-  Mille m(binfile.c_str());
+  Printf("Running EventLoop() with option(s) [%s]", opt.Data());
+  if (opt.Contains("ext"))
+    Printf("Using external tracks.");
+  else
+    Printf("Using VTX standalone tracks.");
+  printf("Coordinate(s) available for r*phi residual minimization: ( ");
+  for (unsigned int ic=0; ic<sgpars.size(); ++ic)
+    cout << sgpars[ic] << " ";
+  cout << ")" << endl;
+  printf("Coordinate(s) available for z residual minimization: ( ");
+  for (unsigned int ic=0; ic<zgpars.size(); ++ic)
+    cout << zgpars[ic] << " ";
+  cout << ")" << endl;
+  if (opt.Contains("ladder"))
+    Printf("Writing data to align ladder postions.");
+  if (opt.Contains("halflayer"))
+    Printf("Writing data to align halflayer positions.");
+
+  // If asBinary is false, write a text file instead of binary file.
+  // For debugging only - text file is not readable by pede.
+  bool asBinary = true;
+  Mille m(binfile.c_str(), true);
+
   for (unsigned int ev=0; ev<events.size(); ev++)
     for (unsigned int t=0; t<events[ev].size(); t++)
     {
