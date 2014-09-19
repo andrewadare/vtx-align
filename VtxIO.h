@@ -12,7 +12,8 @@ void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1,
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event = -1);
 void FillNTuple(geoEvents &events, TNtuple *ntuple);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
-void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfile);
+void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
+                    double regFactor = 1.0, double preSigma = 0.01);
 
 void
 GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
@@ -280,7 +281,8 @@ GetCorrections(const char *resFile, std::map<int, double> &mpc)
 }
 
 void
-WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
+WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
+               double regFactor, double preSigma)
 {
   cout << "Writing " << filename << "..." << flush;
 
@@ -298,6 +300,10 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles)
   fs << "Cfiles  ! c/c++ binary input files listed here:" << endl;
   for (unsigned int i=0; i<binfiles.size(); i++)
     fs << binfiles[i] << " ! binary data file" << endl;
+  fs << endl;
+
+  fs << Form("regularisation %.3g %.3g ", regFactor, preSigma);
+  fs << "! regularisation factor, pre-sigma" << endl;
   fs << endl;
 
   fs << "method inversion 5 0.0001  ! Gauss. elim., #iterations, tol." << endl;
