@@ -55,7 +55,7 @@ with open(configFileName,'r') as file:
 ##############################################
 print("\n--> Setting environment variables")
 
-os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
+#os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
 os.environ["DCACHE_DOOR"] = "phnxdoor1.rcf.bnl.gov:22133"
 
 print("ODBCINI: {}".format(os.environ["ODBCINI"]))
