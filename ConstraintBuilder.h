@@ -364,36 +364,6 @@ ApplyPreSigma(ofstream &fs, veci &labels, double presigma)
   return;
 }
 
-// void
-// ApplyPreSigma(ofstream &fs, SvxTGeo *geo, vecs &gpars, double presigma)
-// {
-//   // Fix or regulate ladders.
-//   fs << "! Presigma for global parameter regularization:" << endl;
-//   fs << "!  = 0: free." << endl;
-//   fs << "!  > 0: regularized. Smaller --> stronger regularization." << endl;
-//   fs << "!  < 0: fixed." << endl;
-//   fs << "Parameter ! Columns: label, initial value, presigma " << endl;
-
-//   veci ladderlabels;
-//   RegularizedLadders(geo, gpars, ladderlabels);
-
-//   for (unsigned int i=0; i<ladderlabels.size(); ++i)
-//   {
-//     int lyr, ldr;
-//     string s;
-//     ParInfo(ladderlabels[i], lyr, ldr, s);
-
-//     // Always leave initial value at default value of zero.
-//     // Could be changed in the future if needed.
-//     fs << Form("%d 0.0 %g ! B%dL%d(%s)",
-//                ladderlabels[i], presigma, lyr, ldr, s.c_str())
-//        << endl;
-//   }
-//   fs << endl;
-
-//   return;
-// }
-
 void
 WriteLadderConstraints(const char *filename,
                        vecs &sgpars, vecs &zgpars,
