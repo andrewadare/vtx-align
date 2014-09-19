@@ -19,11 +19,12 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
 void SetupHist(TH1D *h, int stage);
 void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord);
 
-void DrawResults(int run = 123456,
+void DrawResults(int run = 411768,
                  int prod1 = 0,
                  int subit1 = 0,
                  int prod2 = 0,
-                 int subit2 = 1)
+                 int subit2 = 1,
+                 const char *treename = "vtxhits")
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
@@ -93,8 +94,8 @@ void DrawResults(int run = 123456,
                                         nbins, -xmax, xmax);
       }
 
-  FillHists(hs, hz, hls, hlz, inFile1, "cnthits", 0);
-  FillHists(hs, hz, hls, hlz, inFile2, "cnthits", 1);
+  FillHists(hs, hz, hls, hlz, inFile1, treename, 0);
+  FillHists(hs, hz, hls, hlz, inFile2, treename, 1);
 
   for (int lyr=0; lyr<nlayers; lyr++)
     for (int ldr=0; ldr<nLadders[lyr]; ldr++)
