@@ -172,23 +172,23 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
   // - "ext": Assume residuals were computed from external information.
   // - "halflayer": Align half-layer positions instead of ladders.
 
-  Printf("Running EventLoop() with option(s) [%s]", opt.Data());
+  Printf("Running EventLoop(). option(s): [%s]", opt.Data());
   if (opt.Contains("ext"))
-    Printf("Using external tracks.");
+    Printf(" - Using external tracks.");
   else
-    Printf("Using VTX standalone tracks.");
-  printf("Coordinate(s) available for r*phi residual minimization: ( ");
+    Printf(" - Using VTX standalone tracks.");
+  printf(" - Coordinate(s) available for r*phi residual minimization: ( ");
   for (unsigned int ic=0; ic<sgpars.size(); ++ic)
     cout << sgpars[ic] << " ";
   cout << ")" << endl;
-  printf("Coordinate(s) available for z residual minimization: ( ");
+  printf(" - Coordinate(s) available for z residual minimization: ( ");
   for (unsigned int ic=0; ic<zgpars.size(); ++ic)
     cout << zgpars[ic] << " ";
   cout << ")" << endl;
   if (opt.Contains("ladder"))
-    Printf("Writing data to align ladder postions.");
+    Printf(" - ladder mode");
   if (opt.Contains("halflayer"))
-    Printf("Writing data to align halflayer positions.");
+    Printf(" - halflayer mode");
 
   // If asBinary is false, write a text file instead of binary file.
   // For debugging only - text file is not readable by pede.
