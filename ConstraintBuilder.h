@@ -12,6 +12,7 @@ typedef vector<double> vecd;
 typedef vector<int>    veci;
 
 template<typename T> bool In(T val, vector<T> &v);
+template<typename T> int Idx(T val, vector<T> &v);
 veci LadderLabels(SvxTGeo *geo, string arm, string coord);
 veci EdgeLadderLabels(SvxTGeo *geo, string arm, string coord, string t_or_b);
 veci HalfLayerLabels(SvxTGeo *geo, string arm, string coord);
@@ -24,10 +25,16 @@ void AddConstraint(veci &labels, SvxTGeo *geo,
 void AddConstraints(veci &wlabels, veci &elabels, SvxTGeo *geo,
                     void(*fl)(veci &, SvxTGeo *, vecd &),
                     ofstream &fs, string comment, double sumto = 0.0);
-void WriteLadderConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+void WriteLadderConstraints(const char *filename,
+                            vecs &sgpars, vecs &zgpars,
+                            vecd &sgpre, vecd &zgpre,
                             SvxTGeo *geo, TString opt = "");
-void WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+void WriteHLConstraints(const char *filename,
+                        vecs &sgpars, vecs &zgpars,
+                        vecd &sgpre, vecd &zgpre,
                         SvxTGeo *geo, TString opt = "");
+// void ApplyPreSigma(ofstream &fs, SvxTGeo *geo, vecs &gpars, double presigma);
+void ApplyPreSigma(ofstream &fs, veci &labels, double presigma);
 
 // Position querying callback functions: store current positions into x for the
 // provided labels.
@@ -46,10 +53,18 @@ template<typename T>
 bool In(T val, vector<T> &v)
 {
   // Check for membership in a vector.
-  // Just a less verbose wrapper for std::find().
   if (find(v.begin(), v.end(), val) != v.end())
     return true;
   return false;
+}
+
+template<typename T>
+int Idx(T val, vector<T> &v)
+{
+  // Return position of element in vector.
+  // If element is not found, index will be v.size().
+  // vector<T>::iterator it = find(begin(v), end(v), val);
+  return int(find(begin(v), end(v), val) - begin(v));
 }
 
 veci
@@ -89,14 +104,14 @@ LadderLabels(SvxTGeo *geo, string arm, string coord)
   {
     for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
       for (int ldr=0; ldr<geo->GetNLadders(lyr)/2; ldr++)
-        if (!Dead(lyr,ldr) && !Locked(lyr,ldr))
+        if (!Dead(lyr,ldr))
           l.push_back(Label(lyr, ldr, coord));
   }
   if (arm == "E" || arm == "e" || arm == "all")    // East arm
   {
     for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
       for (int ldr=geo->GetNLadders(lyr)/2; ldr<geo->GetNLadders(lyr); ldr++)
-        if (!Dead(lyr,ldr) && !Locked(lyr,ldr))
+        if (!Dead(lyr,ldr))
           l.push_back(Label(lyr, ldr, coord));
   }
   return l;
@@ -254,7 +269,9 @@ AddConstraints(veci &wlabels, veci &elabels, SvxTGeo *geo,
 }
 
 void
-WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+WriteHLConstraints(const char *filename,
+                   vecs &sgpars, vecs &zgpars,
+                   vecd &sgpre, vecd &zgpre,
                    SvxTGeo *geo, TString opt)
 {
   cout << "Writing " << filename << "..." << flush;
@@ -288,6 +305,17 @@ WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
   veci wz = HalfLayerLabels(geo, "w", "z");
   veci ws = HalfLayerLabels(geo, "w", "s");
 
+  for (unsigned int ic=0; ic<sgpars.size(); ++ic)
+  {
+    veci ll = HalfLayerLabels(geo, "all", sgpars[ic]);
+    ApplyPreSigma(fs, ll, sgpre.at(ic));
+  }
+  for (unsigned int ic=0; ic<zgpars.size(); ++ic)
+  {
+    veci ll = HalfLayerLabels(geo, "all", zgpars[ic]);
+    ApplyPreSigma(fs, ll, zgpre.at(ic));
+  }
+
   if (xdof)
   {
     // AddConstraint(hlx, geo, Ones, fs, "Total x translation");
@@ -319,7 +347,57 @@ WriteHLConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
 }
 
 void
-WriteLadderConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
+ApplyPreSigma(ofstream &fs, veci &labels, double presigma)
+{
+  // Fix or regulate global parameters in the provided label set.
+  fs << "! Presigma for global parameter regularization:" << endl;
+  fs << "!  = 0: free." << endl;
+  fs << "!  > 0: regularized. Smaller --> stronger regularization." << endl;
+  fs << "!  < 0: fixed." << endl;
+  fs << "Parameter ! Columns: label, initial value, presigma " << endl;
+
+  // Currently leaving initial global par. at default value of zero.
+  for (unsigned int i=0; i<labels.size(); ++i)
+    fs << Form("%d 0.0 %g", labels[i], presigma) << endl;
+  fs << endl;
+
+  return;
+}
+
+// void
+// ApplyPreSigma(ofstream &fs, SvxTGeo *geo, vecs &gpars, double presigma)
+// {
+//   // Fix or regulate ladders.
+//   fs << "! Presigma for global parameter regularization:" << endl;
+//   fs << "!  = 0: free." << endl;
+//   fs << "!  > 0: regularized. Smaller --> stronger regularization." << endl;
+//   fs << "!  < 0: fixed." << endl;
+//   fs << "Parameter ! Columns: label, initial value, presigma " << endl;
+
+//   veci ladderlabels;
+//   RegularizedLadders(geo, gpars, ladderlabels);
+
+//   for (unsigned int i=0; i<ladderlabels.size(); ++i)
+//   {
+//     int lyr, ldr;
+//     string s;
+//     ParInfo(ladderlabels[i], lyr, ldr, s);
+
+//     // Always leave initial value at default value of zero.
+//     // Could be changed in the future if needed.
+//     fs << Form("%d 0.0 %g ! B%dL%d(%s)",
+//                ladderlabels[i], presigma, lyr, ldr, s.c_str())
+//        << endl;
+//   }
+//   fs << endl;
+
+//   return;
+// }
+
+void
+WriteLadderConstraints(const char *filename,
+                       vecs &sgpars, vecs &zgpars,
+                       vecd &sgpre, vecd &zgpre,
                        SvxTGeo *geo, TString opt)
 {
   cout << "Writing " << filename << "..." << flush;
@@ -345,23 +423,8 @@ WriteLadderConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
   fs << "! 123 1.0   ! Add a p_123 * f_123 term" << endl;
   fs << "! 234 2.345 ! Add a p_234 * f_234 term" << endl;
   fs << "! ..." << endl;
+  fs << endl;
 
-  /*
-    // Fix or regulate ladders. Example: 104 0.0 -1 (fixed)
-    fs << "Parameter ! Columns: label value presigma (=0: free; >0: regularized; <0: fixed)"
-       << endl;
-    for (int lyr=0; lyr<geo->GetNLayers(); lyr++)
-      for (int ldr=0; ldr<geo->GetNLadders(lyr); ldr++)
-        if (Locked(lyr,ldr))
-        {
-          double presig = 1e-4; // Smaller values --> stronger regularization
-          fs << Form("%4d 0.0 %g ! B%dL%d(s)",
-                     Label(lyr, ldr, "s"), presig, lyr, ldr) << endl;
-          fs << Form("%4d 0.0 %g ! B%dL%d(z)",
-                     Label(lyr, ldr, "z"), presig, lyr, ldr) << endl;
-        }
-    fs << endl;
-  */
   // Global parameter labels for z and s coordinates in east and west arms
   veci wx = LadderLabels(geo, "w", "x");
   veci wy = LadderLabels(geo, "w", "y");
@@ -382,6 +445,29 @@ WriteLadderConstraints(const char *filename, vecs &sgpars, vecs &zgpars,
   veci ets = EdgeLadderLabels(geo, "e", "s", "top");
   veci ebz = EdgeLadderLabels(geo, "e", "z", "bottom");
   veci ebs = EdgeLadderLabels(geo, "e", "s", "bottom");
+
+  // ApplyPreSigma(fs, slabels_bad, 1e-4);
+  // ApplyPreSigma(fs, zlabels_bad, 1e-4);
+
+  // Regularize a hand picked set of poorly-constrained ladders.
+  // (low-stats, low-eff, faulty electronics, behind a dead ladder, etc).
+  veci slabels_bad;
+  veci zlabels_bad;
+  RegularizedLadders(geo, sgpars, slabels_bad);
+  RegularizedLadders(geo, zgpars, zlabels_bad);
+  ApplyPreSigma(fs, slabels_bad, 1e-4);
+  ApplyPreSigma(fs, zlabels_bad, 1e-4);
+
+  for (unsigned int ic=0; ic<sgpars.size(); ++ic)
+  {
+    veci ll = LadderLabels(geo, "all", sgpars[ic]);
+    ApplyPreSigma(fs, ll, sgpre.at(ic));
+  }
+  for (unsigned int ic=0; ic<zgpars.size(); ++ic)
+  {
+    veci ll = LadderLabels(geo, "all", zgpars[ic]);
+    ApplyPreSigma(fs, ll, zgpre.at(ic));
+  }
 
   // Prevent net displacements/distortions, but only if the coordinate
   // is being used as a global parameter (otherwise the system will be
