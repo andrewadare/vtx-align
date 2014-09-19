@@ -65,7 +65,7 @@ DrawXY(SvxTGeo *geo, const char *name, const char *title, TString opt)
       s->SetLineColor(opt.Contains("faint") ? kGray : kGray+2);
       s->SetLineWidth(opt.Contains("faint") ? 1 : 2);
 
-      if (Locked(i,j))
+      if (RegularizedLadder(i,j))
       {
         s->SetLineColor(kOrange-3);
         s->SetLineWidth(2);
@@ -175,8 +175,9 @@ DrawDiffsLinear(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2,
     double r2 = TMath::Sqrt(x2[i]*x2[i] + y2[i]*y2[i]);
     double phi1 = TMath::ATan2(y1[i], x1[i]);
     double phi2 = TMath::ATan2(y2[i], x2[i]);
-    double dphi = fmod(phi2-phi1, TMath::TwoPi());
-    // if (dphi < 0) dphi += TMath::TwoPi();
+    double dphi = phi2-phi1;
+    if (dphi > +TMath::Pi()) dphi -= TMath::TwoPi();
+    if (dphi < -TMath::Pi()) dphi += TMath::TwoPi();
 
     std::map<TString, double> delta;
     delta["x"] = x2[i] - x1[i];
