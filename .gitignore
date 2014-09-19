@@ -38,3 +38,36 @@ production/analyze/*.pdf
 # Ignore any log files
 *.log
 logs/*
+
+#ignore build files in ProdEventCutter
+ProdEventCutter/Makefile.in
+ProdEventCutter/aclocal.m4
+ProdEventCutter/autom4te.cache/*
+ProdEventCutter/build/*
+ProdEventCutter/config.guess
+ProdEventCutter/config.sub
+ProdEventCutter/configure
+ProdEventCutter/depcomp
+ProdEventCutter/install-sh
+ProdEventCutter/ltmain.sh
+ProdEventCutter/m4/*
+ProdEventCutter/missing
+
+#ignore build files in AnaVTXCluster
+AnaVTXCluster/Makefile.in
+AnaVTXCluster/aclocal.m4
+AnaVTXCluster/autom4te.cache/*
+AnaVTXCluster/build/*
+AnaVTXCluster/config.guess
+AnaVTXCluster/config.sub
+AnaVTXCluster/configure
+AnaVTXCluster/depcomp
+AnaVTXCluster/install-sh
+AnaVTXCluster/ltmain.sh
+AnaVTXCluster/m4/*
+AnaVTXCluster/missing
+
+#ignore locally linked util & svgeo files
+SvxTGeo.h
+UtilFns.h
+
