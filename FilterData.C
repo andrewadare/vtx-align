@@ -38,7 +38,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
   SvxTGeo *tgeo = VTXModel(pisafilename);
 
   geoEvents vtxevents;
-  GetEventsFromTree(svxseg, tgeo, vtxevents, nevents);
+  GetEventsFromClusTree(svxseg, tgeo, vtxevents, nevents);
   FitTracks(vtxevents);
   FilterData(vtxevents,
              vertexprobmin,

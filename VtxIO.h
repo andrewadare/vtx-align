@@ -7,8 +7,8 @@
 using namespace std;
 
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax = -1);
-void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax = -1,
-                       TString opt = "");
+void GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax = -1,
+                           TString opt = "");
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event = -1);
 void FillNTuple(geoEvents &events, TNtuple *ntuple);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
@@ -84,8 +84,8 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
 }
 
 void
-GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
-                  TString opt)
+GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
+                      TString opt)
 {
     // This function reads hit ntuple variables of the form
     // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:event"
@@ -355,11 +355,11 @@ GetOffsetsFromConfig(const char *configFile, vecd &vtxTOcnt, vecd &eastTOwest)
 
     //push eastToWest
     for (int i = 0; i < 3; i++)
-      eastTOwest.push_back(eastToWest[i]);
+        eastTOwest.push_back(eastToWest[i]);
 
     //push vtxToCNT
     for (int i = 0; i < 3; i++)
-      vtxTOcnt.push_back(vtxToCNT[i]);
+        vtxTOcnt.push_back(vtxToCNT[i]);
 
 
     return;
