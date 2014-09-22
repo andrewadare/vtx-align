@@ -11,6 +11,7 @@
 void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.root",
                 const char *outfilename = "rootfiles/411768-6-20.root",
                 const char *pisafilename = "geom/411768-6-20.par",
+                TString opt = "cnt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
@@ -22,6 +23,13 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
 
   TNtuple *svxseg = (TNtuple *)inFile->Get("seg_clusntuple");
   assert(svxseg);
+
+  TNtuple *svxcnt;
+  if (opt.Contains("cnt"))
+  {
+    svxcnt = (TNtuple *) inFile->Get("cnt_clusntuple");
+    assert(svxcnt);
+  }
 
   TFile *outFile = new TFile(outfilename, "recreate");
   TNtuple *vtxhits = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
@@ -46,6 +54,10 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
   Printf("Writing output to %s", outfilename);
   outFile->cd();
   outFile->Write(0, TObject::kOverwrite);
+
+  // For now, just write the cnt ntuple to file without filtering.
+  if (opt.Contains("cnt"))
+    svxcnt->Write();
 
   return;
 }
