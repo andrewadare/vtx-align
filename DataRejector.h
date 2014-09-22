@@ -14,7 +14,7 @@ FilterData(geoEvents &events,
            double maxdca = 0.2,
            double maxres_s = 0.1,
            double maxres_z = 0.1,
-           TNtuple *ntuple = 0);
+           TTree *tree = 0);
 
 void
 FilterData(geoEvents &events,
@@ -23,17 +23,17 @@ FilterData(geoEvents &events,
            double maxdca,
            double maxres_s,
            double maxres_z,
-           TNtuple *ntuple)
+           TTree *tree)
 {
   int minmult = 10;
 
   // x-y vertex distributions
   Printf("Filling mult/vertex distributions...");
   double x0 = -1.0, y0 = -1.0, x1 = +1.0, y1 = +1.0;
-  TH2D *hve = new TH2D(Form("%s_ve",ntuple->GetName()),
+  TH2D *hve = new TH2D(Form("%s_ve",tree->GetName()),
                        Form("East vertex;x [cm];y [cm]"),
                        500, x0, x1, 500, y0, y1);
-  TH2D *hvw = new TH2D(Form("%s_vw",ntuple->GetName()),
+  TH2D *hvw = new TH2D(Form("%s_vw",tree->GetName()),
                        Form("West vertex;x [cm];y [cm]"),
                        500, x0, x1, 500, y0, y1);
   for (unsigned int ev=0; ev<events.size(); ev++)
@@ -119,7 +119,7 @@ FilterData(geoEvents &events,
             reject = true;
         }
         if (!reject)
-          FillNTuple(trk, ntuple, ev);
+          FillTree(trk, tree, ev);
       }
   }
 
