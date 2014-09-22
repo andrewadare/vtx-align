@@ -56,7 +56,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
     std::cout << "-- Fitting tracks --" << std::endl;
     FitTracks(vtxevents);
 
-
+    
     std::cout << "-- Filtering data --" << std::endl;
     FilterData(vtxevents,
                vertexprobmin,
@@ -65,9 +65,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
                maxres_s,
                maxres_z,
                vtxtrks);
-    Printf("%.1f%% of initial data rejected.",
-           100 * (1.0 - (float)vtxhits->GetEntries() / svxseg->GetEntries()));
-    
+
 
     Printf("-- Writing output to %s --", outfilename);
     outFile->cd();
