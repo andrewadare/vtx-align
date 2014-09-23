@@ -3,10 +3,14 @@
 
 #include "VtxAlignBase.h"
 #include <TLeaf.h>
+#include <utility>
+#include <map>
 
 using namespace std;
 
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax=-1);
+void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, multimap<int, int> &eventsync, int nmax=-1,
+		       TString opt = "");
 void GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax=-1,
                        TString opt = "");
 void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event = -1);
@@ -81,6 +85,80 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
 
   return;
 }
+
+void
+GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, std::multimap<int, int> &eventsync , int nmax, TString opt)
+{
+  // This function reads hit ntuple variables of the form
+  // "layer:ladder:sensor:xs:ys:zs:x:y:z:xsigma:zsigma:dz:ds:trkid"
+  // into the tracks vector.
+
+  assert(t);
+  assert(geo);
+
+  long nentries = t->GetEntries();
+  int previd = -1;
+  int nhits  = 0;
+  int itrack = 0;
+
+  cout << "Reading tracks from " << t->GetName()
+       << " (" << nentries << " available hits)..."
+       << flush;
+
+  for (int i=0; i<nentries; i++)
+  {
+    t->GetEntry(i);
+    int id = t->GetLeaf("trkid")->GetValue();
+    if (id != previd) // New track
+    {
+      if (nmax > 0 && (int)tracks.size() == nmax)
+      {
+        Printf("%d tracks imported (%d hits).",
+               (int)tracks.size(), nhits);
+        return;
+      }
+      int event = t->GetLeaf("event")->GetValue();
+      eventsync.insert(pair<int,int>(itrack,event));
+      itrack++;
+
+      SvxGeoTrack t;
+      // Track info is not stored in tree. If it were, it would go here.
+      tracks.push_back(t);
+    }
+    
+    SvxGeoHit hit;
+    hit.layer  = t->GetLeaf("layer")->GetValue();
+    hit.ladder = t->GetLeaf("ladder")->GetValue();
+    hit.sensor = t->GetLeaf("sensor")->GetValue();
+    hit.xs     = t->GetLeaf("lx")->GetValue();
+    hit.ys     = t->GetLeaf("ly")->GetValue();
+    hit.zs     = t->GetLeaf("lz")->GetValue();
+    hit.x      = t->GetLeaf("gx")->GetValue();
+    hit.y      = t->GetLeaf("gy")->GetValue();
+    hit.z      = t->GetLeaf("gz")->GetValue();
+    hit.xsigma = t->GetLeaf("x_size")->GetValue();
+    hit.zsigma = t->GetLeaf("z_size")->GetValue();
+    hit.dz     = t->GetLeaf("res_z")->GetValue();
+    hit.ds     = t->GetLeaf("res_s")->GetValue();
+    hit.trkid  = t->GetLeaf("trkid")->GetValue();
+    
+    hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
+
+    // Overwrite x,y,z with local-->global transformation on xs,ys,zs
+    hit.Update();
+
+    tracks.back().nhits++;
+    tracks.back().hits.push_back(hit);
+    previd = id;
+    nhits++;
+  }
+
+  Printf("%d tracks imported (%d hits).",
+         (int)tracks.size(), nhits);
+
+  return;
+}
+
 
 void
 GetEventsFromTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
@@ -178,6 +256,7 @@ FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event)
   // "res_z:res_s:trkid:event"
 
   assert(ntuple);
+
 
   if (false)
     Printf("ds (%8.4f,%8.4f,%8.4f,%8.4f),  "
