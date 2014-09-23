@@ -20,6 +20,7 @@ void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
                                  SvxTGeo, int nmax = -1);
 TTree *CreateTree(const char *name);
 void FillTree(SvxGeoTrack &gt, TTree *t, int evt = -1);
+void FillTree(geoTracks &trks, TTree *t, int evt = -1);
 void FillTree(geoEvents &events, TTree *t);
 void GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax = -1,
                        TString opt = "");
@@ -301,9 +302,9 @@ void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
     GetEventsFromClusTree(tcnt, geo, tmpcntevts, cntmap, nmax, "cnt");
 
     //Loop over cnt events (more restrictive) and find corresponding
-    //seg events, write results to output geoEvents 
-    map<int,int>::iterator cntpos;
-    map<int,int>::iterator segpos;
+    //seg events, write results to output geoEvents
+    map<int, int>::iterator cntpos;
+    map<int, int>::iterator segpos;
     for (cntpos = cntmap.begin(); cntpos != cntmap.end(); ++cntpos)
     {
         //find the corresponding seg index
@@ -452,6 +453,88 @@ FillTree(SvxGeoTrack &gt, TTree *t, int evt)
     }
 
     t->Fill();
+
+    return;
+}
+
+void
+FillTree(geoTracks &trks, TTree *t, int evt)
+{
+    // Function to fill the TTree with
+    // information from SvxGeoTrack object.
+    // See CreateTree() for tree structure.
+    assert(t);
+
+    // Declare the tree branch variables
+    int event;
+    int NTracks;
+    int trkid;
+    float trkphi;
+    float trktheta;
+    int NClus;
+    int layer[8];
+    int ladder[8];
+    int sensor[8];
+    float lx[8];
+    float ly[8];
+    float lz[8];
+    float gx[8];
+    float gy[8];
+    float gz[8];
+    float x_size[8];
+    float z_size[8];
+    float res_z[8];
+    float res_s[8];
+
+    // Set the branch addresses
+    t->SetBranchAddress("event", &event);
+    t->SetBranchAddress("NTracks", &NTracks);
+    t->SetBranchAddress("trkid", &trkid);
+    t->SetBranchAddress("trkphi", &trkphi);
+    t->SetBranchAddress("trktheta", &trktheta);
+    t->SetBranchAddress("NClus", &NClus);
+    t->SetBranchAddress("layer", &layer);
+    t->SetBranchAddress("ladder", &ladder);
+    t->SetBranchAddress("sensor", &sensor);
+    t->SetBranchAddress("lx", &lx);
+    t->SetBranchAddress("ly", &ly);
+    t->SetBranchAddress("lz", &lz);
+    t->SetBranchAddress("gx", &gx);
+    t->SetBranchAddress("gy", &gy);
+    t->SetBranchAddress("gz", &gz);
+    t->SetBranchAddress("x_size", &x_size);
+    t->SetBranchAddress("z_size", &z_size);
+    t->SetBranchAddress("res_z", &res_z);
+    t->SetBranchAddress("res_s", &res_s);
+
+    for (int itrk = 0; itrk < trks.size(); itrk++)
+    {
+        SvxGeoTrack gt = trks.at(itrk);
+        event = evt;
+        NTracks = trks.size(); //if filling w/ this method, NTracks is unknown
+        trkphi = gt.phi0;
+        trktheta = gt.the0;
+        NClus = gt.nhits;
+        for (int ihit = 0; ihit < gt.nhits; ihit++)
+        {
+            SvxGeoHit hit = gt.GetHit(ihit);
+            layer[ihit] = hit.layer;
+            ladder[ihit] = hit.ladder;
+            sensor[ihit] = hit.sensor;
+            lx[ihit] = hit.xs;
+            ly[ihit] = hit.ys;
+            lz[ihit] = hit.zs;
+            gx[ihit] = hit.x;
+            gy[ihit] = hit.y;
+            gz[ihit] = hit.z;
+            x_size[ihit] = hit.xsigma;
+            z_size[ihit] = hit.zsigma;
+            res_z[ihit] = hit.dz;
+            res_s[ihit] = hit.ds;
+            trkid = hit.trkid;
+        }
+        t->Fill();
+    }
 
     return;
 }
