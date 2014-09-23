@@ -31,10 +31,10 @@ void CorrectFromFile(const char *filename,
                      geoEvents &vtxevents,
                      geoEvents &cntevents);
 
-void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
+void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
-              int subiter = 1,     // Geometry update step. Starts at 0.
-              TString alignMode = "halflayer") // "ladder" or "halflayer"
+              int subiter = 0,     // Geometry update step. Starts at 0.
+              TString alignMode = "ladder") // "ladder" or "halflayer"
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -66,7 +66,8 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Set includes "s", "x", "y", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
   vecs sgpars {"x", "y"};
-  vecd sgpresigma {1e-4, 1e-4};
+  vecd sgpresigma {0, 0};
+  // vecd sgpresigma {1e-4, 1e-4};
 
   // Assign free global parameter coords for dz residuals here
   // Set includes "x", "y", "z", "r".
@@ -172,23 +173,23 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
   // - "ext": Assume residuals were computed from external information.
   // - "halflayer": Align half-layer positions instead of ladders.
 
-  Printf("Running EventLoop() with option(s) [%s]", opt.Data());
+  Printf("Running EventLoop(). option(s): [%s]", opt.Data());
   if (opt.Contains("ext"))
-    Printf("Using external tracks.");
+    Printf(" - Using external tracks.");
   else
-    Printf("Using VTX standalone tracks.");
-  printf("Coordinate(s) available for r*phi residual minimization: ( ");
+    Printf(" - Using VTX standalone tracks.");
+  printf(" - Coordinate(s) available for r*phi residual minimization: ( ");
   for (unsigned int ic=0; ic<sgpars.size(); ++ic)
     cout << sgpars[ic] << " ";
   cout << ")" << endl;
-  printf("Coordinate(s) available for z residual minimization: ( ");
+  printf(" - Coordinate(s) available for z residual minimization: ( ");
   for (unsigned int ic=0; ic<zgpars.size(); ++ic)
     cout << zgpars[ic] << " ";
   cout << ")" << endl;
   if (opt.Contains("ladder"))
-    Printf("Writing data to align ladder postions.");
+    Printf(" - ladder mode");
   if (opt.Contains("halflayer"))
-    Printf("Writing data to align halflayer positions.");
+    Printf(" - halflayer mode");
 
   // If asBinary is false, write a text file instead of binary file.
   // For debugging only - text file is not readable by pede.

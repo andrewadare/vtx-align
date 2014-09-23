@@ -4,6 +4,7 @@
 #include "VtxAlignBase.h"
 #include "GLSFitter.h"
 #include "ParameterDefs.h"
+#include "DcaFunctions.h"
 
 using namespace std;
 
@@ -60,12 +61,41 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = 4*hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = 4*hit.zsigma * ClusterZResolution(hit.layer);
 
     if (false)
       Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
              hit.ds, sigs, hit.dz, sigz);
+
+    // /////////////// EXPERIMENTAL - try adding BC to local fit /////////////////
+    // if (bc && j==0)
+    // {
+    //   TVectorD bcvec(2);
+    //   bcvec(0) = 0.;
+    //   bcvec(1) = 0.;
+    //   // bcvec(0) = bc->GetX()[arm];
+    //   // bcvec(1) = bc->GetY()[arm];
+    //   float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
+    //   TVectorD ipvec = IPVec(trk, bcvec); // Impact parameter vector
+
+    //   float dy = bcvec(1) - ipvec(1);
+    //   float dca = (dy)/TMath::Abs(dy) * TMath::Sqrt(ipvec*ipvec);
+    //   int f = int(-dca/trk.vy);
+    //   static int counter = 0;
+    //   if (counter == 0)
+    //     Printf("bc = (%.3g,%.3g)", bcvec(0), bcvec(1));
+    //   if (counter < 100)
+    //     Printf("DCA %10.3g -vy %10.3g sigma %10.3g %d",
+    //            dca, -trk.vy, sigbc, f);
+    //   ++counter;
+
+    //   float ld[1] = {1};
+    //   float gd[1] = {0}; // placeholder - not used
+    //   int nolabels[1] = {0}; // placeholder - not used
+    //   m.mille(1, ld, 0, gd, nolabels, dca, sigbc);
+    // }
+    // ///////////////////////////////////////////////////////////////////////////
 
     // Local derivatives
     // Split into two independent fits per track:
@@ -130,8 +160,8 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 1.6*hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 1.6*hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = 5*hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = 5*hit.zsigma * ClusterZResolution(hit.layer);
 
     // Here, fit clusters individually. Each cluster is treated as
     // one "local fit object".
