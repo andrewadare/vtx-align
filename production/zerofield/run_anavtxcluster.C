@@ -1,5 +1,6 @@
 
 void run_anavtxcluster(int nevents = 0,
+		       int segNumber = 0,
                        const char *infile = "",
                        const char *outfile = "")
 {
@@ -23,6 +24,7 @@ void run_anavtxcluster(int nevents = 0,
     se->registerSubsystem(mr);
 
     SubsysReco *ana = new AnaVTXCluster(outfile);
+    ana->SetEventOffset(segNumber);
     se->registerSubsystem(ana);
 
     // Input manager(s)
