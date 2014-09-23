@@ -154,6 +154,7 @@ print("Output Ntuple: {}".format(ntupleFile))
 
 command = "root -b -q \'run_anavtxcluster.C("
 command += str(nevents) + ","
+command += str(segNumber) + ","
 command += "\"" + dstFile + "\","
 command += "\"" + ntupleFile
 command += ")\'"
