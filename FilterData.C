@@ -8,9 +8,9 @@
 // run-prod-iter.par so the base matches the ROOT file.
 // The alignment script VtxAlign.C requires a .par file with such a name.
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.root",
-                const char *outfilename = "rootfiles/411768-6-20.root",
-                const char *pisafilename = "geom/411768-6-20.par",
+void FilterData(const char *infilename = "rootfiles/zf-411768-0-0_3.root",
+                const char *outfilename = "rootfiles/411768-0-0.root",
+                const char *pisafilename = "geom/411768-0-0.par",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
