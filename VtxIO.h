@@ -13,8 +13,11 @@ using namespace std;
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax = -1);
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, multimap<int, int> &eventsync, int nmax = -1,
                        TString opt = "");
-void GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, int nmax = -1,
+void GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, map<int, int> &eventsync, int nmax = -1,
                            TString opt = "");
+void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
+                                 geoEvents &segevts, geoEvents &cntevts,//<-- output
+                                 SvxTGeo, int nmax = -1);
 TTree *CreateTree(const char *name);
 void FillTree(SvxGeoTrack &gt, TTree *t, int evt = -1);
 void FillTree(geoEvents &events, TTree *t);
@@ -172,8 +175,8 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, std::multimap<int
 }
 
 void
-GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
-                      TString opt)
+GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, map<int, int> &eventsync,
+                      int nmax, TString opt)
 {
     // This function reads hit ntuple variables of the form
     // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:event"
@@ -213,6 +216,20 @@ GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
 
             geoTracks tracks;
             events.push_back(tracks);
+            //add entry to multimap
+            //-> Key = original event index
+            //-> Element = geoEvents vector index
+            if (eventsync.find(ev) != eventsync.end())
+            {
+                cout << "ERROR!! event index=" << ev
+                     << " is already in map. Aborting"
+                     << endl;
+                return;
+            }
+            else
+            {
+                eventsync.insert(pair<int, int>(ev, events.size() - 1));
+            }
         }
         if (id != previd) // New track
         {
@@ -258,6 +275,50 @@ GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, int nmax,
 
     return;
 }
+
+
+void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
+                                 geoEvents &segevts, geoEvents &cntevts,//<-- output
+                                 SvxTGeo *geo, int nmax)
+{
+    //This option reads in entries from segment and svxcnt cluster
+    //ntuples, matches event indecies between them
+    //and output's them to geoEvents object, where the same
+    //index in both geoEvents corresponds to the same
+    //event
+
+
+    //need a pair of temporary geoEvent objects for reading complete entries
+    geoEvents tmpsegevts;
+    geoEvents tmpcntevts;
+
+    //maps for syncing events
+    map<int, int> segmap;
+    map<int, int> cntmap;
+
+    //read the trees
+    GetEventsFromClusTree(tseg, geo, tmpsegevts, segmap, nmax);
+    GetEventsFromClusTree(tcnt, geo, tmpcntevts, cntmap, nmax, "cnt");
+
+    //Loop over cnt events (more restrictive) and find corresponding
+    //seg events, write results to output geoEvents 
+    map<int,int>::iterator cntpos;
+    map<int,int>::iterator segpos;
+    for (cntpos = cntmap.begin(); cntpos != cntmap.end(); ++cntpos)
+    {
+        //find the corresponding seg index
+        segpos = segmap.find(cntpos->first);
+        if (segpos != segmap.end())
+        {
+            cntevts.push_back(tmpcntevts[cntpos->second]);
+            segevts.push_back(tmpsegevts[segpos->second]);
+        }
+    }
+
+    return;
+
+}
+
 
 TTree *
 CreateTree(const char *name)
