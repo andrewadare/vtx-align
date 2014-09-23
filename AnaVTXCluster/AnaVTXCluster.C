@@ -114,7 +114,7 @@ int AnaVTXCluster::Init(PHCompositeNode *topNode)
 
 
     //reset event counter
-    nEvent = 0;
+    nEvent = 0 + event_offset*1000000;//offset the event counter by the event offset times 10^6
 
     return 0;
 }
