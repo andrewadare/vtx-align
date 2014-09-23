@@ -1,6 +1,8 @@
 #include "VtxAlignBase.h"
 #include "DataRejector.h"
 
+#include <map>
+
 // This "preprocessing" script does some initial outlier rejection.
 // It also renames the ntuple(s).
 // It is conventional for outfilename and pisafilename to have the same base.
@@ -24,59 +26,75 @@ void FilterData(const char *infilename = "rootfiles/zf-411768-0-0_3.root",
 
     std::cout << "-- Reading seg_clusntuple --" << std::endl;
     TNtuple *svxseg = (TNtuple *)inFile->Get("seg_clusntuple");
+    TNtuple *svxcnt;
     assert(svxseg);
 
-    TNtuple *svxcnt;
-    if (opt.Contains("cnt"))
-    {
-        std::cout << "-- Reading cnt_clusntuple --" << std::endl;
-        svxcnt = (TNtuple *) inFile->Get("cnt_clusntuple");
-        assert(svxcnt);
-    }
+
+    std::cout << "-- Initializing SvxTGeo --" << std::endl;
+    SvxTGeo *tgeo = VTXModel(pisafilename);
+
 
     std::cout << "-- Creating output file " << outfilename << " --" << std::endl;
     TFile *outFile = new TFile(outfilename, "recreate");
     // TNtuple *vtxhits = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
     // TNtuple *cnthits = new TNtuple("cnthits", "CNT hit variables", HITVARS);
 
-
-    std::cout << "-- Creating vtxtrks --" << std::endl;
+    std::cout << "-- Creating vtxtrks Tree --" << std::endl;
     TTree *vtxtrks = CreateTree("vtxtrks");
-
     TTree *cnttrks;
-    if (opt.Contains("cnt"))
-    {
-        cnttrks = CreateTree("cnttrks");
-    } 
-
-    std::cout << "-- Initializing SvxTGeo --" << std::endl;
-    SvxTGeo *tgeo = VTXModel(pisafilename);
 
 
-    std::cout << "-- Reading events from ntuple --" << std::endl;
     geoEvents vtxevents;
-    GetEventsFromClusTree(svxseg, tgeo, vtxevents, nevents);
-
     geoEvents cntevents;
+
     if (opt.Contains("cnt"))
     {
-        GetEventsFromClusTree(svxcnt, tgeo, cntevents, nevents, "cnt");
-        FillTree(cntevents, cnttrks);
+        std::cout << "-- Reading cnt_clusntuple --" << std::endl;
+        svxcnt = (TNtuple *) inFile->Get("cnt_clusntuple");
+        assert(svxcnt);
+
+        std::cout << "-- Creating vtxtrks Tree --" << std::endl;
+        cnttrks = CreateTree("cnttrks");
+
+        GetSyncedEventsFromClusTree(svxseg, svxcnt,
+                                    vtxevents, cntevents,
+                                    tgeo, nevents);
+
+        //need to fit segments to get phi, theta
+        std::cout << "-- Fitting tracks --" << std::endl;
+        FitTracks(vtxevents);
+
+        std::cout << "-- Filtering data --" << std::endl;
+        FilterData(vtxevents, cntevents,
+                   vtxtrks, cnttrks,
+                   vertexprobmin,
+                   vertexprobmax,
+                   maxdca,
+                   maxres_s,
+                   maxres_z);
+
     }
+    else
+    {
 
-    std::cout << "-- Fitting tracks --" << std::endl;
-    FitTracks(vtxevents);
+        std::cout << "-- Reading events from ntuple --" << std::endl;
+        map <int, int> tmpmap;
+        GetEventsFromClusTree(svxseg, tgeo, vtxevents, tmpmap, nevents);
+
+        std::cout << "-- Fitting tracks --" << std::endl;
+        FitTracks(vtxevents);
+
+        std::cout << "-- Filtering data --" << std::endl;
+        FilterData(vtxevents,
+                   vertexprobmin,
+                   vertexprobmax,
+                   maxdca,
+                   maxres_s,
+                   maxres_z,
+                   vtxtrks);
 
 
-    std::cout << "-- Filtering data --" << std::endl;
-    FilterData(vtxevents,
-               vertexprobmin,
-               vertexprobmax,
-               maxdca,
-               maxres_s,
-               maxres_z,
-               vtxtrks);
-
+    }
 
 
     Printf("-- Writing output to %s --", outfilename);
