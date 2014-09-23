@@ -1,5 +1,7 @@
 #include "VtxAlignBase.h"
 #include "VtxIO.h"
+#include "DataRejector.h"
+
 #include <utility>
 #include <map>
 #include <iomanip>
@@ -8,7 +10,7 @@ using namespace std;
 
 void test_eventsync(const char *inFile = "rootfiles/anavtxcluster_0000411768-0000.root",
                     const char *geoFile = "geom/411768-0-0.par",
-                    int nevents = 8)
+                    int nevents = 10000)
 {
 
     //-- Get ntuples from file
@@ -23,6 +25,9 @@ void test_eventsync(const char *inFile = "rootfiles/anavtxcluster_0000411768-000
     SvxTGeo *tgeo = VTXModel(geoFile);
 
 
+    //-- Create output file
+    TFile *fout = new TFile("test_sync.root","RECREATE");
+
     //-- Read events from tree
     cout << endl;
     cout << "--> Getting unsynced events from ntuple" << endl;
@@ -36,7 +41,14 @@ void test_eventsync(const char *inFile = "rootfiles/anavtxcluster_0000411768-000
     GetEventsFromClusTree(cntclus, tgeo, cntevt, cntmap, nevents, "cnt");
     cout << "  n cnt events = " << cntevt.size() << endl;
 
+    //-- Test original FilterData
+    cout << endl;
+    cout << "--> Filtering Unsynced seg data" << endl;
+    //TTree *segunsynctree = CreateTree("segunsynctree");
+    //FilterData(segevt, 0.01, 0.99, 0.2, 0.1, 0.1, segunsynctree);
+
     //-- Print a table of the number of tracks / event
+    /*
     cout << endl;
     cout << "--> # of tracks per event" << endl;
     cout << setw(6) << "event"
@@ -62,6 +74,7 @@ void test_eventsync(const char *inFile = "rootfiles/anavtxcluster_0000411768-000
 
 
     }
+    */
 
     //-- Get Synced events from tree
     cout << "--> Getting synced events from ntuples" << endl;
@@ -72,6 +85,7 @@ void test_eventsync(const char *inFile = "rootfiles/anavtxcluster_0000411768-000
     cout << "  n seg events = " << segsyncevt.size() << endl;
     cout << "  n cnt events = " << cntsyncevt.size() << endl;
 
+    /*
     cout << endl;
     cout << "--> # of tracks per synced event" << endl;
     cout << setw(6) << "event"
@@ -87,6 +101,21 @@ void test_eventsync(const char *inFile = "rootfiles/anavtxcluster_0000411768-000
              << setw(6) << cntsyncevt.at(i).size()
              << endl;
     }
+    */
+
+    //-- Test data rejection
+    cout << endl;
+    cout << "--> Filterering Synced Data (" << segsyncevt.size() << " events)" << endl;
+
+    TTree *segtree = CreateTree("segtree");
+    cout << "  created tree " << segtree->GetName() << endl;
+
+    TTree *cnttree = CreateTree("cnttree");
+    cout << "  created tree " << cnttree->GetName() << endl;
+
+    FitTracks(segsyncevt);
+    FilterData(segsyncevt, cntsyncevt, segtree, cnttree);
+    //FilterData(segsyncevt, 0.01, 0.99, 0.2, 0.1, 0.1, segtree);
 
 
 
