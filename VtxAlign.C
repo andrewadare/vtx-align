@@ -77,11 +77,14 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
 
-  TNtuple *svxseg = (TNtuple *)inFile->Get("vtxhits");
-  TNtuple *svxcnt = (TNtuple *)inFile->Get("cnthits");
+  TTree *svxseg = (TTree *)inFile->Get("vtxtrks");
+  TTree *svxcnt;
   assert(svxseg);
   if (useCntTracks>0)
+  {
+    svxcnt = (TTree *)inFile->Get("cnttrks");
     assert(svxcnt);
+  }
 
   SvxTGeo *tgeo = VTXModel(pisaFileIn.Data());
 
@@ -146,10 +149,10 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
 
   cout << "Filling output tree(s)..." << flush;
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
-  TNtuple *vtxhits = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
-  TNtuple *cnthits = new TNtuple("cnthits", "CNT hit variables", HITVARS);
-  FillNTuple(vtxevents, vtxhits);
-  FillNTuple(cntevents, cnthits);
+  TTree *vtxtrks = CreateTree("vtxtrks");
+  TTree *cnttrks = CreateTree("cnttrks");
+  FillTree(vtxevents, vtxtrks);
+  FillTree(cntevents, cnttrks);
   Printf("done.");
 
   Printf("Writing %s", pisaFileOut.Data());
