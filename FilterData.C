@@ -43,6 +43,11 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
     std::cout << "-- Creating vtxtrks --" << std::endl;
     TTree *vtxtrks = CreateTree("vtxtrks");
 
+    TTree *cnttrks;
+    if (opt.Contains("cnt"))
+    {
+        cnttrks = CreateTree("cnttrks");
+    } 
 
     std::cout << "-- Initializing SvxTGeo --" << std::endl;
     SvxTGeo *tgeo = VTXModel(pisafilename);
@@ -52,11 +57,17 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
     geoEvents vtxevents;
     GetEventsFromClusTree(svxseg, tgeo, vtxevents, nevents);
 
+    geoEvents cntevents;
+    if (opt.Contains("cnt"))
+    {
+        GetEventsFromClusTree(svxcnt, tgeo, cntevents, nevents, "cnt");
+        FillTree(cntevents, cnttrks);
+    }
 
     std::cout << "-- Fitting tracks --" << std::endl;
     FitTracks(vtxevents);
 
-    
+
     std::cout << "-- Filtering data --" << std::endl;
     FilterData(vtxevents,
                vertexprobmin,
@@ -67,13 +78,16 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro6.ro
                vtxtrks);
 
 
+
     Printf("-- Writing output to %s --", outfilename);
     outFile->cd();
     outFile->Write(0, TObject::kOverwrite);
 
     // For now, just write the cnt ntuple to file without filtering.
     if (opt.Contains("cnt"))
-        svxcnt->Write();
+    {
+        cnttrks->Write();
+    }
 
     return;
 }
