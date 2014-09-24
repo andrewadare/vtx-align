@@ -28,7 +28,6 @@ public:
     int process_event(PHCompositeNode *topNode);
     int End(PHCompositeNode *topNode);
 
-
 protected:
 
     void reset_variables();
@@ -45,6 +44,7 @@ protected:
     //Tree containing event information
     TTree * ntp_event;
     int run;
+    int event_offset;
     int event;
     float vtx[3];
     float vtxE[3];

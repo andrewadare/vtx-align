@@ -14,10 +14,12 @@ void WriteConfigFile(const char *filename,
                      TVectorD &ewdiff,
                      TVectorD &cntdiff,
                      TString notes = "");
+TH1D *
+ProfileSummary(TProfile *prof, const char* name);
 
 void CalcBeamCenter(int run = 411768,
                     int prod = 0,
-                    int subiter = 0)
+                    int subiter = 1)
 {
   bool write = true;
 
@@ -314,6 +316,16 @@ void CalcBeamCenter(int run = 411768,
   gPad->SetGridy();
   dprof->Draw("same");
 
+
+  TH1D* bpsummary = ProfileSummary(bprof, "BC DCA vs phi summary");
+  DrawObject(bpsummary, "", "bp_summary", cList, 500, 500);
+  ltx.DrawLatex(0.2, 0.85, Form("mean %.4f, std dev %.4f",
+                                bpsummary->GetMean(), bpsummary->GetRMS()));
+  TH1D* dpsummary = ProfileSummary(dprof, "DCA vs phi summary");
+  DrawObject(dpsummary, "", "dp_summary", cList, 500, 500);
+  ltx.DrawLatex(0.2, 0.85, Form("mean %.4f, std dev %.4f",
+                                dpsummary->GetMean(), dpsummary->GetRMS()));
+
   Printf("Fraction outside 1000um: %.3f (e) %.3f (w)",
          1.0 - hre->Integral(1,hre->FindBin(0.099))/hre->Integral(),
          1.0 - hrw->Integral(1,hrw->FindBin(0.099))/hrw->Integral());
@@ -372,4 +384,17 @@ WriteConfigFile(const char *filename,
   Printf("done.");
 
   return;
+}
+
+TH1D *
+ProfileSummary(TProfile *prof, const char* name)
+{
+  TH1D* h = new TH1D(name, name, 100, prof->GetMinimum(), prof->GetMaximum());
+  for (int i=1; i<=prof->GetNbinsX(); ++i)
+  {
+    double e = prof->GetBinError(i);
+    h->Fill(prof->GetBinContent(i), e>0 ? 1./e : 0.);
+  }
+
+  return h;
 }
