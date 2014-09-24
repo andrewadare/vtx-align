@@ -28,8 +28,6 @@ public:
     int process_event(PHCompositeNode *topNode);
     int End(PHCompositeNode *topNode);
 
-    void SetEventOffset(int off){event_offset = off;}
-
 protected:
 
     void reset_variables();
