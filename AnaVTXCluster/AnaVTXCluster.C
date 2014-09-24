@@ -20,6 +20,8 @@
 
 #include <iostream>
 #include <map>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "AnaVTXCluster.h"
 
@@ -65,6 +67,8 @@ AnaVTXCluster::AnaVTXCluster() :
     ThisName = "AnaVTXCluster";
 
     reset_variables();
+    
+    event_offset = 0;
 }
 
 //===========================================================================
@@ -78,6 +82,21 @@ AnaVTXCluster::AnaVTXCluster(std::string filename) :
     ThisName = "AnaVTXCluster";
 
     reset_variables();
+    
+    event_offset = 0;
+
+    //extract segNumber
+    char*a = new char[filename.length()+1];
+    strcpy(a,filename.c_str());
+
+    char*b = strtok(a,"-");
+    b = strtok(0,"-");
+    b = strtok(0,"-");
+    b = strtok(0,"-");
+    b = strtok(0,"-");
+    b = strtok(b,".");
+    event_offset = atoi(b) + 0;
+    std::cout<<"event offset is : "<<event_offset<<std::endl;
 }
 
 
@@ -411,7 +430,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		      cnt_trkid,
 		      phi0,
 		      the0,
-		      nEvent
+		      nEvent+event_offset*500000
                     };
 		  //std::cout<<"filling cnt_clusntuple"<<std::endl;
 		  cnt_clusntuple->Fill(varr);
@@ -509,7 +528,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		  0,
 		  0,
 		  seg_trkid,
-		  nEvent
+		  nEvent+event_offset*500000
                 };
 	      seg_clusntuple->Fill(varr);
             }
