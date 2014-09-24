@@ -430,7 +430,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		      cnt_trkid,
 		      phi0,
 		      the0,
-		      nEvent+event_offset*100000
+		      nEvent+event_offset*500000
                     };
 		  //std::cout<<"filling cnt_clusntuple"<<std::endl;
 		  cnt_clusntuple->Fill(varr);
@@ -528,7 +528,7 @@ int AnaVTXCluster::process_event(PHCompositeNode *topNode)
 		  0,
 		  0,
 		  seg_trkid,
-		  nEvent+event_offset*100000
+		  nEvent+event_offset*500000
                 };
 	      seg_clusntuple->Fill(varr);
             }
