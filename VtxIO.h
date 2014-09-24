@@ -634,10 +634,8 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
                   TString /*opt*/)
 {
     // Get events from TTree and put information in geoEvents
-
     assert(t);
     assert(geo);
-
 
     // Declare the tree branch variables
     int event;
