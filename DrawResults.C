@@ -19,7 +19,7 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
 void SetupHist(TH1D *h, int stage);
 void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord);
 
-void DrawResults(int run = 411768,
+void DrawResults(int run = 123456,
                  int prod1 = 0,
                  int subit1 = 0,
                  int prod2 = 0,
@@ -32,6 +32,7 @@ void DrawResults(int run = 411768,
 
   TLatex ltx;
   ltx.SetNDC();
+  ltx.SetTextFont(42);
   TObjArray *cList = new TObjArray();
 
   TString rootFileIn1 = Form("rootfiles/%d-%d-%d.root", run, prod1, subit1);
@@ -189,6 +190,9 @@ void DrawResults(int run = 411768,
 
   for (int lyr=0; lyr<4; lyr++)
   {
+    // Mean of means, mean of std devs
+    double smm = 0, smrms = 0;
+    double zmm = 0, zmrms = 0;
     for (int stage=0; stage<ntrees; stage++)
     {
       hdz[lyr][stage] = new TH1D(Form("hdz%d_%d",lyr, stage),
@@ -221,23 +225,44 @@ void DrawResults(int run = 411768,
 
       for (int ldr=0; ldr<nLadders[lyr]; ldr++)
       {
-        hds[lyr][stage]->SetBinContent(ldr+1, hs[lyr][ldr][stage]->GetMean());
-        hdz[lyr][stage]->SetBinContent(ldr+1, hz[lyr][ldr][stage]->GetMean());
-        hds[lyr][stage]->SetBinError(ldr+1, hs[lyr][ldr][stage]->GetRMS());
-        hdz[lyr][stage]->SetBinError(ldr+1, hz[lyr][ldr][stage]->GetRMS());
+        double sm   = hs[lyr][ldr][stage]->GetMean();
+        double zm   = hz[lyr][ldr][stage]->GetMean();
+        double srms = hs[lyr][ldr][stage]->GetRMS();
+        double zrms = hz[lyr][ldr][stage]->GetRMS();
+
+        if (stage == 1)
+        {
+          smm   += sm/nLadders[lyr];
+          zmm   += zm/nLadders[lyr];
+          smrms += srms/nLadders[lyr];
+          zmrms += zrms/nLadders[lyr];
+        }
+
+        hds[lyr][stage]->SetBinContent(ldr+1, sm);
+        hdz[lyr][stage]->SetBinContent(ldr+1, zm);
+        hds[lyr][stage]->SetBinError(ldr+1, srms);
+        hdz[lyr][stage]->SetBinError(ldr+1, zrms);
       }
     }
-    ltx.SetTextSize(0.07);
     DrawObject(hds[lyr][0], "e0p", Form("ds_lyr%d",lyr), cList);
     gdead[lyr]->Draw("e5p,same");
     hds[lyr][1]->Draw("e0p,same");
     gPad->RedrawAxis();
+    ltx.SetTextSize(0.07);
     ltx.DrawLatex(0.23, 0.92, hds[lyr][0]->GetTitle());
+    ltx.SetTextSize(0.05);
+    ltx.DrawLatex(0.6, 0.85, Form("#LTmean#GT    %.3f", smm));
+    ltx.DrawLatex(0.6, 0.80, Form("#LTStd dev#GT %.3f", smrms));
+
     DrawObject(hdz[lyr][0], "e0p", Form("dz_lyr%d",lyr), cList);
     gdead[lyr]->Draw("e5p,same");
     hdz[lyr][1]->Draw("e0p,same");
     gPad->RedrawAxis();
+    ltx.SetTextSize(0.07);
     ltx.DrawLatex(0.23, 0.92, hdz[lyr][0]->GetTitle());
+    ltx.SetTextSize(0.05);
+    ltx.DrawLatex(0.6, 0.85, Form("#LTmean#GT    %.3f", zmm));
+    ltx.DrawLatex(0.6, 0.80, Form("#LTStd dev#GT %.3f", zmrms));
   }
   ltx.SetTextSize(0.06);
   ltx.SetTextFont(42);
