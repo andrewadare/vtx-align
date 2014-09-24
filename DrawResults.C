@@ -18,13 +18,14 @@ void FillHists(TH1D *hs[nlayers][nladders][ntrees],
 
 void SetupHist(TH1D *h, int stage);
 void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord);
+bool CheckValue(ROOT::TTreeReaderValueBase *value);
 
 void DrawResults(int run = 411768,
                  int prod1 = 0,
                  int subit1 = 0,
                  int prod2 = 0,
                  int subit2 = 1,
-                 const char *treename = "vtxhits")
+                 const char *treename = "vtxtrks")
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
@@ -291,29 +292,38 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
           TFile *f, const char *treename, int stage)
 {
   TTreeReader r(treename, f);
-  TTreeReaderValue<float> ds(r, "res_s");
-  TTreeReaderValue<float> dz(r, "res_z");
-  TTreeReaderValue<float> layer(r, "layer");
-  TTreeReaderValue<float> ladder(r, "ladder");
-  TTreeReaderValue<float> gx(r, "gx");
+
+  TTreeReaderArray<float> ds(r, "res_s");
+  CheckValue(&ds);
+  TTreeReaderArray<float> dz(r, "res_z");
+  CheckValue(&dz);
+  TTreeReaderArray<int> layer(r, "layer");
+  CheckValue(&layer);
+  TTreeReaderArray<int> ladder(r, "ladder");
+  CheckValue(&ladder);
+  TTreeReaderArray<float> gx(r, "gx");
+  CheckValue(&gx);
 
   while (r.Next())
   {
-    int lyr = *layer;
-    int ldr = *ladder;
-    float s = *ds;
-    float z = *dz;
-    float x = *gx;
-    int arm = (x < 0.) ? 0 : 1; // 0 = East, 1 = West.
-
-    // Printf("%s %d %d %d %f %f %x",
-    //        treename, lyr, ldr, stage, s, z, hs[lyr][ldr][stage]);
-    if (s>-0.2 && s<0.2 && z>-0.2 && z<0.2)
+    for (int i=0; i<(int)ds.GetSize(); ++i)
     {
-      hs[lyr][ldr][stage]->Fill(s);
-      hz[lyr][ldr][stage]->Fill(z);
-      hls[lyr][arm][stage]->Fill(s);
-      hlz[lyr][arm][stage]->Fill(z);
+      int lyr = layer[i];
+      int ldr = ladder[i];
+      float s = ds[i];
+      float z = dz[i];
+      float x = gx[i];
+      int arm = (x < 0.) ? 0 : 1; // 0 = East, 1 = West.
+
+      Printf("%s %d %d %d %f %f", treename, lyr, ldr, stage, s, z);
+
+      if (s>-0.2 && s<0.2 && z>-0.2 && z<0.2)
+      {
+        hs[lyr][ldr][stage]->Fill(s);
+        hz[lyr][ldr][stage]->Fill(z);
+        hls[lyr][arm][stage]->Fill(s);
+        hlz[lyr][arm][stage]->Fill(z);
+      }
     }
   }
 
@@ -344,3 +354,16 @@ ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord)
                                 1e4*h2->GetRMS()));
   return;
 }
+
+bool
+CheckValue(ROOT::TTreeReaderValueBase *value)
+{
+  if (value->GetSetupStatus() < 0)
+  {
+    std::cerr << "Error " << value->GetSetupStatus()
+              << "setting up reader for " << value->GetBranchName() << '\n';
+    return false;
+  }
+  return true;
+}
+
