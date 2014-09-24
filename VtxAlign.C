@@ -31,7 +31,7 @@ void CorrectFromFile(const char *filename,
                      geoEvents &vtxevents,
                      geoEvents &cntevents);
 
-void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
+void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
               int subiter = 0,     // Geometry update step. Starts at 0.
               TString alignMode = "ladder") // "ladder" or "halflayer"
@@ -121,7 +121,7 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
     TFile *bcf = new TFile(bcFileIn.Data(), "read");
     TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
 
-    FitTracks(vtxevents, 0);
+    // FitTracks(vtxevents, 0);
     EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc, alignMode);
   }
   if (useCntTracks)
