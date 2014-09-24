@@ -102,8 +102,8 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
 }
 
 void
-GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, std::multimap<int, int> &eventsync ,
-                  int nmax, TString opt)
+GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, 
+                  std::multimap<int, int> &eventsync, int nmax, TString /*opt*/)
 {
     // This function reads hit ntuple variables of the form
     // "layer:ladder:sensor:xs:ys:zs:x:y:z:xsigma:zsigma:dz:ds:trkid"
@@ -507,7 +507,7 @@ FillTree(geoTracks &trks, TTree *t, int evt)
     t->SetBranchAddress("res_z", &res_z);
     t->SetBranchAddress("res_s", &res_s);
 
-    for (int itrk = 0; itrk < trks.size(); itrk++)
+    for (unsigned int itrk = 0; itrk < trks.size(); itrk++)
     {
         SvxGeoTrack gt = trks.at(itrk);
         event = evt;
@@ -631,7 +631,7 @@ FillTree(geoEvents &events, TTree *t)
 
 void
 GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
-                  TString opt)
+                  TString /*opt*/)
 {
     // Get events from TTree and put information in geoEvents
 
