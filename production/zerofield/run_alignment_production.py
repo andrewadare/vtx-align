@@ -155,7 +155,7 @@ print("Output Ntuple: {}".format(ntupleFile))
 command = "root -b -q \'run_anavtxcluster.C("
 command += str(nevents) + ","
 command += "\"" + dstFile + "\","
-command += "\"" + ntupleFile
+command += "\"" + ntupleFile +"\""
 command += ")\'"
 print(command)
 
@@ -179,7 +179,7 @@ print("Output Ntuple: {}".format(ntupleFile))
 command = "root -b -q \'analyze_run14_test_prod_output.C("
 command += str(nevents) + ","
 command += "\"" + dstFile + "\","
-command += "\"" + ntupleFile
+command += "\"" + ntupleFile + "\""
 command += ")\'"
 print(command)
 
