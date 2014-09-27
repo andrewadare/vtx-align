@@ -89,10 +89,16 @@ AnaVTXCluster::AnaVTXCluster(std::string filename) :
     char*a = new char[filename.length()+1];
     strcpy(a,filename.c_str());
 
-    char*b = strtok(a,"-");
-    b = strtok(0,"-");
-    b = strtok(0,"-");
-    b = strtok(0,"-");
+    char*b = strtok(a,"/");
+    b = strtok(0,"/");
+    b = strtok(0,"/");
+    b = strtok(0,"/");
+    b = strtok(0,"/");
+    b = strtok(0,"/");
+    b = strtok(0,"/");
+    b = strtok(0,"/");
+    b = strtok(0,"/");
+    b = strtok(b,"-");
     b = strtok(0,"-");
     b = strtok(b,".");
     event_offset = atoi(b) + 0;
