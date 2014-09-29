@@ -20,7 +20,7 @@ void SetupHist(TH1D *h, int stage);
 void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord);
 bool CheckValue(ROOT::TTreeReaderValueBase *value);
 
-void DrawResults(int run = 123456,
+void DrawResults(int run = 411768,
                  int prod1 = 0,
                  int subit1 = 0,
                  int prod2 = 0,
@@ -319,15 +319,10 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
   TTreeReader r(treename, f);
 
   TTreeReaderArray<float> ds(r, "res_s");
-  CheckValue(&ds);
   TTreeReaderArray<float> dz(r, "res_z");
-  CheckValue(&dz);
   TTreeReaderArray<int> layer(r, "layer");
-  CheckValue(&layer);
   TTreeReaderArray<int> ladder(r, "ladder");
-  CheckValue(&ladder);
   TTreeReaderArray<float> gx(r, "gx");
-  CheckValue(&gx);
 
   while (r.Next())
   {
@@ -340,7 +335,7 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
       float x = gx[i];
       int arm = (x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
-      Printf("%s %d %d %d %f %f", treename, lyr, ldr, stage, s, z);
+      // Printf("%s %d %d %d %f %f", treename, lyr, ldr, stage, s, z);
 
       if (s>-0.2 && s<0.2 && z>-0.2 && z<0.2)
       {
@@ -386,7 +381,7 @@ CheckValue(ROOT::TTreeReaderValueBase *value)
   if (value->GetSetupStatus() < 0)
   {
     std::cerr << "Error " << value->GetSetupStatus()
-              << "setting up reader for " << value->GetBranchName() << '\n';
+              << " setting up reader for " << value->GetBranchName() << '\n';
     return false;
   }
   return true;
