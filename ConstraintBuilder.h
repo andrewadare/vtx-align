@@ -468,9 +468,9 @@ WriteLadderConstraints(const char *filename,
   if (zdof)
   {
     AddConstraints(wz, ez, geo, Ones,      fs, "z translation");
-    AddConstraints(wz, ez, geo, PhiAngles, fs, "z phi shear");
-    AddConstraints(wz, ez, geo, RPhi,      fs, "z r-phi shear");
-    AddConstraints(wz, ez, geo, Radii,     fs, "z r shear");
+    // AddConstraints(wz, ez, geo, PhiAngles, fs, "z phi shear");
+    // AddConstraints(wz, ez, geo, RPhi,      fs, "z r-phi shear");
+    // AddConstraints(wz, ez, geo, Radii,     fs, "z r shear");
     AddConstraints(wtz, etz, geo, Radii,   fs, "top z r shear");
     AddConstraints(wbz, ebz, geo, Radii,   fs, "bottom z r shear");
   }
