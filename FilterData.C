@@ -10,7 +10,7 @@
 // run-prod-iter.par so the base matches the ROOT file.
 // The alignment script VtxAlign.C requires a .par file with such a name.
 
-void FilterData(const char *infilename = "rootfiles/zf-411768-0-0_3-anavtxcluster.root",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-full.root",
                 const char *outfilename = "rootfiles/411768-0-0.root",
                 const char *pisafilename = "geom/411768-0-0.par",
                 double vertexprobmin = 0.02,
@@ -18,8 +18,9 @@ void FilterData(const char *infilename = "rootfiles/zf-411768-0-0_3-anavtxcluste
                 double maxdca = 0.5,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
-                int nevents = 300000, // -1 = everything
-                TString opt = "cnt")
+                int nhitsmin = 4,
+                int nevents = -1, // -1 = everything
+                TString opt = "") // "cnt"
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");
@@ -64,11 +65,12 @@ void FilterData(const char *infilename = "rootfiles/zf-411768-0-0_3-anavtxcluste
     std::cout << "-- Filtering data --" << std::endl;
     FilterData(vtxevents, cntevents,
                vtxtrks, cnttrks,
-               vertexprobmin,
-               vertexprobmax,
+               vertexprobmin, vertexprobmax,
                maxdca,
-               maxres_s,
-               maxres_z);
+               maxres_s, maxres_z, 
+               10, 
+               10, 
+               nhitsmin);
   }
   else
   {
@@ -86,6 +88,7 @@ void FilterData(const char *infilename = "rootfiles/zf-411768-0-0_3-anavtxcluste
                maxdca,
                maxres_s,
                maxres_z,
+               nhitsmin,
                vtxtrks);
   }
 

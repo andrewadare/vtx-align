@@ -13,6 +13,7 @@ void FilterData(geoEvents &events,
                 double maxdca = 0.2,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
+                int nhitsmin = 3,
                 TTree *tree = 0);
 
 void FilterData(geoEvents &segevents,
@@ -25,7 +26,8 @@ void FilterData(geoEvents &segevents,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
                 int maxclus = 10,
-                int minmult = 10);
+                int minmult = 10,
+                int nhitsmin = 3);
 
 bool RejectOutlierVtx(geoTracks &trks, int nq,
                       double *qxe, double *qye,
@@ -36,7 +38,8 @@ bool RejectOutlierTrk(SvxGeoTrack trk, TVectorD bce, TVectorD bcw,
                       float maxdca = 0.2,
                       float maxres_s = 0.1,
                       float maxres_z = 0.1,
-                      int maxclus = 10);
+                      int maxclus = 10,
+                      int nhitsmin = 3);
 
 void
 FilterData(geoEvents &events,
@@ -45,6 +48,7 @@ FilterData(geoEvents &events,
            double maxdca,
            double maxres_s,
            double maxres_z,
+           int nhitsmin,
            TTree *tree)
 {
   int minmult = 10;
@@ -126,6 +130,10 @@ FilterData(geoEvents &events,
         if (TMath::Sqrt(d * d) > maxdca)
           continue;
 
+        // Require at least nhitsmin clusters
+        if (trk.nhits < nhitsmin)
+          continue;
+
         // Residual magnitude cut
         bool reject = false;
         for (int j = 0; j < trk.nhits; j++)
@@ -160,7 +168,7 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
                 double vertexprobmin, double vertexprobmax ,
                 double maxdca,
                 double maxres_s, double maxres_z,
-                int maxclus, int minmult)
+                int maxclus, int minmult, int nhitsmin)
 {
 
   // This function filters data, keeping
@@ -236,7 +244,8 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
       {
         bool rejecttrk = RejectOutlierTrk(segevents[ev][itrk],
                                           bce, bcw,
-                                          maxdca, maxres_s, maxres_z, maxclus);
+                                          maxdca, maxres_s, maxres_z,
+                                          maxclus, nhitsmin);
         if (!rejecttrk)
         {
           FillTree(segevents[ev][itrk], segtree, ev);
@@ -314,7 +323,8 @@ RejectOutlierVtx(geoTracks &trks, int nq,
 
 bool
 RejectOutlierTrk(SvxGeoTrack trk, TVectorD bce, TVectorD bcw,
-                 float maxdca, float maxres_s, float maxres_z, int maxclus)
+                 float maxdca, float maxres_s, float maxres_z, int maxclus,
+                 int nhitsmin)
 {
   // Reject tracks
   // true = reject
@@ -324,6 +334,10 @@ RejectOutlierTrk(SvxGeoTrack trk, TVectorD bce, TVectorD bcw,
 
   // DCA outlier cut
   if (TMath::Sqrt(d * d) > maxdca)
+    return true;
+
+  // Require at least nhitsmin clusters
+  if (trk.nhits < nhitsmin)
     return true;
 
   // Residual magnitude cut
