@@ -196,10 +196,13 @@ os.chdir(condorDir)
 os.remove(prdfFile)
 
 #make all the directories we were in group writable
-os.system("chmod a+w {}".format(outDir))
-for root, dirs, files in os.walk(outDir, topdown=False):
-        for dir in dirs:
-            os.system("chmod a+w {}".format(outDir+dir))
+#os.system("chmod a+w {}".format(outDir))
+#for root, dirs, files in os.walk(outDir, topdown=False):
+#        for dir in dirs:
+#            os.system("chmod a+w {}".format(outDir+dir))
+
+# give everything full group permissions
+os.system("chmod -R g=wrx {}".format(outDir))
 
 ##############################################
 # DONE!
