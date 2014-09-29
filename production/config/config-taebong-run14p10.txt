@@ -1,0 +1,25 @@
+# This is a configuration file to test Taebongs standard alignment
+# par file copied from /direct/phenix+hhj2/tmoon/1.OutputDir/1.VTX/1.Calibration/1.Run14/1.Run14AuAu200/7.0730_v8/svxPISA_Run14AuAu200_dchp2_v8.par on 7/31/2014
+#Offsets taken from an email from Taebong on 8/7/2014:
+#I just got offsets for period10 using run 411915. Physics run 411915 and zero-field run 411768 are relevant to period 10.
+#
+#Could you please use the following offsets for period 10.
+#
+#X VTXtoCNT [cm]              : -0.415337
+#Y VTXtoCNT [cm]              : 0.0105241
+#Z VTXtoCNT [cm]              : 0
+#
+#X EasttoWest [cm]            : 0.0500419
+#Y EasttoWest [cm]            : -0.01951
+#Z EasttoWest [cm]            : -0.0281138
+#
+#X Beamcenter in DCHWEST [cm] : -0.101223
+#Y Beamcenter in DCHWEST [cm] : 0.0838782
+#
+
+beamcenter: -0.101223 0.0838782
+east-to-west: 0.0500419 -0.01951 -0.0281138
+vtx-to-cnt: -0.415337 0.0105241 0
+geomfile: taebong-run14p10.par
+
+
