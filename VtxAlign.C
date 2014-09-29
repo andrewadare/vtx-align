@@ -9,9 +9,11 @@ using namespace std;
 
 // Globals
 const double BField = 0.0;
+const bool drawResults = true;
 const bool useVtxTracks = true;
 const bool useCntTracks = false;
 const double regFactor = 1.0;
+
 
 // Global "presigma" for regularization. Smaller = stronger reg (but 0=none).
 // Written to steering file.
@@ -65,14 +67,17 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Assign free global parameter coords for ds=r*dphi residuals here
   // Set includes "s", "x", "y", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
+
+  // vecs sgpars {"s"};
+  // vecd sgpresigma {0};
+
   vecs sgpars {"x", "y"};
-  vecd sgpresigma {0, 0};
-  // vecd sgpresigma {1e-4, 1e-4};
+  vecd sgpresigma {1e-3, 1e-3};
 
   // Assign free global parameter coords for dz residuals here
   // Set includes "x", "y", "z", "r".
   vecs zgpars {"z"};
-  vecd zgpresigma {1e-3};
+  vecd zgpresigma {1e-2};
 
   TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
@@ -164,6 +169,13 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
 
   Printf("Done!");
 
+  if (drawResults)
+  {
+    Printf("\n\nDrawing results...\n\n");
+    const char *macro = Form("DrawResults.C(%d,%d,%d,%d,%d,\"vtxtrks\")",
+                             run,prod,subiter,prod,subiter+1);
+    gROOT->Macro(macro);
+  }
   return;
 }
 
