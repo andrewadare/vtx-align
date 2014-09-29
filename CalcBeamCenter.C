@@ -15,7 +15,7 @@ void WriteConfigFile(const char *filename,
                      TVectorD &cntdiff,
                      TString notes = "");
 TH1D *
-ProfileSummary(TProfile *prof, const char* name);
+ProfileSummary(TProfile *prof, const char *name);
 
 void CalcBeamCenter(int run = 411768,
                     int prod = 0,
@@ -33,7 +33,8 @@ void CalcBeamCenter(int run = 411768,
                             run, prod, subiter);
 
   TFile *f = new TFile(rootFileIn.Data());
-  TNtuple *t = (TNtuple *)f->Get("vtxhits");
+  // TNtuple *t = (TNtuple *)f->Get("vtxhits");
+  TTree *t = (TTree *)f->Get("vtxtrks");
 
   gStyle->SetOptStat(0);
   gStyle->SetPalette(56, 0, 0.5); // Inverted "radiator", 50% transparency
@@ -45,7 +46,7 @@ void CalcBeamCenter(int run = 411768,
   SvxTGeo *geo = VTXModel(pisaFileIn.Data());
 
   geoEvents events;
-  GetEventsFromTree(t, geo, events, 500000);
+  GetEventsFromTree(t, geo, events, -1);
   FitTracks(events);
 
   // Event multiplicity histograms
@@ -290,6 +291,13 @@ void CalcBeamCenter(int run = 411768,
   cr->SetLogy();
   cList->Add(cr);
 
+  TH1D *bpsummary = ProfileSummary(bprof, "BC DCA vs phi summary");
+  TH1D *dpsummary = ProfileSummary(dprof, "DCA vs phi summary");
+  string bps = Form("mean %.4f, std dev %.4f",
+                    bpsummary->GetMean(), bpsummary->GetRMS());
+  string dps = Form("mean %.4f, std dev %.4f",
+                    dpsummary->GetMean(), dpsummary->GetRMS());
+
   DrawObject(hbp, "colz", "bcdcavsphi", cList, 900, 500);
   hbp->SetTitle("DCA to beam center");
   ax = hbp->GetXaxis();
@@ -302,6 +310,7 @@ void CalcBeamCenter(int run = 411768,
   ay->SetNdivisions(205);
   gPad->SetGridy();
   bprof->Draw("same");
+  ltx.DrawLatex(0.2, 0.85, bps.c_str());
 
   DrawObject(hdp, "colz", "dcavsphi", cList, 900, 500);
   hdp->SetTitle("Zero-field DCA");
@@ -315,24 +324,21 @@ void CalcBeamCenter(int run = 411768,
   ay->SetNdivisions(205);
   gPad->SetGridy();
   dprof->Draw("same");
+  ltx.DrawLatex(0.2, 0.85, dps.c_str());
 
-
-  TH1D* bpsummary = ProfileSummary(bprof, "BC DCA vs phi summary");
   DrawObject(bpsummary, "", "bp_summary", cList, 500, 500);
-  ltx.DrawLatex(0.2, 0.85, Form("mean %.4f, std dev %.4f",
-                                bpsummary->GetMean(), bpsummary->GetRMS()));
-  TH1D* dpsummary = ProfileSummary(dprof, "DCA vs phi summary");
+  ltx.DrawLatex(0.2, 0.85, bps.c_str());
+
   DrawObject(dpsummary, "", "dp_summary", cList, 500, 500);
-  ltx.DrawLatex(0.2, 0.85, Form("mean %.4f, std dev %.4f",
-                                dpsummary->GetMean(), dpsummary->GetRMS()));
+  ltx.DrawLatex(0.2, 0.85, dps.c_str());
 
   Printf("Fraction outside 1000um: %.3f (e) %.3f (w)",
          1.0 - hre->Integral(1,hre->FindBin(0.099))/hre->Integral(),
          1.0 - hrw->Integral(1,hrw->FindBin(0.099))/hrw->Integral());
 
   if (write)
-  {
-    PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
+{
+  PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
     PrintPDF(cList, Form("pdfs/beam-center-run%d-pro%d-sub%d", run, prod, subiter));
   }
 
@@ -387,9 +393,9 @@ WriteConfigFile(const char *filename,
 }
 
 TH1D *
-ProfileSummary(TProfile *prof, const char* name)
+ProfileSummary(TProfile *prof, const char *name)
 {
-  TH1D* h = new TH1D(name, name, 100, prof->GetMinimum(), prof->GetMaximum());
+  TH1D *h = new TH1D(name, name, 100, prof->GetMinimum(), prof->GetMaximum());
   for (int i=1; i<=prof->GetNbinsX(); ++i)
   {
     double e = prof->GetBinError(i);
