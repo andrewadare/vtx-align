@@ -18,9 +18,10 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-fu
                 double maxdca = 0.5,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
-                int nhitsmin = 4,
+                int nhitsmin = 3,
                 int nevents = -1, // -1 = everything
-                TString opt = "") // "cnt"
+                float frac4hit = -1, // -1 = no filter
+                TString opt = "cnt") // "cnt"
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");
@@ -70,7 +71,8 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-fu
                maxres_s, maxres_z, 
                10, 
                10, 
-               nhitsmin);
+               nhitsmin,
+               frac4hit);
   }
   else
   {
