@@ -85,13 +85,14 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-fu
 
     std::cout << "-- Filtering data --" << std::endl;
     FilterData(vtxevents,
+               vtxtrks,
                vertexprobmin,
                vertexprobmax,
                maxdca,
                maxres_s,
                maxres_z,
                nhitsmin,
-               vtxtrks);
+               frac4hit);
   }
 
   Printf("-- Writing output to %s --", outfilename);
