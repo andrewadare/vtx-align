@@ -268,10 +268,10 @@ void DrawResults(int run = 411768,
   ltx.SetTextSize(0.06);
   ltx.SetTextFont(42);
 
-  PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d",
-                        run, prod1, subit1, prod2, subit2), "");
-  PrintPDF(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d",
-                       run, prod1, subit1, prod2, subit2), "");
+  PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d-%s",
+                        run, prod1, subit1, prod2, subit2, treename), "");
+  PrintPDF(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d-%s",
+                       run, prod1, subit1, prod2, subit2, treename), "");
 
   gStyle->SetOptTitle(1);
   const char *parfile1 = Form("geom/%d-%d-%d.par", run, prod1, subit1);

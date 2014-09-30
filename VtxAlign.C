@@ -85,7 +85,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   TTree *svxseg = (TTree *)inFile->Get("vtxtrks");
   TTree *svxcnt;
   assert(svxseg);
-  if (useCntTracks>0)
+  if (useCntTracks > 0)
   {
     svxcnt = (TTree *)inFile->Get("cnttrks");
     assert(svxcnt);
@@ -172,9 +172,18 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   if (drawResults)
   {
     Printf("\n\nDrawing results...\n\n");
-    const char *macro = Form("DrawResults.C(%d,%d,%d,%d,%d,\"vtxtrks\")",
-                             run,prod,subiter,prod,subiter+1);
-    gROOT->Macro(macro);
+    if (useVtxTracks)
+    {
+      const char *macro = Form("DrawResults.C(%d,%d,%d,%d,%d,\"vtxtrks\")",
+                               run, prod, subiter, prod, subiter + 1);
+      gROOT->Macro(macro);
+    }
+    if (useCntTracks)
+    {
+      const char *macro = Form("DrawResults.C(%d,%d,%d,%d,%d,\"cnttrks\")",
+                               run, prod, subiter, prod, subiter + 1);
+      gROOT->Macro(macro);
+    }
   }
   return;
 }
@@ -194,11 +203,11 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
   else
     Printf(" - Using VTX standalone tracks.");
   printf(" - Coordinate(s) available for r*phi residual minimization: ( ");
-  for (unsigned int ic=0; ic<sgpars.size(); ++ic)
+  for (unsigned int ic = 0; ic < sgpars.size(); ++ic)
     cout << sgpars[ic] << " ";
   cout << ")" << endl;
   printf(" - Coordinate(s) available for z residual minimization: ( ");
-  for (unsigned int ic=0; ic<zgpars.size(); ++ic)
+  for (unsigned int ic = 0; ic < zgpars.size(); ++ic)
     cout << zgpars[ic] << " ";
   cout << ")" << endl;
   if (opt.Contains("ladder"))
@@ -211,8 +220,8 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
   bool asBinary = true;
   Mille m(binfile.c_str(), true);
 
-  for (unsigned int ev=0; ev<events.size(); ev++)
-    for (unsigned int t=0; t<events[ev].size(); t++)
+  for (unsigned int ev = 0; ev < events.size(); ev++)
+    for (unsigned int t = 0; t < events[ev].size(); t++)
     {
       SvxGeoTrack trk = events[ev][t];
       if (opt.Contains("ext"))
@@ -238,63 +247,63 @@ CorrectFromFile(const char *filename,
   GetCorrections(filename, mpc);
 
   // Ladder position corrections
-  for (int i=0; i<tgeo->GetNLayers(); i++)
-    for (int j=0; j<tgeo->GetNLadders(i); j++)
+  for (int i = 0; i < tgeo->GetNLayers(); i++)
+    for (int j = 0; j < tgeo->GetNLadders(i); j++)
     {
       int l = -1;
 
       // Ladder translation corrections
-      l = Label(i,j,"x");
+      l = Label(i, j, "x");
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateLadder(i, j, mpc[l], 0., 0.);
-      l = Label(i,j,"y");
+      l = Label(i, j, "y");
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateLadder(i, j, 0., mpc[l], 0.);
-      l = Label(i,j,"z");
+      l = Label(i, j, "z");
       if (mpc.find(l) != mpc.end())
-        tgeo->TranslateLadder(i, j, 0. ,0., mpc[l]);
+        tgeo->TranslateLadder(i, j, 0. , 0., mpc[l]);
 
       // Ladder Phi correction from ds
-      l = Label(i,j,"s");
+      l = Label(i, j, "s");
       if (mpc.find(l) != mpc.end())
         tgeo->RotateLadderRPhi(i, j, mpc[l]);
 
       // Ladder Radial correction
-      l = Label(i,j,"r");
+      l = Label(i, j, "r");
       if (mpc.find(l) != mpc.end())
         tgeo->MoveLadderRadially(i, j, mpc[l]);
     }
 
   // Half-layer position corrections
-  for (int i=0; i<tgeo->GetNLayers(); i++)
-    for (int j=0; j<2; j++) // Arm. 0 = E; 1 = W.
+  for (int i = 0; i < tgeo->GetNLayers(); i++)
+    for (int j = 0; j < 2; j++) // Arm. 0 = E; 1 = W.
     {
       int l = -1;
       // Half-layer translation corrections
-      l = HalfLayerLabel(i,j,"x");
+      l = HalfLayerLabel(i, j, "x");
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateHalfLayer(i, j, mpc[l], 0., 0.);
-      l = HalfLayerLabel(i,j,"y");
+      l = HalfLayerLabel(i, j, "y");
       if (mpc.find(l) != mpc.end())
         tgeo->TranslateHalfLayer(i, j, 0., mpc[l], 0.);
-      l = HalfLayerLabel(i,j,"z");
+      l = HalfLayerLabel(i, j, "z");
       if (mpc.find(l) != mpc.end())
-        tgeo->TranslateHalfLayer(i, j, 0. ,0., mpc[l]);
+        tgeo->TranslateHalfLayer(i, j, 0. , 0., mpc[l]);
 
       // Half-ladder phi correction from ds
       // s is converted to phi which is used for the half-layer rotation
-      l = HalfLayerLabel(i,j,"s");
+      l = HalfLayerLabel(i, j, "s");
       if (mpc.find(l) != mpc.end())
         tgeo->RotateHalfLayerRPhi(i, j, mpc[l]);
     }
 
-  for (unsigned int ev=0; ev<vtxevents.size(); ev++)
-    for (unsigned int t=0; t<vtxevents[ev].size(); t++)
+  for (unsigned int ev = 0; ev < vtxevents.size(); ev++)
+    for (unsigned int t = 0; t < vtxevents[ev].size(); t++)
       vtxevents[ev][t].UpdateHits();
-  for (unsigned int ev=0; ev<cntevents.size(); ev++)
-    for (unsigned int t=0; t<cntevents[ev].size(); t++)
+  for (unsigned int ev = 0; ev < cntevents.size(); ev++)
+    for (unsigned int t = 0; t < cntevents[ev].size(); t++)
     {
-      for (int ihit=0; ihit<cntevents[ev][t].nhits; ihit++)
+      for (int ihit = 0; ihit < cntevents[ev][t].nhits; ihit++)
         cntevents[ev][t].hits[ihit].UpdateResiduals();
 
       cntevents[ev][t].UpdateHits();
