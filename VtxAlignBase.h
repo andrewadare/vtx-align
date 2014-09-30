@@ -24,6 +24,7 @@
 #include <TH1.h>
 #include <TH2.h>
 
+#include <cassert>
 #include <iostream>
 #include <fstream>
 #include <string>
