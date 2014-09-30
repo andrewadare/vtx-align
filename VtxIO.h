@@ -19,8 +19,8 @@ void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
                                  geoEvents &segevts, geoEvents &cntevts,//<-- output
                                  SvxTGeo, int nmax = -1);
 TTree *CreateTree(const char *name);
-void FillTree(SvxGeoTrack &gt, TTree *t, int evt = -1);
-void FillTree(geoTracks &trks, TTree *t, int evt = -1);
+//void FillTree(SvxGeoTrack &gt, TTree *t, int evt = -1);
+//void FillTree(geoTracks &trks, TTree *t, int evt = -1);
 void FillTree(geoEvents &events, TTree *t);
 void GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax = -1,
                        TString opt = "");
@@ -377,7 +377,7 @@ CreateTree(const char *name)
   return t;
 
 }
-
+/*
 void
 FillTree(SvxGeoTrack &gt, TTree *t, int evt)
 {
@@ -538,7 +538,7 @@ FillTree(geoTracks &trks, TTree *t, int evt)
 
   return;
 }
-
+*/
 void
 FillTree(geoEvents &events, TTree *t)
 {
