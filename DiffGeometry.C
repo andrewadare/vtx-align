@@ -5,10 +5,15 @@
 #include "VtxVis.h"
 #include "UtilFns.h"
 
-void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z);
+void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z,            
+            float e2w[], float v2c[]);
 
 void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
-                  const char *pfb = "geom/taebong-run14p10.par")
+                  const char *pfb = "geom/taebong-run14p10.par",
+                  float *e2wa = 0,
+                  float *v2ca = 0,
+                  float *e2wb = 0,
+                  float *v2cb = 0)
 {
   TLatex ltx;
   ltx.SetNDC();
@@ -19,10 +24,21 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
   // Get ladder positions in "a" and "b" geometry
   vecd xa; vecd ya; vecd za;
   vecd xb; vecd yb; vecd zb;
-  GetXYZ(pfa, xa, ya, za);
-  GetXYZ(pfb, xb, yb, zb);
+  GetXYZ(pfa, xa, ya, za, e2wa, v2ca);
+  GetXYZ(pfb, xb, yb, zb, e2wb, v2cb);
 
   SvxTGeo *geo = VTXModel(pfa);
+
+  // Move ladders to coincide with arrow tails and circle centers 
+  if (e2wa)
+  {
+    geo->TranslateArm(0, e2wa[0], e2wa[1], e2wa[2]); // East arm only
+  }
+  if (v2ca)
+  {
+    geo->TranslateArm(0, v2ca[0], v2ca[1], v2ca[2]);
+    geo->TranslateArm(1, v2ca[0], v2ca[1], v2ca[2]);
+  }
 
   TString a = TString(gSystem->BaseName(pfa)).ReplaceAll(".par", "");
   TString b = TString(gSystem->BaseName(pfb)).ReplaceAll(".par", "");
@@ -73,9 +89,22 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
   return;
 }
 
-void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z)
+void GetXYZ(const char *parfile, vecd &x, vecd &y, vecd &z, 
+            float e2w[], float v2c[])
 {
   SvxTGeo *geo = VTXModel(parfile);
+
+  // Apply E-W and VTX-CNT offsets, if provided.
+  if (e2w)
+  {
+    geo->TranslateArm(0, e2w[0], e2w[1], e2w[2]); // East arm only
+  }
+  if (v2c)
+  {
+    geo->TranslateArm(0, v2c[0], v2c[1], v2c[2]);
+    geo->TranslateArm(1, v2c[0], v2c[1], v2c[2]);
+  }
+
   GetLadderXYZ(geo, x, y, z);
   delete geo;
   return;

@@ -62,7 +62,7 @@ void GenerateEvents()
     {
       for (int ihit=0; ihit<cntevents[ev][t].nhits; ihit++)
         cntevents[ev][t].hits[ihit].UpdateResiduals();
-      
+
       cntevents[ev][t].UpdateHits();
     }
 
@@ -78,11 +78,13 @@ void GenerateEvents()
   tgeo->WriteParFile(pisaFileOut.Data());
 
   cout << "Filling output tree(s)..." << flush;
+
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
-  TNtuple *vtxhits = new TNtuple("vtxhits", "VTX hit variables", HITVARS);
-  TNtuple *cnthits = new TNtuple("cnthits", "CNT hit variables", HITVARS);
-  FillNTuple(vtxevents, vtxhits);
-  FillNTuple(cntevents, cnthits);
+  TTree* vtxtree = CreateTree("vtxtrks");
+  TTree* cnttree = CreateTree("cnttrks");
+  FillTree(vtxevents, vtxtree);
+  FillTree(cntevents, cnttree);
+
   Printf("done.");
   Printf("Writing %s", rootFileOut.Data());
   outFile->cd();
