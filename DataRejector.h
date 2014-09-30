@@ -97,6 +97,7 @@ FilterData(geoEvents &events,
   Printf("Rejecting outliers in event loop...");
   int ntracksorig = 0;
   int ntracksfin = 0;
+  geoEvents accevents;
   for (unsigned int ev = 0; ev < events.size(); ev++)
   {
     bool keep = true;
@@ -128,6 +129,7 @@ FilterData(geoEvents &events,
 
     if (keep)
     {
+      geoTracks tmp;
       for (int t = 0; t < ntrk; t++)
       {
         SvxGeoTrack trk = events[ev][t];
@@ -156,14 +158,19 @@ FilterData(geoEvents &events,
         }
         if (!reject)
         {
-          FillTree(trk, tree, ev);
+          //FillTree(trk, tree, ev);
+          tmp.push_back(trk);
           ntracksfin++;
         }
       }
+      accevents.push_back(tmp);
     }
   }
 
-  double rejectFrac = 1.0 - (float)ntracksfin / (float)ntracksorig;
+  FillTree(accevents, tree);
+
+  //double rejectFrac = 1.0 - (float)ntracksfin / (float)ntracksorig;
+  double rejectFrac = 1.0 - (float)tree->GetEntries() / (float)ntracksorig;
   Printf("%.3f%% of tracks rejected by beam center DCA cut of %.0f um"
          " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
          100 * rejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
