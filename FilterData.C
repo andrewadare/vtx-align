@@ -10,7 +10,7 @@
 // run-prod-iter.par so the base matches the ROOT file.
 // The alignment script VtxAlign.C requires a .par file with such a name.
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-full.root",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no-vtx2cnt.root",
                 const char *outfilename = "rootfiles/411768-0-0.root",
                 const char *pisafilename = "geom/411768-0-0.par",
                 double vertexprobmin = 0.02,
@@ -21,7 +21,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-fu
                 int nhitsmin = 3,
                 int nevents = -1, // -1 = everything
                 float frac4hit = -1, // -1 = no filter
-                TString opt = "cnt") // "cnt"
+                TString opt = "cnt") // "": vtx only. "cnt": vtxtrks & cnttrks.
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");

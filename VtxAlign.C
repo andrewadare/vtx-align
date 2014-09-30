@@ -14,7 +14,6 @@ const bool useVtxTracks = true;
 const bool useCntTracks = false;
 const double regFactor = 1.0;
 
-
 // Global "presigma" for regularization. Smaller = stronger reg (but 0=none).
 // Written to steering file.
 // Entries in constraints file(s) take precedence over this.
@@ -33,7 +32,7 @@ void CorrectFromFile(const char *filename,
                      geoEvents &vtxevents,
                      geoEvents &cntevents);
 
-void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
+void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
               int subiter = 0,     // Geometry update step. Starts at 0.
               TString alignMode = "ladder") // "ladder" or "halflayer"
@@ -77,7 +76,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Assign free global parameter coords for dz residuals here
   // Set includes "x", "y", "z", "r".
   vecs zgpars {"z"};
-  vecd zgpresigma {1e-2};
+  vecd zgpresigma {1e-3};
 
   TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
@@ -85,6 +84,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   TTree *svxseg = (TTree *)inFile->Get("vtxtrks");
   TTree *svxcnt;
   assert(svxseg);
+
   if (useCntTracks > 0)
   {
     svxcnt = (TTree *)inFile->Get("cnttrks");
