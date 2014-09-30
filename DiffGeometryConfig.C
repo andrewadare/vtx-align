@@ -2,12 +2,13 @@
 
 void DiffGeometryConfig()
 {
-  // Either type in offsets here...
+  // To assign the optional east to west and VTX to CNT offsets, either 
+  // type in the offsets directly (as done for geometry "a"),
+  // or read them from a production config file (as done for "b"), 
+  // or use a combination of both.
   float e2wa[] = {-0.0183, -0.0071, -0.1475};
-  float v2ca[] = {-0.45, 0.07, +0.1};//-0.3095};
+  float v2ca[] = {-0.45, 0.07, +0.1};
 
-  // Or get them out of a production config file. 
-  // Or do both, as done in this script.
   float e2wb[3] = {0};
   float v2cb[3] = {0};
   GetOffsetsFromConfig("production/config/config-taebong-run14p10.txt",
