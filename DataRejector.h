@@ -10,13 +10,14 @@
 #include "TRandom3.h"
 
 void FilterData(geoEvents &events,
+                TTree *tree = 0,
                 double vertexprobmin = 0.01,
                 double vertexprobmax = 0.99,
                 double maxdca = 0.2,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
                 int nhitsmin = 3,
-                TTree *tree = 0);
+                float frac4hit = -1);
 
 void FilterData(geoEvents &segevents,
                 geoEvents &cntevents,
@@ -51,13 +52,14 @@ void Fix4HitFrac(geoEvents &segeventsout, geoEvents &cnteventsout,
 
 void
 FilterData(geoEvents &events,
+           TTree *tree,
            double vertexprobmin,
            double vertexprobmax,
            double maxdca,
            double maxres_s,
            double maxres_z,
            int nhitsmin,
-           TTree *tree)
+           float frac4hit)
 {
   int minmult = 10;
 
@@ -167,7 +169,22 @@ FilterData(geoEvents &events,
     }
   }
 
-  FillTree(accevents, tree);
+  if (frac4hit > 0)
+  {
+    geoEvents filtevents;
+
+    geoEvents tmp1, tmp2;
+
+    Fix4HitFrac(filtevents, tmp1,
+                accevents, tmp2,
+                frac4hit);
+
+    FillTree(filtevents, tree);
+  }
+  else
+  {
+    FillTree(accevents, tree);
+  }
 
   //double rejectFrac = 1.0 - (float)ntracksfin / (float)ntracksorig;
   double rejectFrac = 1.0 - (float)tree->GetEntries() / (float)ntracksorig;
