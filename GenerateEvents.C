@@ -5,8 +5,8 @@ void GenerateEvents()
 {
   int run = 123456;
   int prod = 0;
-  const int nvtxevents = (int)9e3;
-  const int ncntevents = (int)1e3;
+  const int nvtxevents = (int)9e1;
+  const int ncntevents = (int)1e1;
   SvxTGeo *tgeo = VTXModel("geom/svxPISA-ideal.par");
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, 0);
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, 0);
@@ -80,8 +80,8 @@ void GenerateEvents()
   cout << "Filling output tree(s)..." << flush;
 
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
-  TTree* vtxtree = CreateTree("vtxtrks");
-  TTree* cnttree = CreateTree("cnttrks");
+  TTree *vtxtree = CreateTree("vtxtrks");
+  TTree *cnttree = CreateTree("cnttrks");
   FillTree(vtxevents, vtxtree);
   FillTree(cntevents, cnttree);
 

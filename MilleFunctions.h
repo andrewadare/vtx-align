@@ -31,6 +31,48 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
   int nzgp = zgpars.size();
   int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
+  /////////////// EXPERIMENTAL - try adding BC to local fit /////////////////
+  if (bc)
+  {
+    TVectorD bcvec(2);
+    bcvec(0) = 0.;
+    bcvec(1) = 0.;
+    // bcvec(0) = bc->GetX()[arm];
+    // bcvec(1) = bc->GetY()[arm];
+    float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
+    TVectorD ipvec = IPVec(trk, bcvec); // Impact parameter vector
+    TVectorD trknormal(2);
+    trknormal(0) = cos(trk.phi0 + TMath::PiOver2());
+    trknormal(1) = sin(trk.phi0 + TMath::PiOver2());
+    float dca = trknormal * ipvec;
+
+    // float dy = bcvec(1) - ipvec(1);
+    // float dy = ipvec(1);
+    // float dca = (dy)/TMath::Abs(dy) * TMath::Sqrt(ipvec*ipvec);
+    // int f = int(-dca/trk.vy);
+
+    // // debug----------------
+    // static int counter = 0;
+    // if (counter == 0)
+    //   Printf("bc = (%.3g,%.3g)", bcvec(0), bcvec(1));
+    // if (counter < 100)
+    //   Printf("DCA %10.3g -vy %10.3g sigma %10.3g %d",
+    //          dca, -trk.vy, sigbc, f);
+    // ++counter;
+    // // debug----------------
+
+    float distance = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
+    float sderlc[4] = {1.0,   distance, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
+    float zderlc[4] = {0.0, 0.0, 1.0,   distance}; // dz(r)/dz0, dz(r)/dslope
+
+    float ld[1] = {1};
+    float gd[1] = {0}; // placeholder - not used
+    int nolabels[1] = {0}; // placeholder - not used
+    m.mille(4, sderlc, 0, gd, nolabels, dca, sigbc);
+    // TODO include z also
+  }
+  ///////////////////////////////////////////////////////////////////////////
+
   for (int j=0; j<trk.nhits; j++)
   {
     SvxGeoHit hit = trk.GetHit(j);
@@ -61,49 +103,29 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 4*hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 4*hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = /*4**/hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = /*4**/hit.zsigma * ClusterZResolution(hit.layer);
 
     if (false)
       Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
              hit.ds, sigs, hit.dz, sigz);
 
-    // /////////////// EXPERIMENTAL - try adding BC to local fit /////////////////
-    // if (bc && j==0)
-    // {
-    //   TVectorD bcvec(2);
-    //   bcvec(0) = 0.;
-    //   bcvec(1) = 0.;
-    //   // bcvec(0) = bc->GetX()[arm];
-    //   // bcvec(1) = bc->GetY()[arm];
-    //   float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
-    //   TVectorD ipvec = IPVec(trk, bcvec); // Impact parameter vector
-
-    //   float dy = bcvec(1) - ipvec(1);
-    //   float dca = (dy)/TMath::Abs(dy) * TMath::Sqrt(ipvec*ipvec);
-    //   int f = int(-dca/trk.vy);
-    //   static int counter = 0;
-    //   if (counter == 0)
-    //     Printf("bc = (%.3g,%.3g)", bcvec(0), bcvec(1));
-    //   if (counter < 100)
-    //     Printf("DCA %10.3g -vy %10.3g sigma %10.3g %d",
-    //            dca, -trk.vy, sigbc, f);
-    //   ++counter;
-
-    //   float ld[1] = {1};
-    //   float gd[1] = {0}; // placeholder - not used
-    //   int nolabels[1] = {0}; // placeholder - not used
-    //   m.mille(1, ld, 0, gd, nolabels, dca, sigbc);
-    // }
-    // ///////////////////////////////////////////////////////////////////////////
-
     // Local derivatives
     // Split into two independent fits per track:
     // 1. in the r-z plane: z = z0 + slope*r
     // 2. in the x-y plane: y' = y0' + slope*r (where y' \perp r)
-    float r = hit.x*hit.x + hit.y*hit.y;
-    float sderlc[4] = {1.0,   r, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
-    float zderlc[4] = {0.0, 0.0, 1.0,   r}; // dz(r)/dz0, dz(r)/dslope
+    // r is an approximation.
+    // TODO: the exact r would be hit position dot pt unit vector (cos phi, sin phi).
+
+    float r = sqrt(hit.x*hit.x + hit.y*hit.y);
+    float distance = hit.x*cos(trk.phi0) + hit.y*sin(trk.phi0);
+    float sderlc[4] = {1.0,   distance, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
+    float zderlc[4] = {0.0, 0.0, 1.0,   distance}; // dz(r)/dz0, dz(r)/dslope
+
+    Printf("r %5.3f distance %5.3f | x, y, phi %5.3f, %5.3f, %5.3f", 
+           r, distance, hit.x, hit.y, trk.phi0);
+
+    assert(abs(distance-r) < 0.1*r);
 
     m.mille(4, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
     m.mille(4, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
