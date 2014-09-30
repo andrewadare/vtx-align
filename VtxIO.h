@@ -11,9 +11,11 @@
 using namespace std;
 
 void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax = -1);
-void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, multimap<int, int> &eventsync, int nmax = -1,
+void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks,
+                       multimap<int, int> &eventsync, int nmax = -1,
                        TString opt = "");
-void GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts, map<int, int> &eventsync, int nmax = -1,
+void GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts,
+                           map<int, int> &eventsync, int nmax = -1,
                            TString opt = "");
 void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
                                  geoEvents &segevts, geoEvents &cntevts,//<-- output
@@ -175,8 +177,8 @@ GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks,
 }
 
 void
-GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events, map<int, int> &eventsync,
-                      int nmax, TString opt)
+GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events,
+                      map<int, int> &eventsync, int nmax, TString opt)
 {
   // This function reads hit ntuple variables of the form
   // "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:x_size:z_size:res_z:res_s:trkid:event"
@@ -287,7 +289,6 @@ void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
   //index in both geoEvents corresponds to the same
   //event
 
-
   //need a pair of temporary geoEvent objects for reading complete entries
   geoEvents tmpsegevts;
   geoEvents tmpcntevts;
@@ -316,9 +317,59 @@ void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
   }
 
   return;
-
 }
 
+struct VtxTrackVars
+{
+  VtxTrackVars();
+  ~VtxTrackVars() {};
+
+  Int_t   event;
+  Int_t   NTracks;
+  Int_t   trkid;
+  Int_t   NClus;
+  Int_t   layer[8];
+  Int_t   ladder[8];
+  Int_t   sensor[8];
+  Float_t trkphi;
+  Float_t trktheta;
+  Float_t lx[8];
+  Float_t ly[8];
+  Float_t lz[8];
+  Float_t gx[8];
+  Float_t gy[8];
+  Float_t gz[8];
+  Float_t x_size[8];
+  Float_t z_size[8];
+  Float_t res_z[8];
+  Float_t res_s[8];
+};
+
+VtxTrackVars::VtxTrackVars() :
+  event(0),
+  NTracks(0),
+  trkid(0),
+  NClus(0),
+  trkphi(0.),
+  trktheta(0.)
+{
+  for (int i=0; i<8; ++i)
+  {
+    layer[i] = 0;
+    ladder[i] = 0;
+    sensor[i] = 0;
+    lx[i] = 0;
+    ly[i] = 0;
+    lz[i] = 0;
+    gx[i] = 0;
+    gy[i] = 0;
+    gz[i] = 0;
+    x_size[i] = 0;
+    z_size[i] = 0;
+    res_z[i] = 0;
+    res_s[i] = 0;
+  }
+}
 
 TTree *
 CreateTree(const char *name)
@@ -331,47 +382,69 @@ CreateTree(const char *name)
   // Declare the tree branch variables
   // is there a way to get around this,
   // since they aren't being used here?
-  int event;
-  int NTracks;
-  int trkid;
-  float trkphi;
-  float trktheta;
-  int NClus;
-  int layer[8];
-  int ladder[8];
-  int sensor[8];
-  float lx[8];
-  float ly[8];
-  float lz[8];
-  float gx[8];
-  float gy[8];
-  float gz[8];
-  float x_size[8];
-  float z_size[8];
-  float res_z[8];
-  float res_s[8];
+  // int event;
+  // int NTracks;
+  // int trkid;
+  // float trkphi;
+  // float trktheta;
+  // int NClus;
+  // int layer[8];
+  // int ladder[8];
+  // int sensor[8];
+  // float lx[8];
+  // float ly[8];
+  // float lz[8];
+  // float gx[8];
+  // float gy[8];
+  // float gz[8];
+  // float x_size[8];
+  // float z_size[8];
+  // float res_z[8];
+  // float res_s[8];
 
   TTree *t = new TTree(name, "Track based TTree for use in VTX Alignment");
-  t->Branch("event", &event, "event/I");
-  t->Branch("NTracks", &NTracks, "NTracks/I");
-  t->Branch("trkid", &trkid, "trkid/I");
-  t->Branch("trkphi", &trkphi, "trkphi/F");
-  t->Branch("trktheta", &trktheta, "trktheta/F");
-  t->Branch("NClus", &NClus, "NClus/I");
-  t->Branch("layer", &layer, "layer[NClus]/I");
-  t->Branch("ladder", &ladder, "ladder[NClus]/I");
-  t->Branch("sensor", &sensor, "sensor[NClus]/I");
-  t->Branch("lx", &lx, "lx[NClus]/F");
-  t->Branch("ly", &ly, "ly[NClus]/F");
-  t->Branch("lz", &lz, "lz[NClus]/F");
-  t->Branch("gx", &gx, "gx[NClus]/F");
-  t->Branch("gy", &gy, "gy[NClus]/F");
-  t->Branch("gz", &gz, "gz[NClus]/F");
-  t->Branch("x_size", &x_size, "x_size[NClus]/F");
-  t->Branch("z_size", &z_size, "z_size[NClus]/F");
-  t->Branch("res_z", &res_z, "res_z[NClus]/F");
-  t->Branch("res_s", &res_s, "res_s[NClus]/F");
+  VtxTrackVars vtv;
 
+  t->Branch("event"   , &vtv.event   , "event/I");
+  t->Branch("NTracks" , &vtv.NTracks , "NTracks/I");
+  t->Branch("trkid"   , &vtv.trkid   , "trkid/I");
+  t->Branch("NClus"   , &vtv.NClus   , "NClus/I");
+  t->Branch("layer"   , &vtv.layer   , "layer[NClus]/I");
+  t->Branch("ladder"  , &vtv.ladder  , "ladder[NClus]/I");
+  t->Branch("sensor"  , &vtv.sensor  , "sensor[NClus]/I");
+
+  t->Branch("trkphi"  , &vtv.trkphi  , "trkphi[NClus]/F");
+  t->Branch("trktheta", &vtv.trktheta, "trktheta[NClus]/F");
+  t->Branch("lx"      , &vtv.lx      , "lx[NClus]/F");
+  t->Branch("ly"      , &vtv.ly      , "ly[NClus]/F");
+  t->Branch("lz"      , &vtv.lz      , "lz[NClus]/F");
+  t->Branch("gx"      , &vtv.gx      , "gx[NClus]/F");
+  t->Branch("gy"      , &vtv.gy      , "gy[NClus]/F");
+  t->Branch("gz"      , &vtv.gz      , "gz[NClus]/F");
+  t->Branch("x_size"  , &vtv.x_size  , "x_size[NClus]/F");
+  t->Branch("z_size"  , &vtv.z_size  , "z_size[NClus]/F");
+  t->Branch("res_z"   , &vtv.res_z   , "res_z[NClus]/F");
+  t->Branch("res_s"   , &vtv.res_s   , "res_s[NClus]/F");
+
+  // t->Branch("event", &event, "event/I");
+  // t->Branch("NTracks", &NTracks, "NTracks/I");
+  // t->Branch("trkid", &trkid, "trkid/I");
+  // t->Branch("trkphi", &trkphi, "trkphi/F");
+  // t->Branch("trktheta", &trktheta, "trktheta/F");
+  // t->Branch("NClus", &NClus, "NClus/I");
+  // t->Branch("layer", &layer, "layer[NClus]/I");
+  // t->Branch("ladder", &ladder, "ladder[NClus]/I");
+  // t->Branch("sensor", &sensor, "sensor[NClus]/I");
+  // t->Branch("lx", &lx, "lx[NClus]/F");
+  // t->Branch("ly", &ly, "ly[NClus]/F");
+  // t->Branch("lz", &lz, "lz[NClus]/F");
+  // t->Branch("gx", &gx, "gx[NClus]/F");
+  // t->Branch("gy", &gy, "gy[NClus]/F");
+  // t->Branch("gz", &gz, "gz[NClus]/F");
+  // t->Branch("x_size", &x_size, "x_size[NClus]/F");
+  // t->Branch("z_size", &z_size, "z_size[NClus]/F");
+  // t->Branch("res_z", &res_z, "res_z[NClus]/F");
+  // t->Branch("res_s", &res_s, "res_s[NClus]/F");
 
   return t;
 
@@ -546,47 +619,26 @@ FillTree(geoEvents &events, TTree *t)
   // See CreateTree() for tree structure.
   assert(t);
 
-  // Declare the tree branch variables
-  int event;
-  int NTracks;
-  int trkid;
-  float trkphi;
-  float trktheta;
-  int NClus;
-  int layer[8];
-  int ladder[8];
-  int sensor[8];
-  float lx[8];
-  float ly[8];
-  float lz[8];
-  float gx[8];
-  float gy[8];
-  float gz[8];
-  float x_size[8];
-  float z_size[8];
-  float res_z[8];
-  float res_s[8];
-
-  // Set the branch addresses
-  t->SetBranchAddress("event", &event);
-  t->SetBranchAddress("NTracks", &NTracks);
-  t->SetBranchAddress("trkid", &trkid);
-  t->SetBranchAddress("trkphi", &trkphi);
-  t->SetBranchAddress("trktheta", &trktheta);
-  t->SetBranchAddress("NClus", &NClus);
-  t->SetBranchAddress("layer", &layer);
-  t->SetBranchAddress("ladder", &ladder);
-  t->SetBranchAddress("sensor", &sensor);
-  t->SetBranchAddress("lx", &lx);
-  t->SetBranchAddress("ly", &ly);
-  t->SetBranchAddress("lz", &lz);
-  t->SetBranchAddress("gx", &gx);
-  t->SetBranchAddress("gy", &gy);
-  t->SetBranchAddress("gz", &gz);
-  t->SetBranchAddress("x_size", &x_size);
-  t->SetBranchAddress("z_size", &z_size);
-  t->SetBranchAddress("res_z", &res_z);
-  t->SetBranchAddress("res_s", &res_s);
+  VtxTrackVars vtv;
+  t->SetBranchAddress("event",    &vtv.event);
+  t->SetBranchAddress("NTracks",  &vtv.NTracks);
+  t->SetBranchAddress("trkid",    &vtv.trkid);
+  t->SetBranchAddress("trkphi",   &vtv.trkphi);
+  t->SetBranchAddress("trktheta", &vtv.trktheta);
+  t->SetBranchAddress("NClus",    &vtv.NClus);
+  t->SetBranchAddress("layer",    &vtv.layer);
+  t->SetBranchAddress("ladder",   &vtv.ladder);
+  t->SetBranchAddress("sensor",   &vtv.sensor);
+  t->SetBranchAddress("lx",       &vtv.lx);
+  t->SetBranchAddress("ly",       &vtv.ly);
+  t->SetBranchAddress("lz",       &vtv.lz);
+  t->SetBranchAddress("gx",       &vtv.gx);
+  t->SetBranchAddress("gy",       &vtv.gy);
+  t->SetBranchAddress("gz",       &vtv.gz);
+  t->SetBranchAddress("x_size",   &vtv.x_size);
+  t->SetBranchAddress("z_size",   &vtv.z_size);
+  t->SetBranchAddress("res_z",    &vtv.res_z);
+  t->SetBranchAddress("res_s",    &vtv.res_s);
 
   for (unsigned int ev = 0; ev < events.size(); ev++)
   {
@@ -595,30 +647,30 @@ FillTree(geoEvents &events, TTree *t)
 
       SvxGeoTrack trk = events[ev][itrk];
 
-      event = (int)ev;
-      NTracks = (int)events[ev].size();
-      trkid = (int)itrk;
-      trkphi = trk.phi0;
-      trktheta = trk.the0;
-      NClus = trk.nhits;
+      vtv.event = (int)ev;
+      vtv.NTracks = (int)events[ev].size();
+      vtv.trkid = (int)itrk;
+      vtv.trkphi = trk.phi0;
+      vtv.trktheta = trk.the0;
+      vtv.NClus = trk.nhits;
 
       for (int ihit = 0; ihit < trk.nhits; ihit++)
       {
         SvxGeoHit hit = trk.GetHit(ihit);
 
-        layer[ihit] = hit.layer;
-        ladder[ihit] = hit.ladder;
-        sensor[ihit] = hit.sensor;
-        lx[ihit] = hit.xs;
-        ly[ihit] = hit.ys;
-        lz[ihit] = hit.zs;
-        gx[ihit] = hit.x;
-        gy[ihit] = hit.y;
-        gz[ihit] = hit.z;
-        x_size[ihit] = hit.xsigma;
-        z_size[ihit] = hit.zsigma;
-        res_z[ihit] = hit.dz;
-        res_s[ihit] = hit.ds;
+        vtv.layer[ihit] = hit.layer;
+        vtv.ladder[ihit] = hit.ladder;
+        vtv.sensor[ihit] = hit.sensor;
+        vtv.lx[ihit] = hit.xs;
+        vtv.ly[ihit] = hit.ys;
+        vtv.lz[ihit] = hit.zs;
+        vtv.gx[ihit] = hit.x;
+        vtv.gy[ihit] = hit.y;
+        vtv.gz[ihit] = hit.z;
+        vtv.x_size[ihit] = hit.xsigma;
+        vtv.z_size[ihit] = hit.zsigma;
+        vtv.res_z[ihit] = hit.dz;
+        vtv.res_s[ihit] = hit.ds;
       }
 
       t->Fill();
@@ -636,48 +688,68 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
   assert(t);
   assert(geo);
 
-  // Declare the tree branch variables
-  int event;
-  int NTracks;
-  int trkid;
-  float trkphi;
-  float trktheta;
-  int NClus;
-  int layer[8];
-  int ladder[8];
-  int sensor[8];
-  float lx[8];
-  float ly[8];
-  float lz[8];
-  float gx[8];
-  float gy[8];
-  float gz[8];
-  float x_size[8];
-  float z_size[8];
-  float res_z[8];
-  float res_s[8];
+  // // Declare the tree branch variables
+  // int event;
+  // int NTracks;
+  // int trkid;
+  // float trkphi;
+  // float trktheta;
+  // int NClus;
+  // int layer[8];
+  // int ladder[8];
+  // int sensor[8];
+  // float lx[8];
+  // float ly[8];
+  // float lz[8];
+  // float gx[8];
+  // float gy[8];
+  // float gz[8];
+  // float x_size[8];
+  // float z_size[8];
+  // float res_z[8];
+  // float res_s[8];
 
-  // Set the branch addresses
-  t->SetBranchAddress("event", &event);
-  t->SetBranchAddress("NTracks", &NTracks);
-  t->SetBranchAddress("trkid", &trkid);
-  t->SetBranchAddress("trkphi", &trkphi);
-  t->SetBranchAddress("trktheta", &trktheta);
-  t->SetBranchAddress("NClus", &NClus);
-  t->SetBranchAddress("layer", &layer);
-  t->SetBranchAddress("ladder", &ladder);
-  t->SetBranchAddress("sensor", &sensor);
-  t->SetBranchAddress("lx", &lx);
-  t->SetBranchAddress("ly", &ly);
-  t->SetBranchAddress("lz", &lz);
-  t->SetBranchAddress("gx", &gx);
-  t->SetBranchAddress("gy", &gy);
-  t->SetBranchAddress("gz", &gz);
-  t->SetBranchAddress("x_size", &x_size);
-  t->SetBranchAddress("z_size", &z_size);
-  t->SetBranchAddress("res_z", &res_z);
-  t->SetBranchAddress("res_s", &res_s);
+  // // Set the branch addresses
+  // t->SetBranchAddress("event", &event);
+  // t->SetBranchAddress("NTracks", &NTracks);
+  // t->SetBranchAddress("trkid", &trkid);
+  // t->SetBranchAddress("trkphi", &trkphi);
+  // t->SetBranchAddress("trktheta", &trktheta);
+  // t->SetBranchAddress("NClus", &NClus);
+  // t->SetBranchAddress("layer", &layer);
+  // t->SetBranchAddress("ladder", &ladder);
+  // t->SetBranchAddress("sensor", &sensor);
+  // t->SetBranchAddress("lx", &lx);
+  // t->SetBranchAddress("ly", &ly);
+  // t->SetBranchAddress("lz", &lz);
+  // t->SetBranchAddress("gx", &gx);
+  // t->SetBranchAddress("gy", &gy);
+  // t->SetBranchAddress("gz", &gz);
+  // t->SetBranchAddress("x_size", &x_size);
+  // t->SetBranchAddress("z_size", &z_size);
+  // t->SetBranchAddress("res_z", &res_z);
+  // t->SetBranchAddress("res_s", &res_s);
 
+  VtxTrackVars vtv;
+  t->SetBranchAddress("event",    &vtv.event);
+  t->SetBranchAddress("NTracks",  &vtv.NTracks);
+  t->SetBranchAddress("trkid",    &vtv.trkid);
+  t->SetBranchAddress("trkphi",   &vtv.trkphi);
+  t->SetBranchAddress("trktheta", &vtv.trktheta);
+  t->SetBranchAddress("NClus",    &vtv.NClus);
+  t->SetBranchAddress("layer",    &vtv.layer);
+  t->SetBranchAddress("ladder",   &vtv.ladder);
+  t->SetBranchAddress("sensor",   &vtv.sensor);
+  t->SetBranchAddress("lx",       &vtv.lx);
+  t->SetBranchAddress("ly",       &vtv.ly);
+  t->SetBranchAddress("lz",       &vtv.lz);
+  t->SetBranchAddress("gx",       &vtv.gx);
+  t->SetBranchAddress("gy",       &vtv.gy);
+  t->SetBranchAddress("gz",       &vtv.gz);
+  t->SetBranchAddress("x_size",   &vtv.x_size);
+  t->SetBranchAddress("z_size",   &vtv.z_size);
+  t->SetBranchAddress("res_z",    &vtv.res_z);
+  t->SetBranchAddress("res_s",    &vtv.res_s);
 
   long nentries = t->GetEntries();
   int prevev  = -1;
@@ -690,7 +762,7 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
   {
     t->GetEntry(i);
 
-    if (event != prevev) // New event
+    if (vtv.event != prevev) // New event
     {
       if (nmax > 0 && (int)evts.size() == nmax)
       {
@@ -702,37 +774,37 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
       geoTracks tracks;
       //if we know the number of tracks in the event
       //reserve the space to avoid reallocating the vector
-      if (NTracks >= 0)
-        tracks.reserve(NTracks);
+      if (vtv.NTracks >= 0)
+        tracks.reserve(vtv.NTracks);
 
       evts.push_back(tracks);
     }
 
     SvxGeoTrack trk;
-    trk.phi0 = trkphi;
-    trk.the0 = trktheta;
-    trk.nhits = NClus;
+    trk.phi0 =  vtv.trkphi;
+    trk.the0 =  vtv.trktheta;
+    trk.nhits = vtv.NClus;
 
     //save some reallocation by knowing the number of clusters
-    trk.hits.reserve(NClus);
+    trk.hits.reserve(vtv.NClus);
 
-    for (int j = 0; j < NClus; j++)
+    for (int j = 0; j < vtv.NClus; j++)
     {
       SvxGeoHit hit;
-      hit.layer  = layer[j];
-      hit.ladder = ladder[j];
-      hit.sensor = sensor[j];
-      hit.xs     = lx[j];
-      hit.ys     = ly[j];
-      hit.zs     = lz[j];
-      hit.x      = gx[j];
-      hit.y      = gy[j];
-      hit.z      = gz[j];
-      hit.xsigma = x_size[j]; // N.B. this is not sigma!
-      hit.zsigma = z_size[j]; // N.B. this is not sigma!
-      hit.dz     = res_z[j];
-      hit.ds     = res_s[j];
-      hit.trkid  = trkid;
+      hit.layer  = vtv.layer[j];
+      hit.ladder = vtv.ladder[j];
+      hit.sensor = vtv.sensor[j];
+      hit.xs     = vtv.lx[j];
+      hit.ys     = vtv.ly[j];
+      hit.zs     = vtv.lz[j];
+      hit.x      = vtv.gx[j];
+      hit.y      = vtv.gy[j];
+      hit.z      = vtv.gz[j];
+      hit.xsigma = vtv.x_size[j]; // N.B. this is not sigma!
+      hit.zsigma = vtv.z_size[j]; // N.B. this is not sigma!
+      hit.dz     = vtv.res_z[j];
+      hit.ds     = vtv.res_s[j];
+      hit.trkid  = vtv.trkid;
       hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
 
       // Overwrite x,y,z with local-->global transformation on xs,ys,zs
@@ -745,7 +817,7 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
     evts.back().push_back(trk);
     ntracks++;
 
-    prevev = event;
+    prevev = vtv.event;
   }
 
   Printf("%d events imported (%d tracks, %d hits).",
@@ -753,6 +825,132 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
 
   return;
 }
+
+// void
+// GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
+//                   TString /*opt*/)
+// {
+//   // Get events from TTree and put information in geoEvents
+//   assert(t);
+//   assert(geo);
+
+//   // Declare the tree branch variables
+//   int event;
+//   int NTracks;
+//   int trkid;
+//   float trkphi;
+//   float trktheta;
+//   int NClus;
+//   int layer[8];
+//   int ladder[8];
+//   int sensor[8];
+//   float lx[8];
+//   float ly[8];
+//   float lz[8];
+//   float gx[8];
+//   float gy[8];
+//   float gz[8];
+//   float x_size[8];
+//   float z_size[8];
+//   float res_z[8];
+//   float res_s[8];
+
+//   // Set the branch addresses
+//   t->SetBranchAddress("event", &event);
+//   t->SetBranchAddress("NTracks", &NTracks);
+//   t->SetBranchAddress("trkid", &trkid);
+//   t->SetBranchAddress("trkphi", &trkphi);
+//   t->SetBranchAddress("trktheta", &trktheta);
+//   t->SetBranchAddress("NClus", &NClus);
+//   t->SetBranchAddress("layer", &layer);
+//   t->SetBranchAddress("ladder", &ladder);
+//   t->SetBranchAddress("sensor", &sensor);
+//   t->SetBranchAddress("lx", &lx);
+//   t->SetBranchAddress("ly", &ly);
+//   t->SetBranchAddress("lz", &lz);
+//   t->SetBranchAddress("gx", &gx);
+//   t->SetBranchAddress("gy", &gy);
+//   t->SetBranchAddress("gz", &gz);
+//   t->SetBranchAddress("x_size", &x_size);
+//   t->SetBranchAddress("z_size", &z_size);
+//   t->SetBranchAddress("res_z", &res_z);
+//   t->SetBranchAddress("res_s", &res_s);
+
+
+//   long nentries = t->GetEntries();
+//   int prevev  = -1;
+//   int ntracks = 0;
+//   int nhits   = 0;
+
+
+//   Printf("Reading events from Tree (%d available hits)...", (int)nentries);
+//   for (int i = 0; i < nentries; i++)
+//   {
+//     t->GetEntry(i);
+
+//     if (event != prevev) // New event
+//     {
+//       if (nmax > 0 && (int)evts.size() == nmax)
+//       {
+//         Printf("%d events imported (%d tracks, %d hits).",
+//                (int)evts.size(), ntracks, nhits);
+//         return;
+//       }
+
+//       geoTracks tracks;
+//       //if we know the number of tracks in the event
+//       //reserve the space to avoid reallocating the vector
+//       if (NTracks >= 0)
+//         tracks.reserve(NTracks);
+
+//       evts.push_back(tracks);
+//     }
+
+//     SvxGeoTrack trk;
+//     trk.phi0 = trkphi;
+//     trk.the0 = trktheta;
+//     trk.nhits = NClus;
+
+//     //save some reallocation by knowing the number of clusters
+//     trk.hits.reserve(NClus);
+
+//     for (int j = 0; j < NClus; j++)
+//     {
+//       SvxGeoHit hit;
+//       hit.layer  = layer[j];
+//       hit.ladder = ladder[j];
+//       hit.sensor = sensor[j];
+//       hit.xs     = lx[j];
+//       hit.ys     = ly[j];
+//       hit.zs     = lz[j];
+//       hit.x      = gx[j];
+//       hit.y      = gy[j];
+//       hit.z      = gz[j];
+//       hit.xsigma = x_size[j]; // N.B. this is not sigma!
+//       hit.zsigma = z_size[j]; // N.B. this is not sigma!
+//       hit.dz     = res_z[j];
+//       hit.ds     = res_s[j];
+//       hit.trkid  = trkid;
+//       hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
+
+//       // Overwrite x,y,z with local-->global transformation on xs,ys,zs
+//       hit.Update();
+
+//       trk.hits.push_back(hit);
+//       nhits++;
+//     }
+
+//     evts.back().push_back(trk);
+//     ntracks++;
+
+//     prevev = event;
+//   }
+
+//   Printf("%d events imported (%d tracks, %d hits).",
+//          (int)evts.size(), ntracks, nhits);
+
+//   return;
+// }
 
 
 
@@ -931,7 +1129,7 @@ GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[])
   }
 
   Info("", "Reading offsets from %s...", configFile);
-  
+
   for (string line; getline(fin, line);)
   {
     if (line.find("east-to-west") != string::npos)
