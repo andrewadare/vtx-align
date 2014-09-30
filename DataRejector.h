@@ -7,6 +7,8 @@
 #include "DcaFunctions.h"
 #include "VtxIO.h"
 
+#include "TRandom3.h"
+
 void FilterData(geoEvents &events,
                 double vertexprobmin = 0.01,
                 double vertexprobmax = 0.99,
@@ -27,7 +29,8 @@ void FilterData(geoEvents &segevents,
                 double maxres_z = 0.1,
                 int maxclus = 10,
                 int minmult = 10,
-                int nhitsmin = 3);
+                int nhitsmin = 3,
+                float frac4hit = -1);
 
 bool RejectOutlierVtx(geoTracks &trks, int nq,
                       double *qxe, double *qye,
@@ -40,6 +43,11 @@ bool RejectOutlierTrk(SvxGeoTrack trk, TVectorD bce, TVectorD bcw,
                       float maxres_z = 0.1,
                       int maxclus = 10,
                       int nhitsmin = 3);
+
+void Fix4HitFrac(geoEvents &segeventsout, geoEvents &cnteventsout,
+                 geoEvents &segeventsin, geoEvents &cnteventsin,
+                 float frac = 0.5);
+
 
 void
 FilterData(geoEvents &events,
@@ -168,7 +176,8 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
                 double vertexprobmin, double vertexprobmax ,
                 double maxdca,
                 double maxres_s, double maxres_z,
-                int maxclus, int minmult, int nhitsmin)
+                int maxclus, int minmult, int nhitsmin,
+                float frac4hit)
 {
 
   // This function filters data, keeping
@@ -228,6 +237,10 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
   int ncntin = 0;
   int ncntout = 0;
 
+  //temporary containers to hold accepted tracks
+  geoEvents accsegevents;
+  geoEvents acccntevents;
+
   for (unsigned int ev = 0; ev < segevents.size(); ev++)
   {
     nsegin += segevents.at(ev).size();
@@ -235,10 +248,10 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
 
     bool rejectev = RejectOutlierVtx(segevents.at(ev),
                                      nq, qxe, qye, qxw, qyw, minmult);
-    //bool rejectev = false;
 
     if (!rejectev)
     {
+      geoTracks tmptrks;
       //loop over segments and reject outliers
       for (unsigned int itrk = 0; itrk < segevents.at(ev).size(); itrk++)
       {
@@ -248,23 +261,45 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
                                           maxclus, nhitsmin);
         if (!rejecttrk)
         {
-          FillTree(segevents[ev][itrk], segtree, ev);
-          nsegout++;
+          tmptrks.push_back(segevents[ev][itrk]);
         }
       }
 
-      //accept all cnt tracks
-      FillTree(cntevents.at(ev), cnttree, ev);
-      ncntout += cntevents.at(ev).size();
+      if (tmptrks.size() > 0)
+      {
+        accsegevents.push_back(tmptrks);
+        acccntevents.push_back(cntevents[ev]);
+      }
     }
   }
 
-  double segRejectFrac = 1.0 - (float)nsegout / (float)nsegin;
+  //if desired, filter further to get a given percentage of 4hit segments
+  if (frac4hit > 0)
+  {
+
+    geoEvents filtsegevents;
+    geoEvents filtcntevents;
+
+    Fix4HitFrac(filtsegevents, filtcntevents,
+                accsegevents, acccntevents,
+                frac4hit);
+
+    FillTree(filtsegevents, segtree);
+    FillTree(filtcntevents, cnttree);
+  }
+  else
+  {
+    //write out all the desired tracks
+    FillTree(accsegevents, segtree);
+    FillTree(acccntevents, cnttree);
+  }
+
+  double segRejectFrac = 1.0 - (float)segtree->GetEntries() / (float)nsegin;
   Printf("%.3f%% of segments rejected by beam center DCA cut of %.0f um"
          " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
          100 * segRejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
 
-  double cntRejectFrac = 1.0 - (float)ncntout / (float)ncntin;
+  double cntRejectFrac = 1.0 - (float)cnttree->GetEntries() / (float)ncntin;
   Printf("%.3f%% of svxcnt rejected by beam center DCA cut of %.0f um"
          " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
          100 * cntRejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
@@ -353,6 +388,102 @@ RejectOutlierTrk(SvxGeoTrack trk, TVectorD bce, TVectorD bcw,
   }
 
   return false;
+}
+
+
+void Fix4HitFrac(geoEvents &segeventsout, geoEvents &cnteventsout,
+                 geoEvents &segeventsin, geoEvents &cnteventsin,
+                 float frac)
+{
+  // Reject 3 hit tracks randomely until they make up the desired
+  // fraction of overall tracks
+
+  // check if we need to keep cnt tracks in sync
+  bool synccnt = false;
+  if (cnteventsin.size() > 0)
+    synccnt = true;
+
+
+  // count the number of 3/4 hit tracks
+  int N3hit = 0;
+  int N4hit = 0;
+  for (unsigned int i = 0; i < segeventsin.size(); i++)
+  {
+    for (unsigned int j = 0; j < segeventsin.at(i).size(); j++)
+    {
+      if (segeventsin[i][j].nhits == 3)
+        N3hit++;
+      if (segeventsin[i][j].nhits == 4)
+        N4hit++;
+    }
+  }
+  Printf("Input segments have %.2f%% 4 hit tracks",
+         (float)N4hit / (float)(N4hit + N3hit) * 100.);
+
+  // calculate how many 3 hit tracks we want based on the number of 4 hits
+  // n3 = (1 - frac) / frac * n4
+  int N3hit_desired = N4hit * ((1 - frac) / frac);
+
+  if (N3hit_desired > N3hit)
+  {
+    Info("Fix4HitFrac() in DataRejector.h",
+         "Fraction of 4 hit track exceeds expectations.");
+    segeventsout = segeventsin;
+    cnteventsout = cnteventsin;
+    return;
+  }
+
+  //segeventsout = segeventsin;
+  //cnteventsout = cnteventsin;
+
+
+  float keepfrac = (float)N3hit_desired / (float)N3hit;
+
+  TRandom3 rnd;
+
+  int N3hit_out = 0;
+  int N4hit_out = 0;
+  for (unsigned int i = 0; i < segeventsin.size(); i++)
+  {
+    geoTracks tmp;
+
+    for (unsigned int j = 0; j < segeventsin.at(i).size(); j++)
+    {
+
+      if (segeventsin[i][j].nhits == 3)
+      {
+        if (rnd.Uniform(0, 1) < keepfrac)
+        {
+          tmp.push_back(segeventsin[i][j]);
+          N3hit_out++;
+        }
+      }
+      else
+      {
+        N4hit_out++;
+      }
+
+    }
+
+    if (tmp.size() > 0)
+    {
+      segeventsout.push_back(tmp);
+      if (synccnt)
+        cnteventsout.push_back(cnteventsin[i]);
+    }
+  }
+
+
+  if (!synccnt)
+    cnteventsout = cnteventsin;
+
+  Printf("Output segments have %.2f%% 4 hit tracks",
+         (float)N4hit_out / (float)(N4hit_out + N3hit_out) * 100.);
+
+
+  return;
+
+
 }
 
 
