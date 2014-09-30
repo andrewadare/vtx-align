@@ -32,6 +32,7 @@ void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
 vecs SplitLine(const string &line, const char *delim = " ");
 
 int GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[]);
+string GetGeomFromConfig(const char *configFile);
 
 void
 GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
@@ -931,15 +932,15 @@ GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[])
   }
 
   Info("", "Reading offsets from %s...", configFile);
-  
+
   for (string line; getline(fin, line);)
   {
     if (line.find("east-to-west") != string::npos)
     {
       vecs words = SplitLine(line);
       assert(words.size() == 4);
-      for (int i=0; i<3; ++i)
-        e2w[i] = atof(words[i+1].c_str());
+      for (int i = 0; i < 3; ++i)
+        e2w[i] = atof(words[i + 1].c_str());
 
       Printf("E-W offset: %f %f %f", e2w[0], e2w[1], e2w[2]);
     }
@@ -947,14 +948,47 @@ GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[])
     {
       vecs words = SplitLine(line);
       assert(words.size() == 4);
-      for (int i=0; i<3; ++i)
-        v2c[i] = atof(words[i+1].c_str());
+      for (int i = 0; i < 3; ++i)
+        v2c[i] = atof(words[i + 1].c_str());
 
       Printf("VTX-CNT offset: %f %f %f", v2c[0], v2c[1], v2c[2]);
     }
   }
 
   return 0;
+}
+
+string
+GetGeomFromConfig(const char *configFile)
+{
+  // Get the geometry file name from a config file
+  assert(configFile);
+  ifstream fin;
+  fin.open(configFile);
+
+  if (!fin)
+  {
+    Error("GetGeomFromConfig() in VtxIO.h", "Problem opening %s",
+          configFile);
+    return "";
+  }
+
+  Info("", "Reading geom file from %s...", configFile);
+
+  for (string line; getline(fin, line);)
+  {
+    if (line.find("geomfile") != string::npos)
+    {
+      vecs words = SplitLine(line);
+      assert(words.size() == 2);
+      return words[1];
+    }
+  }
+
+  Error("GetGeomFromConfig() in VtxIO.h",
+        "Unable to find geomfile in %s", configFile);
+
+  return "";
 }
 
 vecs
