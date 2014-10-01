@@ -2,12 +2,6 @@ TODO items for VTX alignment
 ----------------------------
 
 
-# Fix FillTree() in VtxIO.h #
-** 9/29/2014 **
-
-`FillTree(SvxGeoTrack &gt, TTree *t, int evt)` is suboptimal. It currently sets the branch address of each branch in the tree for each call. I suspect that slows down execution, since it is called for every SvxSegment in `FilterData()`.
-
-
 # Add beamcenter and vertex to tree #
 ** 9/29/2014 **
 
