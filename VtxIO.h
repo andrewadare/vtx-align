@@ -28,14 +28,6 @@ vecs SplitLine(const string &line, const char *delim = " ");
 int GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[]);
 string GetGeomFromConfig(const char *configFile);
 
-
-
-
-
-
-
-
-
 void
 GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events,
                       map<int, int> &eventsync, int nmax, TString opt)
