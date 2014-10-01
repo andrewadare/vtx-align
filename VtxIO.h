@@ -10,10 +10,6 @@
 
 using namespace std;
 
-void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks, int nmax = -1);
-void GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &trks,
-                       multimap<int, int> &eventsync, int nmax = -1,
-                       TString opt = "");
 void GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &evts,
                            map<int, int> &eventsync, int nmax = -1,
                            TString opt = "");
@@ -21,13 +17,9 @@ void GetSyncedEventsFromClusTree(TNtuple *tseg, TNtuple *tcnt,//<-- input
                                  geoEvents &segevts, geoEvents &cntevts,//<-- output
                                  SvxTGeo, int nmax = -1);
 TTree *CreateTree(const char *name);
-//void FillTree(SvxGeoTrack &gt, TTree *t, int evt = -1);
-//void FillTree(geoTracks &trks, TTree *t, int evt = -1);
 void FillTree(geoEvents &events, TTree *t);
 void GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax = -1,
                        TString opt = "");
-void FillNTuple(SvxGeoTrack &gt, TNtuple *ntuple, int event = -1);
-void FillNTuple(geoEvents &events, TNtuple *ntuple);
 int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
                     double regFactor = 1.0, double preSigma = 0.01);
@@ -36,146 +28,13 @@ vecs SplitLine(const string &line, const char *delim = " ");
 int GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[]);
 string GetGeomFromConfig(const char *configFile);
 
-void
-GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks, int nmax)
-{
-  // This function reads hit ntuple variables of the form
-  // "layer:ladder:sensor:xs:ys:zs:x:y:z:xsigma:zsigma:dz:ds:trkid"
-  // into the tracks vector.
 
-  assert(t);
-  assert(geo);
 
-  long nentries = t->GetEntries();
-  int previd = -1;
-  int nhits  = 0;
 
-  cout << "Reading tracks from " << t->GetName()
-       << " (" << nentries << " available hits)..."
-       << flush;
 
-  for (int i = 0; i < nentries; i++)
-  {
-    t->GetEntry(i);
-    int id = t->GetLeaf("trkid")->GetValue();
-    if (id != previd) // New track
-    {
-      if (nmax > 0 && (int)tracks.size() == nmax)
-      {
-        Printf("%d tracks imported (%d hits).",
-               (int)tracks.size(), nhits);
-        return;
-      }
-      SvxGeoTrack t;
-      // Track info is not stored in tree. If it were, it would go here.
-      tracks.push_back(t);
-    }
 
-    SvxGeoHit hit;
-    hit.layer  = t->GetLeaf("layer")->GetValue();
-    hit.ladder = t->GetLeaf("ladder")->GetValue();
-    hit.sensor = t->GetLeaf("sensor")->GetValue();
-    hit.xs     = t->GetLeaf("lx")->GetValue();
-    hit.ys     = t->GetLeaf("ly")->GetValue();
-    hit.zs     = t->GetLeaf("lz")->GetValue();
-    hit.x      = t->GetLeaf("gx")->GetValue();
-    hit.y      = t->GetLeaf("gy")->GetValue();
-    hit.z      = t->GetLeaf("gz")->GetValue();
-    hit.xsigma = t->GetLeaf("x_size")->GetValue();
-    hit.zsigma = t->GetLeaf("z_size")->GetValue();
-    hit.dz     = t->GetLeaf("res_z")->GetValue();
-    hit.ds     = t->GetLeaf("res_s")->GetValue();
-    hit.trkid  = t->GetLeaf("trkid")->GetValue();
-    hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
 
-    // Overwrite x,y,z with local-->global transformation on xs,ys,zs
-    hit.Update();
 
-    tracks.back().nhits++;
-    tracks.back().hits.push_back(hit);
-    previd = id;
-    nhits++;
-  }
-
-  Printf("%d tracks imported (%d hits).",
-         (int)tracks.size(), nhits);
-
-  return;
-}
-
-void
-GetTracksFromTree(TNtuple *t, SvxTGeo *geo, geoTracks &tracks,
-                  std::multimap<int, int> &eventsync, int nmax, TString /*opt*/)
-{
-  // This function reads hit ntuple variables of the form
-  // "layer:ladder:sensor:xs:ys:zs:x:y:z:xsigma:zsigma:dz:ds:trkid"
-  // into the tracks vector.
-
-  assert(t);
-  assert(geo);
-
-  long nentries = t->GetEntries();
-  int previd = -1;
-  int nhits  = 0;
-  int itrack = 0;
-
-  cout << "Reading tracks from " << t->GetName()
-       << " (" << nentries << " available hits)..."
-       << flush;
-
-  for (int i = 0; i < nentries; i++)
-  {
-    t->GetEntry(i);
-    int id = t->GetLeaf("trkid")->GetValue();
-    if (id != previd) // New track
-    {
-      if (nmax > 0 && (int)tracks.size() == nmax)
-      {
-        Printf("%d tracks imported (%d hits).",
-               (int)tracks.size(), nhits);
-        return;
-      }
-      int event = t->GetLeaf("event")->GetValue();
-      eventsync.insert(pair<int, int>(itrack, event));
-      itrack++;
-
-      SvxGeoTrack t;
-      // Track info is not stored in tree. If it were, it would go here.
-      tracks.push_back(t);
-    }
-
-    SvxGeoHit hit;
-    hit.layer  = t->GetLeaf("layer")->GetValue();
-    hit.ladder = t->GetLeaf("ladder")->GetValue();
-    hit.sensor = t->GetLeaf("sensor")->GetValue();
-    hit.xs     = t->GetLeaf("lx")->GetValue();
-    hit.ys     = t->GetLeaf("ly")->GetValue();
-    hit.zs     = t->GetLeaf("lz")->GetValue();
-    hit.x      = t->GetLeaf("gx")->GetValue();
-    hit.y      = t->GetLeaf("gy")->GetValue();
-    hit.z      = t->GetLeaf("gz")->GetValue();
-    hit.xsigma = t->GetLeaf("x_size")->GetValue();
-    hit.zsigma = t->GetLeaf("z_size")->GetValue();
-    hit.dz     = t->GetLeaf("res_z")->GetValue();
-    hit.ds     = t->GetLeaf("res_s")->GetValue();
-    hit.trkid  = t->GetLeaf("trkid")->GetValue();
-
-    hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
-
-    // Overwrite x,y,z with local-->global transformation on xs,ys,zs
-    hit.Update();
-
-    tracks.back().nhits++;
-    tracks.back().hits.push_back(hit);
-    previd = id;
-    nhits++;
-  }
-
-  Printf("%d tracks imported (%d hits).",
-         (int)tracks.size(), nhits);
-
-  return;
-}
 
 void
 GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events,
@@ -334,6 +193,12 @@ struct VtxTrackVars
   Int_t   sensor[8];
   Float_t trkphi;
   Float_t trktheta;
+  Float_t primvtx[3];
+  Float_t xydca;
+  Float_t zdca;
+  Float_t phirot;
+  Float_t yp0;
+  Float_t z0;
   Float_t lx[8];
   Float_t ly[8];
   Float_t lz[8];
@@ -352,9 +217,20 @@ VtxTrackVars::VtxTrackVars() :
   trkid(0),
   NClus(0),
   trkphi(0.),
-  trktheta(0.)
+  trktheta(0.),
+  xydca(0.),
+  zdca(0.),
+  phirot(0.),
+  yp0(0.),
+  z0(0.)
 {
-  for (int i=0; i<8; ++i)
+
+  for (int i = 0; i < 3; i++)
+  {
+    primvtx[i] = 0;
+  }
+
+  for (int i = 0; i < 8; ++i)
   {
     layer[i] = 0;
     ladder[i] = 0;
@@ -383,25 +259,31 @@ CreateTree(const char *name)
   TTree *t = new TTree(name, "Track based TTree for use in VTX Alignment");
   VtxTrackVars vtv;
 
-  t->Branch("event"   , &vtv.event   , "event/I");
-  t->Branch("NTracks" , &vtv.NTracks , "NTracks/I");
-  t->Branch("trkid"   , &vtv.trkid   , "trkid/I");
-  t->Branch("NClus"   , &vtv.NClus   , "NClus/I");
-  t->Branch("layer"   , &vtv.layer   , "layer[NClus]/I");
-  t->Branch("ladder"  , &vtv.ladder  , "ladder[NClus]/I");
-  t->Branch("sensor"  , &vtv.sensor  , "sensor[NClus]/I");
-  t->Branch("trkphi"  , &vtv.trkphi  , "trkphi[NClus]/F");
-  t->Branch("trktheta", &vtv.trktheta, "trktheta[NClus]/F");
-  t->Branch("lx"      , &vtv.lx      , "lx[NClus]/F");
-  t->Branch("ly"      , &vtv.ly      , "ly[NClus]/F");
-  t->Branch("lz"      , &vtv.lz      , "lz[NClus]/F");
-  t->Branch("gx"      , &vtv.gx      , "gx[NClus]/F");
-  t->Branch("gy"      , &vtv.gy      , "gy[NClus]/F");
-  t->Branch("gz"      , &vtv.gz      , "gz[NClus]/F");
-  t->Branch("x_size"  , &vtv.x_size  , "x_size[NClus]/F");
-  t->Branch("z_size"  , &vtv.z_size  , "z_size[NClus]/F");
-  t->Branch("res_z"   , &vtv.res_z   , "res_z[NClus]/F");
-  t->Branch("res_s"   , &vtv.res_s   , "res_s[NClus]/F");
+  t->Branch("event"    , &vtv.event   , "event/I");
+  t->Branch("NTracks"  , &vtv.NTracks , "NTracks/I");
+  t->Branch("trkid"    , &vtv.trkid   , "trkid/I");
+  t->Branch("trkphi"   , &vtv.trkphi  , "trkphi/F");
+  t->Branch("trktheta" , &vtv.trktheta, "trktheta/F");
+  t->Branch("primvtx"  , &vtv.primvtx , "primvtx[3]/F");
+  t->Branch("xydca"    , &vtv.xydca   , "xydca/F");
+  t->Branch("zdca"     , &vtv.zdca    , "zdca/F");
+  t->Branch("phirot"   , &vtv.phirot  , "phirot/F");
+  t->Branch("yp0"      , &vtv.yp0     , "yp0/F");
+  t->Branch("z0"       , &vtv.z0      , "z0/F");
+  t->Branch("NClus"    , &vtv.NClus   , "NClus/I");
+  t->Branch("layer"    , &vtv.layer   , "layer[NClus]/I");
+  t->Branch("ladder"   , &vtv.ladder  , "ladder[NClus]/I");
+  t->Branch("sensor"   , &vtv.sensor  , "sensor[NClus]/I");
+  t->Branch("lx"       , &vtv.lx      , "lx[NClus]/F");
+  t->Branch("ly"       , &vtv.ly      , "ly[NClus]/F");
+  t->Branch("lz"       , &vtv.lz      , "lz[NClus]/F");
+  t->Branch("gx"       , &vtv.gx      , "gx[NClus]/F");
+  t->Branch("gy"       , &vtv.gy      , "gy[NClus]/F");
+  t->Branch("gz"       , &vtv.gz      , "gz[NClus]/F");
+  t->Branch("x_size"   , &vtv.x_size  , "x_size[NClus]/F");
+  t->Branch("z_size"   , &vtv.z_size  , "z_size[NClus]/F");
+  t->Branch("res_z"    , &vtv.res_z   , "res_z[NClus]/F");
+  t->Branch("res_s"    , &vtv.res_s   , "res_s[NClus]/F");
 
   return t;
 }
@@ -414,12 +296,18 @@ FillTree(geoEvents &events, TTree *t)
   // See CreateTree() for tree structure.
   assert(t);
 
-  VtxTrackVars vtv;
+  VtxTrackVars                    vtv;
   t->SetBranchAddress("event",    &vtv.event);
   t->SetBranchAddress("NTracks",  &vtv.NTracks);
   t->SetBranchAddress("trkid",    &vtv.trkid);
   t->SetBranchAddress("trkphi",   &vtv.trkphi);
   t->SetBranchAddress("trktheta", &vtv.trktheta);
+  t->SetBranchAddress("primvtx",  &vtv.primvtx);
+  t->SetBranchAddress("xydca",    &vtv.xydca);
+  t->SetBranchAddress("zdca",     &vtv.zdca);
+  t->SetBranchAddress("phirot",   &vtv.phirot);
+  t->SetBranchAddress("yp0",      &vtv.yp0);
+  t->SetBranchAddress("z0",       &vtv.z0);
   t->SetBranchAddress("NClus",    &vtv.NClus);
   t->SetBranchAddress("layer",    &vtv.layer);
   t->SetBranchAddress("ladder",   &vtv.ladder);
@@ -442,12 +330,20 @@ FillTree(geoEvents &events, TTree *t)
 
       SvxGeoTrack trk = events[ev][itrk];
 
-      vtv.event = (int)ev;
-      vtv.NTracks = (int)events[ev].size();
-      vtv.trkid = (int)itrk;
-      vtv.trkphi = trk.phi0;
-      vtv.trktheta = trk.the0;
-      vtv.NClus = trk.nhits;
+      vtv.event      = (int)ev;
+      vtv.NTracks    = (int)events[ev].size();
+      vtv.trkid      = (int)itrk;
+      vtv.trkphi     = trk.phi0;
+      vtv.trktheta   = trk.the0;
+      vtv.primvtx[0] = trk.vx;
+      vtv.primvtx[1] = trk.vy;
+      vtv.primvtx[2] = trk.vz;
+      vtv.xydca      = trk.xydca;
+      vtv.zdca       = trk.zdca;
+      vtv.phirot     = trk.phirot;
+      vtv.yp0        = trk.yp0;
+      vtv.z0         = trk.z0;
+      vtv.NClus      = trk.nhits;
 
       for (int ihit = 0; ihit < trk.nhits; ihit++)
       {
@@ -483,12 +379,18 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
   assert(t);
   assert(geo);
 
-  VtxTrackVars vtv;
+  VtxTrackVars                    vtv;
   t->SetBranchAddress("event",    &vtv.event);
   t->SetBranchAddress("NTracks",  &vtv.NTracks);
   t->SetBranchAddress("trkid",    &vtv.trkid);
   t->SetBranchAddress("trkphi",   &vtv.trkphi);
   t->SetBranchAddress("trktheta", &vtv.trktheta);
+  t->SetBranchAddress("primvtx",  &vtv.primvtx);
+  t->SetBranchAddress("xydca",    &vtv.xydca);
+  t->SetBranchAddress("zdca",     &vtv.zdca);
+  t->SetBranchAddress("phirot",   &vtv.phirot);
+  t->SetBranchAddress("yp0",      &vtv.yp0);
+  t->SetBranchAddress("z0",       &vtv.z0);
   t->SetBranchAddress("NClus",    &vtv.NClus);
   t->SetBranchAddress("layer",    &vtv.layer);
   t->SetBranchAddress("ladder",   &vtv.ladder);
@@ -534,9 +436,17 @@ GetEventsFromTree(TTree *t, SvxTGeo *geo, geoEvents &evts, int nmax,
     }
 
     SvxGeoTrack trk;
-    trk.phi0 =  vtv.trkphi;
-    trk.the0 =  vtv.trktheta;
-    trk.nhits = vtv.NClus;
+    trk.phi0   = vtv.trkphi;
+    trk.the0   = vtv.trktheta;
+    trk.vx     = vtv.primvtx[0];
+    trk.vy     = vtv.primvtx[1];
+    trk.vz     = vtv.primvtx[2];
+    trk.xydca  = vtv.xydca;
+    trk.zdca   = vtv.zdca;
+    trk.phirot = vtv.phirot;
+    trk.yp0    = vtv.yp0;
+    trk.z0     = vtv.z0;
+    trk.nhits  = vtv.NClus;
 
     //save some reallocation by knowing the number of clusters
     trk.hits.reserve(vtv.NClus);
