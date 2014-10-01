@@ -32,7 +32,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
   int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
   /////////////// EXPERIMENTAL - try adding BC to local fit /////////////////
-  if (bc)
+  if (0 && bc)
   {
     TVectorD bcvec(2);
     bcvec(0) = 0.;
@@ -122,8 +122,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float sderlc[4] = {1.0,   distance, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
     float zderlc[4] = {0.0, 0.0, 1.0,   distance}; // dz(r)/dz0, dz(r)/dslope
 
-    Printf("r %5.3f distance %5.3f | x, y, phi %5.3f, %5.3f, %5.3f", 
-           r, distance, hit.x, hit.y, trk.phi0);
+    // Printf("r %5.3f distance %5.3f | x, y, phi %5.3f, %5.3f, %5.3f", 
+    //        r, distance, hit.x, hit.y, trk.phi0);
 
     assert(abs(distance-r) < 0.1*r);
 

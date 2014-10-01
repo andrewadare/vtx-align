@@ -5,8 +5,8 @@ void GenerateEvents()
 {
   int run = 123456;
   int prod = 0;
-  const int nvtxevents = (int)9e1;
-  const int ncntevents = (int)1e1;
+  const int nvtxevents = (int)9e3;
+  const int ncntevents = (int)1e3;
   SvxTGeo *tgeo = VTXModel("geom/svxPISA-ideal.par");
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, 0);
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, 0);
@@ -24,8 +24,17 @@ void GenerateEvents()
     vertex(2) = 2*ran.Gaus();
 
     geoTracks tracks;
-    int ntracks = 1 + ran.Integer(50);
+    int ntracks = 10 + ran.Integer(40);
     GenerateEvent(tgeo, ntracks, vertex, tracks);
+
+    // Save vertex
+    for (unsigned int t=0; t<tracks.size(); t++)
+    {
+      tracks[t].vx = vertex(0);
+      tracks[t].vy = vertex(1);
+      tracks[t].vz = vertex(2);
+    }
+
     vtxevents[n] = tracks;
   }
   Printf("%lu VTX events generated.", vtxevents.size());
@@ -39,8 +48,17 @@ void GenerateEvents()
     vertex(2) = 2*ran.Gaus();
 
     geoTracks tracks;
-    int ntracks = 1 + ran.Integer(50);
+    int ntracks = 10 + ran.Integer(40);
     GenerateEvent(tgeo, ntracks, vertex, tracks);
+
+    // Save vertex
+    for (unsigned int t=0; t<tracks.size(); t++)
+    {
+      tracks[t].vx = vertex(0);
+      tracks[t].vy = vertex(1);
+      tracks[t].vz = vertex(2);
+    }
+
     cntevents[n] = tracks;
   }
   Printf("%lu CNT events generated.", cntevents.size());

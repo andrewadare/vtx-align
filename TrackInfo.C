@@ -84,7 +84,7 @@ void TrackInfo(int run = 411768,
       SvxGeoTrack trk = evs_nobc[ev][t];
       hphi->Fill(trk.phi0);
       hxys_no->Fill(TMath::Tan(trk.phi0));
-      hy0->Fill(trk.vy);
+      hy0->Fill(trk.yp0);
 
       double mphi = MeanPhi(trk);
       for (int ihit=0; ihit<trk.nhits; ihit++)
@@ -107,7 +107,7 @@ void TrackInfo(int run = 411768,
       hz0->Fill(trk.vz);
       hzslope->Fill(TMath::Tan(trk.the0 - TMath::PiOver2()));
       hxys_bc->Fill(TMath::Tan(trk.phi0));
-      hy0bc->Fill(trk.vy);
+      hy0bc->Fill(trk.yp0);
 
       int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
       double bc[2] = {gbc->GetX()[arm], gbc->GetY()[arm]};

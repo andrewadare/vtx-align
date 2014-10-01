@@ -58,7 +58,7 @@ FillSystem(geoEvents &events, TMatrixD &M, TVectorD &y0, TString arm)
     {
       if (row==nrows)
         return;
-      double yint = events[ev][t].vy;
+      double yint = events[ev][t].yp0;
       double phi = events[ev][t].phi0;
       bool east = East(phi);
       if ((arm=="east" && east) || (arm=="west" && !east))

@@ -5,11 +5,6 @@
 #include "GLSFitter.h"
 #include "VertexFinder.h"
 
-
-TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
-TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
-// TGraph *DcaDist(TFile *f, TNtuple *t, TVectorD &bc, TString arm,
-//                 TH1D *hr=0, int ntracks=10000);
 TGraph *DcaDist(geoTracks &tracks, TVectorD &bc, TString arm,
                 TH1D *hr=0, int ntracks=10000);
 void DcaDist(geoEvents &events, TString arm, TH2D *hxy, TH1D *hr);
@@ -18,27 +13,6 @@ void DcaVsPhi(geoTracks &tracks, TVectorD &bce, TVectorD &bcw,
 void DcaVsPhi(geoEvents &events, TVectorD &bce, TVectorD &bcw,
               TH2D *hist, TProfile *prof);
 
-TVectorD
-IPVec(TVectorD &a, TVectorD &n, TVectorD &p)
-{
-  // Compute impact parameter vector from point p to line x = a + tn
-  // where
-  // - x is a straight-line track trajectory
-  // - a is a point on vector x (e.g. y-intercept point (0, y0))
-  // - n is a unit vector directing x (e.g. (cos(phi), sin(phi)).
-  return a - p - ((a - p)*n)*n;
-}
-
-TVectorD
-IPVec(SvxGeoTrack &t, TVectorD &p)
-{
-  TVectorD a(2); a(1) = t.vy;
-  TVectorD n(2);
-  n(0) = TMath::Cos(t.phi0);
-  n(1) = TMath::Sin(t.phi0);
-  return IPVec(a,n,p);
-}
-
 TGraph *
 DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
 {
@@ -46,6 +20,7 @@ DcaDist(geoTracks &tracks, TVectorD &bc, TString arm, TH1D *hr, int ntracks)
   g->SetMarkerStyle(kFullDotMedium);
   for (unsigned int i=0; i<tracks.size(); i++)
   {
+    Printf("**************************DEPRECATE****************************");
     double phi = tracks[i].phi0;
     if ((arm=="east" && East(phi)) || (arm=="west" && !East(phi)))
     {

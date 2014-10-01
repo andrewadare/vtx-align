@@ -5,6 +5,7 @@
 #include "BeamCenterFuncs.h"
 #include "ParameterDefs.h"
 #include "VtxIO.h"
+#include "VtxVis.h"
 
 void WriteConfigFile(const char *filename,
                      int run,
@@ -17,9 +18,9 @@ void WriteConfigFile(const char *filename,
 TH1D *
 ProfileSummary(TProfile *prof, const char *name);
 
-void CalcBeamCenter(int run = 411768,
+void CalcBeamCenter(int run = 123456,
                     int prod = 0,
-                    int subiter = 1)
+                    int subiter = 0)
 {
   bool write = true;
 
@@ -33,7 +34,6 @@ void CalcBeamCenter(int run = 411768,
                             run, prod, subiter);
 
   TFile *f = new TFile(rootFileIn.Data());
-  // TNtuple *t = (TNtuple *)f->Get("vtxhits");
   TTree *t = (TTree *)f->Get("vtxtrks");
 
   gStyle->SetOptStat(0);
@@ -48,6 +48,12 @@ void CalcBeamCenter(int run = 411768,
   geoEvents events;
   GetEventsFromTree(t, geo, events, -1);
   FitTracks(events);
+
+  TH1D *hdcae = new TH1D("hdcae", "", 200, -0.05, 0.05);
+  TH1D *hdcaw = new TH1D("hdcaw", "", 200, -0.05, 0.05);
+  TH2D *hdca2d   = new TH2D("hdca2d", ";#phi [rad];DCA [cm]",
+                            100, -TMath::PiOver2(), 3*TMath::PiOver2(),
+                            100, -0.05, +0.05);
 
   // Event multiplicity histograms
   TH1D *hne = new TH1D("hne", Form("VTXE multiplicity - prod %d step %d;"
@@ -76,7 +82,7 @@ void CalcBeamCenter(int run = 411768,
                            xyzstr[k], prod, subiter, xyzstr[k]),
                       200, -1, 1);
 
-  Printf("Filling mult/vertex distributions...");
+  Printf("Filling mult/vertex/DCA distributions...");
   int minmult = 10;
   for (unsigned int ev=0; ev<events.size(); ev++)
   {
@@ -85,8 +91,22 @@ void CalcBeamCenter(int run = 411768,
     for (int t=0; t<mult; t++)
     {
       SvxGeoTrack trk = events[ev][t];
-      if (East(trk.phi0)) ne++;
-      else nw++;
+      if (East(trk.phi0))
+      {
+        ne++;
+        hdcae->Fill(trk.xydca);
+      }
+      else
+      {
+        nw++;
+        hdcaw->Fill(trk.xydca);
+      }
+
+      double p = trk.phi0;
+      if (p > 3*TMath::PiOver2())
+        p -= TMath::TwoPi();
+      hdca2d->Fill(p, trk.xydca);
+
     }
 
     hne->Fill(ne);
@@ -231,6 +251,28 @@ void CalcBeamCenter(int run = 411768,
   gPad->SetLogx();
   gPad->SetLogy();
 
+
+  TCanvas *cdca = new TCanvas("cdca", "dca_east_west", 1000, 500);
+  SetYMax(hdcae, hdcaw);
+  cdca->Divide(2,1,0,0);
+  cdca->cd(1);
+  hdcae->Draw();
+  ltx.DrawLatex(0.15, 0.90, Form("East: (Mean, Std Dev) = (%.0f, %.0f) #mum",
+                                 1e4*hdcae->GetMean(), 1e4*hdcae->GetRMS()));
+  cdca->cd(2);
+  hdcaw->Draw();
+  ltx.DrawLatex(0.15, 0.90, Form("West: (Mean, Std Dev) = (%.0f, %.0f) #mum",
+                                 1e4*hdcaw->GetMean(), 1e4*hdcaw->GetRMS()));
+  cList->Add(cdca);
+
+  DrawObject(hdca2d, "col", "dca2d", cList);
+  hdca2d->GetXaxis()->CenterTitle();
+  hdca2d->GetYaxis()->CenterTitle();
+  TProfile* dca2dprof = hdca2d->ProfileX("dca2dprof", 1, -1, "d,same");
+  dca2dprof->SetMarkerStyle(kFullCircle);
+  ltx.DrawLatex(0.25, 0.80, Form("West"));
+  ltx.DrawLatex(0.65, 0.80, Form("East"));
+
   TCanvas *cve = new TCanvas("cve", "cve", 500, 500);
   hve->Draw("col");
   ltx.DrawLatex(0.15, 0.85, Form("BC = %.3f, %.3f", bce(0), bce(1)));
@@ -337,8 +379,8 @@ void CalcBeamCenter(int run = 411768,
          1.0 - hrw->Integral(1,hrw->FindBin(0.099))/hrw->Integral());
 
   if (write)
-{
-  PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
+  {
+    PrintPDFs(cList, Form("pdfs/run%d-prod%d-subiter%d", run, prod, subiter), "");
     PrintPDF(cList, Form("pdfs/beam-center-run%d-pro%d-sub%d", run, prod, subiter));
   }
 

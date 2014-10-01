@@ -74,7 +74,7 @@ void CheckTrackFits(int run = 411768,
         linfit->SetRange(-20., bcx);
       if (arm==1)
         linfit->SetRange(bcx, +20.);
-      linfit->SetParameters(trk.vy, TMath::Tan(trk.phi0));
+      linfit->SetParameters(trk.yp0, TMath::Tan(trk.phi0));
   
       linfit->Draw("same");
       g->Draw("p,same");
