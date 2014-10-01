@@ -107,61 +107,22 @@ FilterData(geoEvents &events,
     ntracksorig += ntrk;
 
     // Reject outlying vertices
-    if (ntrk > minmult)
-    {
-      keep = false;
+    bool rejectev = RejectOutlierVtx(events.at(ev),
+                                     nq, qxe, qye, qxw, qyw, minmult);
 
-      TVectorD ve = Vertex(events.at(ev), "east");
-      TVectorD vw = Vertex(events.at(ev), "west");
-      double dxe = ve(0) - bce(0);
-      double dye = ve(1) - bce(1);
-      double dxw = vw(0) - bcw(0);
-      double dyw = vw(1) - bcw(1);
-      double ex = 0.5 * (qxe[nq - 1] - qxe[0]);
-      double ey = 0.5 * (qye[nq - 1] - qye[0]);
-      double wx = 0.5 * (qxw[nq - 1] - qxw[0]);
-      double wy = 0.5 * (qyw[nq - 1] - qyw[0]);
-
-      if (dxe * dxe / ex / ex + dye * dye / ey / ey < 1.0 &&
-          dxw * dxw / wx / wx + dyw * dyw / wy / wy < 1.0)
-      {
-        keep = true;
-      }
-    }
-
-    if (keep)
+    if (!rejectev)
     {
       geoTracks tmp;
       for (int t = 0; t < ntrk; t++)
       {
-        SvxGeoTrack trk = events[ev][t];
-        double phi = trk.phi0;
-        TVectorD d = IPVec(trk, East(phi) ? bce : bcw);
 
-        // DCA outlier cut
-        if (TMath::Sqrt(d * d) > maxdca)
-          continue;
-
-        // Require at least nhitsmin clusters
-        if (trk.nhits < nhitsmin)
-          continue;
-
-        // Residual magnitude cut
-        bool reject = false;
-        for (int j = 0; j < trk.nhits; j++)
+        bool rejecttrk = RejectOutlierTrk(events[ev][t],
+                                          bce, bcw,
+                                          maxdca, maxres_s, maxres_z,
+                                          maxclus, nhitsmin);
+        if (!rejecttrk)
         {
-          SvxGeoHit hit = trk.GetHit(j);
-          if (TMath::Abs(hit.ds) > maxres_s || TMath::Abs(hit.dz) > maxres_z)
-            reject = true;
-
-          // Reject tracks with suspiciously large clusters
-          if (hit.xsigma > 10 || hit.zsigma > 10)
-            reject = true;
-        }
-        if (!reject)
-        {
-          //FillTree(trk, tree, ev);
-          tmp.push_back(trk);
+          tmp.push_back(events[ev][t]);
           ntracksfin++;
         }
       }
