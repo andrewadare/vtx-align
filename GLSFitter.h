@@ -10,19 +10,11 @@ typedef vector<geoTracks> geoEvents;
 
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L);
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov);
-void TrackFitZResid(SvxGeoTrack &gt);
-void TrackFitSResid(SvxGeoTrack &gt);
-
-// void TrackFitZResid(SvxGeoTrack &gt, double *pars = 0);
-// void TrackFitSResid(SvxGeoTrack &gt, double *pars = 0, TGraphErrors *bc = 0);
-// void ZeroFieldResiduals(SvxGeoTrack &gt,
-//                         double *pars = 0,  y0, z0, yslope, zslope
-//                         TGraphErrors *bc = 0    /* 0=east, 1=west */);
-void Residuals(SvxGeoTrack &tt, SvxGeoTrack &mt, TNtuple *t);
-void FitTrack(SvxGeoTrack &track, TGraphErrors *bc = 0);
+void TrackFitL(SvxGeoTrack &gt); // Longitudinal component --> z0, theta
+void TrackFitT(SvxGeoTrack &gt); // Transverse component --> y0', phi
 void FitTracks(geoTracks &tracks, TGraphErrors *bc = 0);
 void FitTracks(geoEvents &events, TGraphErrors *bc = 0, TString opt = "");
-void RadialDCA(geoTracks &event);
+void RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt);
 
 // It is questionable whether the following functions belong in this file.
 bool East(double phi);
@@ -98,12 +90,14 @@ SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L)
 }
 
 void
-TrackFitZResid(SvxGeoTrack &gt)
+TrackFitL(SvxGeoTrack &gt)
 {
-  // Perform straight-line fit z(r) = z0 + c*r.
-  // Assign residuals to gt.hits[i].dz.
+  // Longitudinal/polar component
+  // Fit track using a straight line z(r) = z0 + c*r.
+  // Assigns residuals, z-intercept, and polar angle.
 
-  int m = gt.nhits, n = 2; // m = # measurements; n = # parameters.
+  // m = # measurements; n = # parameters.
+  int m = gt.nhits, n = 2;
   TMatrixD X(m, n);
   TMatrixD Cinv(m, m);
   TVectorD y(m);
@@ -138,12 +132,13 @@ TrackFitZResid(SvxGeoTrack &gt)
 }
 
 void
-TrackFitSResid(SvxGeoTrack &gt)
+TrackFitT(SvxGeoTrack &gt)
 {
+  // Transverse/azimuthal component
   // Perform straight-line fit y' = m'*x' + b' after rotating points
   // to approximately lie along the x axis. Then by construction,
   // x' ~ r, m' ~ 0, and the error is (mostly) in the y' = phi direction.
-  // Assign s = r*phi residual to gt.hits[i].ds.
+  // Assign s = r*phi residual and azimuthal angle and intercept info.
 
   int m = gt.nhits;
   int n = 2;
@@ -207,7 +202,7 @@ TrackFitSResid(SvxGeoTrack &gt)
   return;
 }
 // void
-// TrackFitSResid(SvxGeoTrack &gt, double *pars, TGraphErrors * /*bc*/)
+// TrackFitT(SvxGeoTrack &gt, double *pars, TGraphErrors * /*bc*/)
 // {
 //   // Perform straight-line fit y' = m'*x' + b' after rotating points
 //   // to approximately lie along the x axis. Then by construction,
@@ -295,8 +290,8 @@ TrackFitSResid(SvxGeoTrack &gt)
 //   }
 
 //   double zpars[2] = {0}, spars[2] = {0};
-//   TrackFitZResid(gt, zpars);
-//   TrackFitSResid(gt, spars, bc);
+//   TrackFitL(gt, zpars);
+//   TrackFitT(gt, spars, bc);
 
 //   pars[0] = spars[0]; // y0 (y-intercept)
 //   pars[1] = zpars[0]; // z0 (z-intercept)
@@ -306,60 +301,75 @@ TrackFitSResid(SvxGeoTrack &gt)
 //   return;
 // }
 
-// void
-// FitTrack(SvxGeoTrack &track, TGraphErrors *bc)
-// {
-//   // Perform straight-line fit --> residuals, track parameters
-//   // double pars[4] = {0}; /* y0, z0, phi, theta */
-//   // ZeroFieldResiduals(track, pars, bc);
-//   TrackFitZResid(track);
-//   TrackFitSResid(track);
-//   // track.yp0  = pars[0];
-//   // track.z0   = pars[1];
-//   // track.phi0 = pars[2];
-//   // track.the0 = pars[3];
-//   return;
-// }
-
 void
-FitTrack(SvxGeoTrack &track, TGraphErrors * /*bc*/)
-{
-  // Perform straight-line fit --> residuals, track parameters
-  TrackFitZResid(track);
-  TrackFitSResid(track);
-  return;
-}
-
-void
-FitTracks(geoTracks &tracks, TGraphErrors *bc)
+FitTracks(geoTracks &tracks, TGraphErrors * /*bc*/)
 {
   cout << Form("Fitting %lu tracks...", tracks.size()) << flush;
 
   for (unsigned int i=0; i<tracks.size(); i++)
-    FitTrack(tracks[i], bc);
+  {
+    TrackFitL(tracks[i]);
+    TrackFitT(tracks[i]);
+  }
 
   Printf("done.");
   return;
 }
 
 void
-RadialDCA(geoTracks &event)
+RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
 {
-  // Compute x,y vertex position from each VTX arm
-  TVectorD xye = XYCenter(event, "east");
-  TVectorD xyw = XYCenter(event, "west");
 
-  // Compute radial DCA with respect to the relevant vertex and save to track.
+  // Compute the 2-D distance of closest approach from reference point to track.
+  // The reference point (x,y) is one of the following:
+  // 1. A primary vertex computed here (compute_vertex). Also assigns vx,vy (!)
+  // 2. A primary vertex already saved with the track (use_stored_vertex)
+  // 3. A beam center provided in the TGraph (opt = "")
+  // 4. Fall-through case: DCA will be computed w.r.t. (0,0).
+
+  if (opt.Contains("no_dca"))
+    return;
+  
+  TVectorD xye(2);
+  TVectorD xyw(2);
+  if (opt.Contains("compute_vertex"))
+  {
+    // Compute x,y vertex position from each VTX arm.
+    // Requires that tracks have already been fit.
+    xye = XYCenter(event, "east");
+    xyw = XYCenter(event, "west");
+  }
+  else if (bc)
+  {
+    xye(0) = bc->GetX()[0];
+    xye(1) = bc->GetY()[0];
+    xyw(0) = bc->GetX()[1];
+    xyw(1) = bc->GetY()[1];
+  }
+  else
+  {
+    // xye, xyw are already initialized to zero; this is just for clarity.
+    xye(0) = 0.;
+    xye(1) = 0.;
+    xyw(0) = 0.;
+    xyw(1) = 0.;
+  }
+
+  // Compute radial DCA and save to track.
   for (unsigned int t=0; t<event.size(); t++)
   {
     SvxGeoTrack &trk = event[t];
     int arm = (trk.hits[0].x < 0.) ? 0 : 1;   // 0 = East, 1 = West.
     TVectorD vxy = arm ? xyw : xye;
 
-    Printf("vertex: (%f %f %f)", trk.vx, trk.vy, trk.vz);
+    // Printf("gen,calc x: (%.0f, %.0f) | gen,calc y: (%.0f, %.0f)",
+    //        1e4*trk.vx, 1e4*vxy(0), 1e4*trk.vy, 1e4*vxy(1));
 
-    vxy(0) = 0.; //trk.vx;
-    vxy(1) = 0.; //trk.vy;
+    if (opt.Contains("use_stored_vertex"))
+    {
+      vxy(0) = trk.vx;
+      vxy(1) = trk.vy;
+    }
     // TVectorD ipvec = IPVec(trk, vxy);         // Impact parameter vector
 
     ///////////////
@@ -379,7 +389,7 @@ RadialDCA(geoTracks &event)
     double mp = tan(trk.phi0 - trk.phirot);
     TVectorD ipp(2);
     ipp(1) = mp*vxyp(0) + trk.yp0 - vxyp(1);
-    
+
     // Rotate back out of the primed frame
 
     TVectorD ipvec = R*ipp;
@@ -392,26 +402,41 @@ RadialDCA(geoTracks &event)
     float dca = trknormal * ipvec;
 
     // Assignment
-    trk.vx = vxy(0);
-    trk.vy = vxy(1);
     trk.xydca = dca;
+    if (opt.Contains("compute_vertex"))
+    {
+      trk.vx = vxy(0);
+      trk.vy = vxy(1);
+    }
   }
 
   return;
 }
 
 void
-FitTracks(geoEvents &events, TGraphErrors *bc, TString /*opt*/)
+FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
 {
+  if (opt.Contains("compute_vertex"))
+    Info("", "Vertex and DCA will be computed after track fits "
+         "and (re)assigned to tracks.");
+  else if (opt.Contains("use_stored_vertex"))
+    Info("", "DCA will be computed after track fits using stored vertices.");
+  else if (bc)
+    Info("", "DCA will be computed with respect to beam center.");
+  else if (opt.Contains("no_dca"))
+    Info("", "Skipping DCA calculation.");
+
   cout << Form("Fitting tracks in %lu events...", events.size()) << flush;
 
   for (unsigned int ev=0; ev<events.size(); ev++)
   {
     for (unsigned int t=0; t<events[ev].size(); t++)
     {
-      FitTrack(events[ev][t], bc);
+      TrackFitL(events[ev][t]);
+      TrackFitT(events[ev][t]);
     }
-    RadialDCA(events[ev]);
+
+    RadialDCA(events[ev], bc, opt);
   }
 
   Printf("done.");
