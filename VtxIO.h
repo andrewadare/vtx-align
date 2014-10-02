@@ -24,9 +24,8 @@ int GetCorrections(const char *resFile, std::map<int, double> &mpc);
 void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
                     double regFactor = 1.0, double preSigma = 0.01);
 vecs SplitLine(const string &line, const char *delim = " ");
-
-int GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[]);
-string GetGeomFromConfig(const char *configFile);
+int GetParamFromConfig(const char *configFile, float bc[], float e2w[],
+                   float v2c[], string &geo);
 
 void
 GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events,
@@ -541,11 +540,12 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
 
   return;
 }
-
-int
-GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[])
+int 
+GetParamFromConfig(const char *configFile, float bc[], float e2w[],
+                   float v2c[], string &geo)
 {
-  // Read east-to-west and vtx-to-cnt offsets from configFile
+  // Read beamcenter, east-to-west, vtx-to-cnt offsets
+  // and geometry file name from configFile
   assert(configFile);
   ifstream fin;
   fin.open(configFile);
@@ -561,6 +561,20 @@ GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[])
 
   for (string line; getline(fin, line);)
   {
+    //make sure we skip comments
+    if (line.size() == 0 || line.at(0) == '#')
+    {
+      continue;
+    }
+    if (line.find("beamcenter") != string::npos)
+    {
+      vecs words = SplitLine(line);
+      assert(words.size() == 3);
+      for (int i = 0; i < 2; i++)
+        bc[i] = atof(words[i + 1].c_str());
+
+      Printf("Beam Center: %f %f", bc[0], bc[1]);
+    }
     if (line.find("east-to-west") != string::npos)
     {
       vecs words = SplitLine(line);
@@ -579,43 +593,25 @@ GetOffsetsFromConfig(const char *configFile, float e2w[], float v2c[])
 
       Printf("VTX-CNT offset: %f %f %f", v2c[0], v2c[1], v2c[2]);
     }
-  }
-
-  return 0;
-}
-
-string
-GetGeomFromConfig(const char *configFile)
-{
-  // Get the geometry file name from a config file
-  assert(configFile);
-  ifstream fin;
-  fin.open(configFile);
-
-  if (!fin)
-  {
-    Error("GetGeomFromConfig() in VtxIO.h", "Problem opening %s",
-          configFile);
-    return "";
-  }
-
-  Info("", "Reading geom file from %s...", configFile);
-
-  for (string line; getline(fin, line);)
-  {
     if (line.find("geomfile") != string::npos)
     {
       vecs words = SplitLine(line);
       assert(words.size() == 2);
-      return words[1];
+      geo = words[1];
+
+      //D. McGlinchey - May want to move this somewhere else,
+      //but for now we know the directory path, so we should
+      //add it 
+      geo = "geom/" + geo;
+
+      Printf("Geometry file: %s", geo.c_str());
     }
   }
 
-  Error("GetGeomFromConfig() in VtxIO.h",
-        "Unable to find geomfile in %s", configFile);
+  return 0;
 
-  return "";
 }
+
 
 vecs
 SplitLine(const string &line, const char *delim)
