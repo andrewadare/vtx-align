@@ -91,6 +91,8 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no
                maxdca,
                maxres_s,
                maxres_z,
+               10,
+               10,
                nhitsmin,
                frac4hit);
   }
