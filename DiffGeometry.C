@@ -61,7 +61,7 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
                   Form("e2w a: (%.4f, %.4f, %.4f)", e2wa[0], e2wa[1], e2wa[2]));
   if (e2wb)
     ltx.DrawLatex(0.02, 0.92,
-                  Form("e2w b: (%.4f, %.4f, %.4f)", e2wa[0], e2wa[1], e2wa[2]));
+                  Form("e2w b: (%.4f, %.4f, %.4f)", e2wb[0], e2wb[1], e2wb[2]));
   gPad->Print(Form("pdfs/dsxy%s.pdf", ab.Data()));
   cList->Add(gPad);
 
@@ -81,7 +81,7 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
                   Form("e2w a: (%.4f, %.4f, %.4f)", e2wa[0], e2wa[1], e2wa[2]));
   if (e2wb)
     ltx.DrawLatex(0.02, 0.92,
-                  Form("e2w b: (%.4f, %.4f, %.4f)", e2wa[0], e2wa[1], e2wa[2]));
+                  Form("e2w b: (%.4f, %.4f, %.4f)", e2wb[0], e2wb[1], e2wb[2]));
   gPad->Print(Form("pdfs/dzxy%s.pdf", ab.Data()));
   cList->Add(gPad);
 
@@ -103,7 +103,7 @@ void DiffGeometry(const char *pfa = "geom/svxPISA-ideal.par",
                   Form("e2w a: (%.4f, %.4f, %.4f)", e2wa[0], e2wa[1], e2wa[2]));
   if (e2wb)
     ltx.DrawLatex(0.70, 0.895,
-                  Form("e2w b: (%.4f, %.4f, %.4f)", e2wa[0], e2wa[1], e2wa[2]));
+                  Form("e2w b: (%.4f, %.4f, %.4f)", e2wb[0], e2wb[1], e2wb[2]));
   */
   gPad->Print(Form("pdfs/dx%s.pdf", ab.Data()));
   cList->Add(gPad);
