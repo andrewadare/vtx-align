@@ -148,6 +148,7 @@ TrackFitT(SvxGeoTrack &gt)
   TVectorD y(m);         // Dependent variables y'.
   double phirot = 0;     // <phi_cluster> used to rotate clusters
 
+  int outermostLayer = 0;
   for (int ihit=0; ihit<m; ihit++)
   {
     SvxGeoHit hit = gt.GetHit(ihit);
@@ -158,7 +159,13 @@ TrackFitT(SvxGeoTrack &gt)
     // Note that hit.xsigma is expected to be in integer units 1,2,3....
     double xsigma = hit.xsigma * ClusterXResolution(hit.layer);
     Cinv(ihit,ihit) = (xsigma > 0) ? 1./xsigma : 1.;
-    phirot += 1./m * TMath::ATan2(hit.y, hit.x);
+
+    // Compute rotation angle as phi of outermost hit
+    if (hit.layer > outermostLayer)
+    {
+      outermostLayer = hit.layer;
+      phirot = TMath::ATan2(hit.y, hit.x);
+    }
   }
 
   // Rotate x, y by -phirot so error is approximately in y' direction only.
@@ -329,7 +336,7 @@ RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
 
   if (opt.Contains("no_dca"))
     return;
-  
+
   TVectorD xye(2);
   TVectorD xyw(2);
   if (opt.Contains("compute_vertex"))
