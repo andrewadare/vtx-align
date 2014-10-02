@@ -1,0 +1,17 @@
+# Created by D. McGlinchey
+# On Thu Sep  29 13:58 EST 2014
+# Run number: 411768
+# Production step: 0
+# Sub-iteration step: 0
+# Source: https://git.racf.bnl.gov/phenix/git/vtx-align/vtx-align.git
+# Latest commit: b0b8cbc3c7290d16748a52563c622e9c9293f59d
+# Notes: 
+#  copied from config-zf-411768-0-0_1.txt
+#
+# Remove east to west offset
+# Keep beam center
+
+beamcenter: 0.3532 0.0528
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: svxPISA-ideal.par
