@@ -16,6 +16,8 @@ void FilterData(geoEvents &events,
                 double maxdca = 0.2,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
+                int maxclus = 10,
+                int minmult = 10,
                 int nhitsmin = 3,
                 float frac4hit = -1);
 
@@ -58,11 +60,11 @@ FilterData(geoEvents &events,
            double maxdca,
            double maxres_s,
            double maxres_z,
+           int maxclus,
+           int minmult,
            int nhitsmin,
            float frac4hit)
 {
-  int minmult = 10;
-
   // x-y vertex distributions
   Printf("Filling mult/vertex distributions...");
   double x0 = -1.0, y0 = -1.0, x1 = +1.0, y1 = +1.0;
@@ -115,7 +117,6 @@ FilterData(geoEvents &events,
       geoTracks tmp;
       for (int t = 0; t < ntrk; t++)
       {
-
         bool rejecttrk = RejectOutlierTrk(events[ev][t],
                                           bce, bcw,
                                           maxdca, maxres_s, maxres_z,
@@ -128,6 +129,7 @@ FilterData(geoEvents &events,
       }
       accevents.push_back(tmp);
     }
+
   }
 
   if (frac4hit > 0)
