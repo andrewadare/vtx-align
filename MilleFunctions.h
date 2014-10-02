@@ -182,8 +182,8 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 5*hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 5*hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = 50*hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = 50*hit.zsigma * ClusterZResolution(hit.layer);
 
     // Here, fit clusters individually. Each cluster is treated as
     // one "local fit object".
