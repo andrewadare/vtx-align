@@ -39,9 +39,9 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float sigbc = bc->GetEX()[arm];   // Usually x error is bigger
     float dca = trk.xydca;
 
-    float distance = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
-    float sderlc[4] = {1.0,   distance, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
-    float zderlc[4] = {0.0, 0.0, 1.0,   distance}; // dz(r)/dz0, dz(r)/dslope
+    float xp = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
+    float sderlc[4] = {1.0,   xp, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
+    float zderlc[4] = {0.0, 0.0, 1.0,   xp}; // dz(r)/dz0, dz(r)/dslope
 
     float ld[1] = {1};
     float gd[1] = {0}; // placeholder - not used
