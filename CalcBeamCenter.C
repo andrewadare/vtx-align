@@ -47,7 +47,7 @@ void CalcBeamCenter(int run = 123456,
 
   geoEvents events;
   GetEventsFromTree(t, geo, events, -1);
-  FitTracks(events);
+  FitTracks(events, 0, "");
 
   TH1D *hdcae = new TH1D("hdcae", "", 200, -0.05, 0.05);
   TH1D *hdcaw = new TH1D("hdcaw", "", 200, -0.05, 0.05);
@@ -164,8 +164,8 @@ void CalcBeamCenter(int run = 123456,
   hvw->GetXaxis()->SetRangeUser(x0, x1);
   hvw->GetYaxis()->SetRangeUser(y0, y1);
 
-  Printf("Refitting tracks using beam center...");
-  FitTracks(events, gbc);
+  // Printf("Refitting tracks using beam center...");
+  // FitTracks(events, gbc);
 
   Printf("DCA x-y distribution...");
   x0 = -0.12;
