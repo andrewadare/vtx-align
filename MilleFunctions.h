@@ -31,35 +31,13 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
   int nzgp = zgpars.size();
   int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
-  /////////////// EXPERIMENTAL - try adding BC to local fit /////////////////
-  if (0 && bc)
+  if (bc)
   {
     TVectorD bcvec(2);
-    bcvec(0) = 0.;
-    bcvec(1) = 0.;
-    // bcvec(0) = bc->GetX()[arm];
-    // bcvec(1) = bc->GetY()[arm];
-    float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
-    TVectorD ipvec = IPVec(trk, bcvec); // Impact parameter vector
-    TVectorD trknormal(2);
-    trknormal(0) = cos(trk.phi0 + TMath::PiOver2());
-    trknormal(1) = sin(trk.phi0 + TMath::PiOver2());
-    float dca = trknormal * ipvec;
-
-    // float dy = bcvec(1) - ipvec(1);
-    // float dy = ipvec(1);
-    // float dca = (dy)/TMath::Abs(dy) * TMath::Sqrt(ipvec*ipvec);
-    // int f = int(-dca/trk.vy);
-
-    // // debug----------------
-    // static int counter = 0;
-    // if (counter == 0)
-    //   Printf("bc = (%.3g,%.3g)", bcvec(0), bcvec(1));
-    // if (counter < 100)
-    //   Printf("DCA %10.3g -vy %10.3g sigma %10.3g %d",
-    //          dca, -trk.vy, sigbc, f);
-    // ++counter;
-    // // debug----------------
+    bcvec(0) = bc->GetX()[arm];
+    bcvec(1) = bc->GetY()[arm];
+    float sigbc = bc->GetEX()[arm];   // Usually x error is bigger
+    float dca = trk.xydca;
 
     float distance = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
     float sderlc[4] = {1.0,   distance, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
@@ -71,7 +49,6 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     m.mille(4, sderlc, 0, gd, nolabels, dca, sigbc);
     // TODO include z also
   }
-  ///////////////////////////////////////////////////////////////////////////
 
   for (int j=0; j<trk.nhits; j++)
   {
