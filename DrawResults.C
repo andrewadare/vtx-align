@@ -29,7 +29,7 @@ void DrawResults(int run = 411768,
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
-  int nLadders[4] = {10,20,16,24}; // ladders/layer
+  int nLadders[4] = {10, 20, 16, 24}; // ladders/layer
 
   TLatex ltx;
   ltx.SetNDC();
@@ -45,16 +45,16 @@ void DrawResults(int run = 411768,
 
 
   TGraphErrors *gdead[nlayers];
-  for (int lyr=0; lyr<nlayers; lyr++)
+  for (int lyr = 0; lyr < nlayers; lyr++)
   {
     gdead[lyr] = new TGraphErrors();
-    SetGraphProps(gdead[lyr],kNone, kOrange-8, kNone,kDot);
-    gdead[lyr]->SetFillColorAlpha(kOrange-8, 0.5);
+    SetGraphProps(gdead[lyr], kNone, kOrange - 8, kNone, kDot);
+    gdead[lyr]->SetFillColorAlpha(kOrange - 8, 0.5);
     gdead[lyr]->SetLineWidth(0);
-    for (int ldr=0; ldr<nLadders[lyr]; ldr++)
+    for (int ldr = 0; ldr < nLadders[lyr]; ldr++)
     {
-      double dx = Dead(lyr,ldr) ? 0.5 : 0.0;
-      double dy = Dead(lyr,ldr) ? 0.089 : 0.0;
+      double dx = Dead(lyr, ldr) ? 0.5 : 0.0;
+      double dy = Dead(lyr, ldr) ? 0.089 : 0.0;
       gdead[lyr]->SetPoint(ldr, ldr, 0.0);
       gdead[lyr]->SetPointError(ldr, dx, dy);
     }
@@ -64,12 +64,14 @@ void DrawResults(int run = 411768,
   TH1D *hdz[nlayers][ntrees];
   TH1D *hs[nlayers][nladders][ntrees];
   TH1D *hz[nlayers][nladders][ntrees];
-  for (int lyr=0; lyr<nlayers; lyr++)
-    for (int ldr=0; ldr<nLadders[lyr]; ldr++)
-      for (int stage=0; stage<ntrees; stage++)
+  for (int lyr = 0; lyr < nlayers; lyr++)
+    for (int ldr = 0; ldr < nLadders[lyr]; ldr++)
+      for (int stage = 0; stage < ntrees; stage++)
       {
         int nbins   = 100;
         double xmax = 0.12;
+        if (string(treename).find("cnt") != string::npos)
+          xmax = 0.3;
         hs[lyr][ldr][stage] = new TH1D(Form("hs%d%d%d", lyr, ldr, stage),
                                        Form("B%dL%d", lyr, ldr),
                                        nbins, -xmax, xmax);
@@ -79,15 +81,17 @@ void DrawResults(int run = 411768,
       }
 
   // Residuals for half-layer units
-  const char *armlabel[narms] = {"E","W"};
+  const char *armlabel[narms] = {"E", "W"};
   TH1D *hls[nlayers][narms][ntrees];
   TH1D *hlz[nlayers][narms][ntrees];
-  for (int lyr=0; lyr<nlayers; lyr++)
-    for (int arm=0; arm<narms; arm++)
-      for (int stage=0; stage<ntrees; stage++)
+  for (int lyr = 0; lyr < nlayers; lyr++)
+    for (int arm = 0; arm < narms; arm++)
+      for (int stage = 0; stage < ntrees; stage++)
       {
         int nbins   = 200;
         double xmax = 0.06;
+        if (string(treename).find("cnt") != string::npos)
+          xmax = 0.2;
         hls[lyr][arm][stage] = new TH1D(Form("hls%d%d%d", lyr, arm, stage),
                                         Form("B%d%s", lyr, armlabel[arm]),
                                         nbins, -xmax, xmax);
@@ -99,9 +103,9 @@ void DrawResults(int run = 411768,
   FillHists(hs, hz, hls, hlz, inFile1, treename, 0);
   FillHists(hs, hz, hls, hlz, inFile2, treename, 1);
 
-  for (int lyr=0; lyr<nlayers; lyr++)
-    for (int ldr=0; ldr<nLadders[lyr]; ldr++)
-      for (int stage=0; stage<ntrees; stage++)
+  for (int lyr = 0; lyr < nlayers; lyr++)
+    for (int ldr = 0; ldr < nLadders[lyr]; ldr++)
+      for (int stage = 0; stage < ntrees; stage++)
       {
         SetupHist(hs[lyr][ldr][stage], stage);
         SetupHist(hz[lyr][ldr][stage], stage);
@@ -109,13 +113,13 @@ void DrawResults(int run = 411768,
 
   TCanvas *cls = new TCanvas(Form("cls%d", 0), Form("%d", 0), 1200, 800);
   cls->Divide(4, 2, 0.001, 0.001);
-  for (int lyr=0; lyr<4; lyr++)
-    for (int arm=0; arm<2; arm++)
+  for (int lyr = 0; lyr < 4; lyr++)
+    for (int arm = 0; arm < 2; arm++)
     {
-      cls->cd(arm*4 + lyr+1);
+      cls->cd(arm * 4 + lyr + 1);
       TH1D *h1 = hls[lyr][arm][0];
       TH1D *h2 = hls[lyr][arm][1];
-      SetYMax(h1,h2);
+      SetYMax(h1, h2);
       h1->Draw("");
       h2->Draw("same");
       SetupHist(h1, 0);
@@ -126,13 +130,13 @@ void DrawResults(int run = 411768,
 
   TCanvas *clz = new TCanvas(Form("clz%d", 0), Form("%d", 0), 1200, 800);
   clz->Divide(4, 2, 0.001, 0.001);
-  for (int lyr=0; lyr<4; lyr++)
-    for (int arm=0; arm<2; arm++)
+  for (int lyr = 0; lyr < 4; lyr++)
+    for (int arm = 0; arm < 2; arm++)
     {
-      clz->cd(arm*4 + lyr+1);
+      clz->cd(arm * 4 + lyr + 1);
       TH1D *h1 = hlz[lyr][arm][0];
       TH1D *h2 = hlz[lyr][arm][1];
-      SetYMax(h1,h2);
+      SetYMax(h1, h2);
       h1->Draw("");
       h2->Draw("same");
       SetupHist(h1, 0);
@@ -142,44 +146,44 @@ void DrawResults(int run = 411768,
   cList->Add(clz);
 
   // Draw individual residual distributions on sub-pads
-  for (int lyr=0; lyr<4; lyr++)
+  for (int lyr = 0; lyr < 4; lyr++)
   {
     Printf("Drawing residuals in layer %d", lyr);
     int nl = nLadders[lyr];
-    int nx = lyr ? nl/4 : nl/2; // Number of pads along x
+    int nx = lyr ? nl / 4 : nl / 2; // Number of pads along x
     int ny = lyr ? 4 : 2;       // Number of pads along y
     int ph = 200;               // pad height in px
     int pw = 200;               // pad width in px
     TCanvas *cs = new TCanvas(Form("cs%d", lyr), Form("ds layer %d", lyr),
-                              pw*nx, ph*ny);
+                              pw * nx, ph * ny);
     TCanvas *cz = new TCanvas(Form("cz%d", lyr), Form("dz layer %d", lyr),
-                              pw*nx, ph*ny);
+                              pw * nx, ph * ny);
     cs->Divide(nx, ny, 0.001, 0.001);
     cz->Divide(nx, ny, 0.001, 0.001);
 
-    for (int ldr=0; ldr<nl; ldr++)
+    for (int ldr = 0; ldr < nl; ldr++)
     {
-      cs->cd(ldr+1);
+      cs->cd(ldr + 1);
       SetYMax(hs[lyr][ldr][0], hs[lyr][ldr][1]);
-      for (int stage=0; stage<ntrees; stage++)
-        hs[lyr][ldr][stage]->Draw(stage==0?"":"same");
+      for (int stage = 0; stage < ntrees; stage++)
+        hs[lyr][ldr][stage]->Draw(stage == 0 ? "" : "same");
       ModifyPad(gPad, hs[lyr][ldr][0], hs[lyr][ldr][1], "ds");
 
-      cz->cd(ldr+1);
+      cz->cd(ldr + 1);
       SetYMax(hz[lyr][ldr][0], hz[lyr][ldr][1]);
-      for (int stage=0; stage<ntrees; stage++)
-        hz[lyr][ldr][stage]->Draw(stage==0?"":"same");
+      for (int stage = 0; stage < ntrees; stage++)
+        hz[lyr][ldr][stage]->Draw(stage == 0 ? "" : "same");
       ModifyPad(gPad, hz[lyr][ldr][0], hz[lyr][ldr][1], "dz");
 
-      if (Dead(lyr,ldr))
+      if (Dead(lyr, ldr))
       {
         TLatex l;
-        l.SetTextColor(kGray+2);
+        l.SetTextColor(kGray + 2);
         l.SetTextSize(0.4);
         l.SetNDC();
-        cs->cd(ldr+1);
+        cs->cd(ldr + 1);
         l.DrawLatex(0.5, 0.5, "#times");
-        cz->cd(ldr+1);
+        cz->cd(ldr + 1);
         l.DrawLatex(0.5, 0.5, "#times");
       }
 
@@ -189,22 +193,22 @@ void DrawResults(int run = 411768,
   }
 
 
-  for (int lyr=0; lyr<4; lyr++)
+  for (int lyr = 0; lyr < 4; lyr++)
   {
     // Mean of means, mean of std devs
     double smm = 0, smrms = 0;
     double zmm = 0, zmrms = 0;
-    for (int stage=0; stage<ntrees; stage++)
+    for (int stage = 0; stage < ntrees; stage++)
     {
-      hdz[lyr][stage] = new TH1D(Form("hdz%d_%d",lyr, stage),
+      hdz[lyr][stage] = new TH1D(Form("hdz%d_%d", lyr, stage),
                                  Form("z-resid layer %d", lyr),
                                  nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
-      hds[lyr][stage] = new TH1D(Form("hds%d_%d",lyr, stage),
+      hds[lyr][stage] = new TH1D(Form("hds%d_%d", lyr, stage),
                                  Form("s-resid layer %d", lyr),
                                  nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
       SetHistProps(hds[lyr][stage], kRed, kNone, kRed, kFullCircle, 1.5);
       SetHistProps(hdz[lyr][stage], kBlue, kNone, kBlue, kFullCircle, 1.5);
-      if (stage==0)
+      if (stage == 0)
       {
         SetHistProps(hds[lyr][stage], kGray, kNone, kGray, kFullCircle, 1.5);
         SetHistProps(hdz[lyr][stage], kGray, kNone, kGray, kFullCircle, 1.5);
@@ -224,7 +228,7 @@ void DrawResults(int run = 411768,
       hds[lyr][stage]->GetXaxis()->SetNdivisions(210);
       hdz[lyr][stage]->GetXaxis()->SetNdivisions(210);
 
-      for (int ldr=0; ldr<nLadders[lyr]; ldr++)
+      for (int ldr = 0; ldr < nLadders[lyr]; ldr++)
       {
         double sm   = hs[lyr][ldr][stage]->GetMean();
         double zm   = hz[lyr][ldr][stage]->GetMean();
@@ -233,19 +237,19 @@ void DrawResults(int run = 411768,
 
         if (stage == 1)
         {
-          smm   += sm/nLadders[lyr];
-          zmm   += zm/nLadders[lyr];
-          smrms += srms/nLadders[lyr];
-          zmrms += zrms/nLadders[lyr];
+          smm   += sm / nLadders[lyr];
+          zmm   += zm / nLadders[lyr];
+          smrms += srms / nLadders[lyr];
+          zmrms += zrms / nLadders[lyr];
         }
 
-        hds[lyr][stage]->SetBinContent(ldr+1, sm);
-        hdz[lyr][stage]->SetBinContent(ldr+1, zm);
-        hds[lyr][stage]->SetBinError(ldr+1, srms);
-        hdz[lyr][stage]->SetBinError(ldr+1, zrms);
+        hds[lyr][stage]->SetBinContent(ldr + 1, sm);
+        hdz[lyr][stage]->SetBinContent(ldr + 1, zm);
+        hds[lyr][stage]->SetBinError(ldr + 1, srms);
+        hdz[lyr][stage]->SetBinError(ldr + 1, zrms);
       }
     }
-    DrawObject(hds[lyr][0], "e0p", Form("ds_lyr%d",lyr), cList);
+    DrawObject(hds[lyr][0], "e0p", Form("ds_lyr%d", lyr), cList);
     gdead[lyr]->Draw("e5p,same");
     hds[lyr][1]->Draw("e0p,same");
     gPad->RedrawAxis();
@@ -255,7 +259,7 @@ void DrawResults(int run = 411768,
     ltx.DrawLatex(0.6, 0.85, Form("#LTmean#GT    %.3f", smm));
     ltx.DrawLatex(0.6, 0.80, Form("#LTStd dev#GT %.3f", smrms));
 
-    DrawObject(hdz[lyr][0], "e0p", Form("dz_lyr%d",lyr), cList);
+    DrawObject(hdz[lyr][0], "e0p", Form("dz_lyr%d", lyr), cList);
     gdead[lyr]->Draw("e5p,same");
     hdz[lyr][1]->Draw("e0p,same");
     gPad->RedrawAxis();
@@ -284,23 +288,23 @@ void DrawResults(int run = 411768,
 void
 SetupHist(TH1D *h, int stage)
 {
-  if (stage==0)
+  if (stage == 0)
   {
-    h->SetLineColor(kGray+1);
+    h->SetLineColor(kGray + 1);
     h->SetFillColor(kGray);
   }
   else if (TString(h->GetName()).Contains("hs"))
-    h->SetLineColor(kGreen+3);
+    h->SetLineColor(kGreen + 3);
   else if (TString(h->GetName()).Contains("hz"))
-    h->SetLineColor(kAzure+2);
+    h->SetLineColor(kAzure + 2);
   else if (TString(h->GetName()).Contains("hls"))
-    h->SetLineColor(kGreen+3);
+    h->SetLineColor(kGreen + 3);
   else if (TString(h->GetName()).Contains("hlz"))
-    h->SetLineColor(kAzure+2);
+    h->SetLineColor(kAzure + 2);
 
   TAxis *ax = h->GetXaxis();
   TAxis *ay = h->GetYaxis();
-  ay->SetRangeUser(0, 1.3*h->GetMaximum());
+  ay->SetRangeUser(0, 1.3 * h->GetMaximum());
   ax->SetNdivisions(205);
   ax->SetLabelSize(0.06);
   ay->SetNdivisions(205);
@@ -326,7 +330,7 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
 
   while (r.Next())
   {
-    for (int i=0; i<(int)ds.GetSize(); ++i)
+    for (int i = 0; i < (int)ds.GetSize(); ++i)
     {
       int lyr = layer[i];
       int ldr = ladder[i];
@@ -337,7 +341,7 @@ FillHists(TH1D *hs[nlayers][nladders][ntrees],
 
       // Printf("%s %d %d %d %f %f", treename, lyr, ldr, stage, s, z);
 
-      if (s>-0.2 && s<0.2 && z>-0.2 && z<0.2)
+      if (s > -0.2 && s < 0.2 && z > -0.2 && z < 0.2)
       {
         hs[lyr][ldr][stage]->Fill(s);
         hz[lyr][ldr][stage]->Fill(z);
@@ -364,14 +368,14 @@ ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord)
   ltx.DrawLatex(0.23, 0.92, h1->GetTitle());
   ltx.DrawLatex(0.23, 0.85, Form("%s [cm]", coord.Data()));
   ltx.SetTextSize(0.06);
-  ltx.DrawLatex(0.62,0.93, Form("#color[%d]{%.0f (%.0f) #mum}",
-                                kBlack /*h1->GetLineColor()*/,
-                                1e4*h1->GetMean(),
-                                1e4*h1->GetRMS()));
-  ltx.DrawLatex(0.62,0.87, Form("#color[%d]{%.0f (%.0f) #mum}",
-                                h2->GetLineColor(),
-                                1e4*h2->GetMean(),
-                                1e4*h2->GetRMS()));
+  ltx.DrawLatex(0.62, 0.93, Form("#color[%d]{%.0f (%.0f) #mum}",
+                                 kBlack /*h1->GetLineColor()*/,
+                                 1e4 * h1->GetMean(),
+                                 1e4 * h1->GetRMS()));
+  ltx.DrawLatex(0.62, 0.87, Form("#color[%d]{%.0f (%.0f) #mum}",
+                                 h2->GetLineColor(),
+                                 1e4 * h2->GetMean(),
+                                 1e4 * h2->GetRMS()));
   return;
 }
 
