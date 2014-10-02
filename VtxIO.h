@@ -531,7 +531,7 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
   fs << "! regularisation factor, pre-sigma" << endl;
   fs << endl;
 
-  fs << "method inversion 5 0.0001  ! Gauss. elim., #iterations, tol." << endl;
+  fs << "method inversion 5 0.00001  ! Gauss. elim., #iterations, tol." << endl;
   fs << "end" << endl;
 
   fs.close();
