@@ -12,14 +12,14 @@
 
 void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no-vtx2cnt.root",
                 const char *outfilename = "rootfiles/411768-0-0.root",
-                const char *pisafilename = "geom/411768-0-0.par",
+                const char *configfilename = "production/config/config-zf-411768-0-0.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
                 int nhitsmin = 3,
-                int nevents = -1, // -1 = everything
+                int nevents = 10000, // -1 = everything
                 float frac4hit = -1, // -1 = no filter
                 TString opt = "cnt") // "": vtx only. "cnt": vtxtrks & cnttrks.
 {
@@ -32,7 +32,12 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no
   assert(svxseg);
 
   std::cout << "-- Initializing SvxTGeo --" << std::endl;
-  SvxTGeo *tgeo = VTXModel(pisafilename);
+  float bc[2] = {0};
+  float e2w[3] = {0};
+  float v2c[3] = {0};
+  string geo;
+  GetParamFromConfig(configfilename, bc, e2w, v2c, geo);
+  SvxTGeo *tgeo = VTXModel(geo.c_str());
 
   std::cout << "-- Creating output file " << outfilename << " --" << std::endl;
   TFile *outFile = new TFile(outfilename, "recreate");
@@ -68,9 +73,9 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no
                vtxtrks, cnttrks,
                vertexprobmin, vertexprobmax,
                maxdca,
-               maxres_s, maxres_z, 
-               10, 
-               10, 
+               maxres_s, maxres_z,
+               10,
+               10,
                nhitsmin,
                frac4hit);
   }
