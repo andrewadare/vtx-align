@@ -23,6 +23,7 @@ double ClusterZResolution(int layer);
 TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
+double ZVertex(geoTracks &event, TString arm);
 
 
 TVectorD
@@ -598,5 +599,30 @@ IPVec(SvxGeoTrack &t, TVectorD &p)
   n(1) = sin(t.phi0);
   return IPVec(a,n,p);
 }
+
+double
+ZVertex(geoTracks &tracks, TString arm)
+{
+  int nz = 0;
+  const int maxnz = tracks.size();
+  assert(maxnz>0);
+  double zs[maxnz];
+  double probs[1] = {0.5}; // For median = 50% quantile
+  double quantiles[1] = {0};
+
+  for (unsigned int i=0; i<tracks.size(); i++)
+  {
+    bool east = East(tracks[i].phi0);
+    if (arm=="")
+      zs[nz++] = tracks[i].vz;
+    else if ((arm=="east" && east) || (arm=="west" && !east))
+      zs[nz++] = tracks[i].vz;
+  }
+  TMath::Quantiles(nz, 1, zs, quantiles, probs, false);
+
+  return quantiles[0];
+}
+
+
 
 #endif
