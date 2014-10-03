@@ -18,15 +18,19 @@ void WriteConfigFile(const char *filename,
 TH1D *
 ProfileSummary(TProfile *prof, const char *name);
 
-void CalcBeamCenter(int run = 123456,
+void CalcBeamCenter(int run = 411768,
                     int prod = 0,
-                    int subiter = 0)
+                    int subiter = 1)
 {
   bool write = true;
 
   // Inputs:
   TString rootFileIn = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn = Form("geom/%d-%d-%d.par", run, prod, subiter);
+  TString bcFileIn   = Form("rootfiles/bc-%d.root", run);
+  TFile *bcfFixed   = new TFile(bcFileIn.Data(), "read");
+  TGraphErrors *gbcFixed  = (TGraphErrors *) bcfFixed->Get("gbc");
+  gbcFixed->SetName("gbcFixed");
 
   // Outputs:
   TString bcFileOut  = Form("rootfiles/bc-%d-%d-%d.root", run, prod, subiter);
@@ -47,13 +51,18 @@ void CalcBeamCenter(int run = 123456,
 
   geoEvents events;
   GetEventsFromTree(t, geo, events, -1);
-  FitTracks(events, 0, "");
+
+  // Hack in print statements now, clean up later
+  Info("", "Using beamcenter from %s", bcfFixed->GetName());
+  Info("", " E: (%.3f, %.3f)", gbcFixed->GetX()[0], gbcFixed->GetY()[0]);
+  Info("", " W: (%.3f, %.3f)", gbcFixed->GetX()[1], gbcFixed->GetY()[1]);
+  FitTracks(events, gbcFixed, "");
 
   TH1D *hdcae = new TH1D("hdcae", "", 200, -0.05, 0.05);
   TH1D *hdcaw = new TH1D("hdcaw", "", 200, -0.05, 0.05);
   TH2D *hdca2d   = new TH2D("hdca2d", ";#phi [rad];DCA [cm]",
                             100, -TMath::PiOver2(), 3*TMath::PiOver2(),
-                            100, -0.05, +0.05);
+                            100, -0.25, +0.25);
 
   // Event multiplicity histograms
   TH1D *hne = new TH1D("hne", Form("VTXE multiplicity - prod %d step %d;"
@@ -268,7 +277,7 @@ void CalcBeamCenter(int run = 123456,
   DrawObject(hdca2d, "col", "dca2d", cList);
   hdca2d->GetXaxis()->CenterTitle();
   hdca2d->GetYaxis()->CenterTitle();
-  TProfile* dca2dprof = hdca2d->ProfileX("dca2dprof", 1, -1, "d,same");
+  TProfile *dca2dprof = hdca2d->ProfileX("dca2dprof", 1, -1, "d,same");
   dca2dprof->SetMarkerStyle(kFullCircle);
   ltx.DrawLatex(0.25, 0.80, Form("West"));
   ltx.DrawLatex(0.65, 0.80, Form("East"));
