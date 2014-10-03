@@ -167,6 +167,8 @@ TrackFitT(SvxGeoTrack &gt)
       phirot = TMath::ATan2(hit.y, hit.x);
     }
   }
+  if (phirot < 0)
+    phirot += TMath::TwoPi();
 
   // Rotate x, y by -phirot so error is approximately in y' direction only.
   // In rotated frame (xp, yp) = (cx + sy, cy - sx)
