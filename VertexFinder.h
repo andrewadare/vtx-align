@@ -5,7 +5,6 @@
 #include "GLSFitter.h"
 
 TVectorD Vertex(geoTracks &event, TString arm, TString opt = "");
-double ZVertex(geoTracks &event, TString arm);
 void FillVertexArrays(geoEvents &events, int minmult,
                       vecd &vxe, vecd &vye, vecd &vze,
                       vecd &vxw, vecd &vyw, vecd &vzw,
@@ -26,29 +25,6 @@ void FillVertexHists(geoEvents &events, int minmult,
 // root [3] TMath::Quantiles(10, 3, x, quantiles, probs, false)
 // root [4] quantiles
 // (double [3]) { 3.250000e+00, 5.500000e+00, 7.750000e+00 }
-
-double
-ZVertex(geoTracks &tracks, TString arm)
-{
-  int nz = 0;
-  const int maxnz = tracks.size();
-  assert(maxnz>0);
-  double zs[maxnz];
-  double probs[1] = {0.5}; // For median = 50% quantile
-  double quantiles[1] = {0};
-
-  for (unsigned int i=0; i<tracks.size(); i++)
-  {
-    bool east = East(tracks[i].phi0);
-    if (arm=="")
-      zs[nz++] = tracks[i].vz;
-    else if ((arm=="east" && east) || (arm=="west" && !east))
-      zs[nz++] = tracks[i].vz;
-  }
-  TMath::Quantiles(nz, 1, zs, quantiles, probs, false);
-
-  return quantiles[0];
-}
 
 TVectorD
 Vertex(geoTracks &event, TString arm, TString opt)
