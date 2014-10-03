@@ -32,10 +32,10 @@ void CorrectFromFile(const char *filename,
                      geoEvents &vtxevents,
                      geoEvents &cntevents);
 
-void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
+void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
               int subiter = 0,     // Geometry update step. Starts at 0.
-              TString alignMode = "ladder") // "ladder" or "halflayer"
+              TString alignMode = "halflayer") // "ladder" or "halflayer"
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -47,7 +47,10 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // Inputs:
   TString rootFileIn = Form("rootfiles/%d-%d-%d.root", run, prod, subiter);
   TString pisaFileIn = Form("geom/%d-%d-%d.par", run, prod, subiter);
-  TString bcFileIn   = Form("rootfiles/bc-%d-%d-%d.root", run, prod, subiter);
+  // TString bcFileIn   = Form("rootfiles/bc-%d-%d-%d.root", run, prod, subiter);
+  TString bcFileIn   = Form("rootfiles/bc-%d.root", run);
+  TFile *bcf         = new TFile(bcFileIn.Data(), "read");
+  TGraphErrors *gbc  = (TGraphErrors *) bcf->Get("gbc");
 
   // Outputs:
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, subiter + 1);
@@ -70,13 +73,13 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   // vecs sgpars {"s"};
   // vecd sgpresigma {0};
 
-  vecs sgpars {"x", "y"};
-  vecd sgpresigma {1e-3, 1e-3};
+  vecs sgpars {"s", "x", "y"};
+  vecd sgpresigma {0,0,0};
 
   // Assign free global parameter coords for dz residuals here
   // Set includes "x", "y", "z", "r".
   vecs zgpars {"z"};
-  vecd zgpresigma {1e-3};
+  vecd zgpresigma {0};
 
   TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
@@ -123,10 +126,13 @@ void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
   {
     GetEventsFromTree(svxseg, tgeo, vtxevents, -1);
 
-    TFile *bcf = new TFile(bcFileIn.Data(), "read");
-    TGraphErrors *gbc = (TGraphErrors *) bcf->Get("gbc");
-
-    FitTracks(vtxevents, 0, "");
+    if (gbc)
+    {
+      Info("", "Using beamcenter from %s", bcf->GetName());
+      Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
+      Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
+    }
+    FitTracks(vtxevents, gbc, "");
     EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc, alignMode);
   }
   if (useCntTracks)
