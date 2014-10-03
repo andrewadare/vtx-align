@@ -351,11 +351,8 @@ RejectOutlierTrk(SvxGeoTrack trk, TVectorD bce, TVectorD bcw,
   // Reject tracks
   // true = reject
 
-  double phi = trk.phi0;
-  TVectorD d = IPVec(trk, East(phi) ? bce : bcw);
-
   // DCA outlier cut
-  if (TMath::Sqrt(d * d) > maxdca)
+  if (TMath::Abs(trk.xydca) > maxdca)
     return true;
 
   // Require at least nhitsmin clusters
