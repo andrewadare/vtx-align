@@ -10,8 +10,8 @@
 // run-prod-iter.par so the base matches the ROOT file.
 // The alignment script VtxAlign.C requires a .par file with such a name.
 // opt may contain:
-//      "": vtx only. 
-//      "cnt": vtxtrks & cnttrks. 
+//      "": vtx only.
+//      "cnt": vtxtrks & cnttrks.
 //      "fixed-bc" use beamcenter from rootfiles/bc-411768.root
 
 void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_full.root", //rootfiles/anavtxcluster_411768-pro0-no-vtx2cnt.root",
@@ -23,9 +23,9 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_f
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
                 int nhitsmin = 3,
-                int nevents = -1, // -1 = everything
+                int nevents = 10000, // -1 = everything
                 float frac4hit = -1, // -1 = no filter
-                TString opt = "cnt, fixed-bc") // see above
+                TString opt = "fixed-bc") // see above
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");
@@ -85,56 +85,36 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_f
     GetSyncedEventsFromClusTree(svxseg, svxcnt,
                                 vtxevents, cntevents,
                                 tgeo, nevents);
-
-    //need to fit segments to get phi, theta
-    std::cout << "-- Fitting tracks --" << std::endl;
-    if (gbc)
-    {
-      Info("", "Using beamcenter in fit:");
-      Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
-      Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
-    }
-    FitTracks(vtxevents, gbc, "");
-
-    std::cout << "-- Filtering data --" << std::endl;
-    FilterData(vtxevents, cntevents,
-               vtxtrks, cnttrks,
-               vertexprobmin, vertexprobmax,
-               maxdca,
-               maxres_s, maxres_z,
-               10,
-               10,
-               nhitsmin,
-               frac4hit);
   }
   else
   {
     std::cout << "-- Reading events from ntuple --" << std::endl;
     map <int, int> tmpmap;
     GetEventsFromClusTree(svxseg, tgeo, vtxevents, tmpmap, nevents);
-
-    std::cout << "-- Fitting tracks --" << std::endl;
-    if (gbc)
-    {
-
-      Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
-      Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
-    }
-    FitTracks(vtxevents, gbc);
-
-    std::cout << "-- Filtering data --" << std::endl;
-    FilterData(vtxevents,
-               vtxtrks,
-               vertexprobmin,
-               vertexprobmax,
-               maxdca,
-               maxres_s,
-               maxres_z,
-               10,
-               10,
-               nhitsmin,
-               frac4hit);
   }
+
+  //need to fit segments to get phi, theta
+  std::cout << "-- Fitting tracks --" << std::endl;
+  if (gbc)
+  {
+    Info("", "Using beamcenter in fit:");
+    Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
+    Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
+  }
+  FitTracks(vtxevents, gbc, "");
+
+
+  std::cout << "-- Filtering data --" << std::endl;
+  FilterData(vtxevents, cntevents,
+             vtxtrks, cnttrks,
+             vertexprobmin, vertexprobmax,
+             maxdca,
+             maxres_s, maxres_z,
+             10,
+             10,
+             nhitsmin,
+             frac4hit);
+
 
   Printf("-- Writing output to %s --", outfilename);
   outFile->cd();
