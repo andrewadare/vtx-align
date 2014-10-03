@@ -44,6 +44,7 @@ void ApplyPreSigma(ofstream &fs, veci &labels, double presigma);
 // They should all return void and take the same parameter list.
 void      Ones(veci &labels, SvxTGeo *geo, vecd &x);
 void     Radii(veci &labels, SvxTGeo *geo, vecd &x);
+void   HLRadii(veci &labels, SvxTGeo *geo, vecd &x);
 void PhiAngles(veci &labels, SvxTGeo *geo, vecd &x);
 void      RPhi(veci &labels, SvxTGeo *geo, vecd &x);
 void      XPos(veci &labels, SvxTGeo *geo, vecd &x);
@@ -155,6 +156,31 @@ Radii(veci &labels, SvxTGeo *geo, vecd &x)
     ParInfo(labels[i], lyr, ldr, s);
     x[i] = geo->SensorRadius(lyr, ldr, 0);
   }
+}
+
+void
+HLRadii(veci &labels, SvxTGeo *geo, vecd &x)
+{
+  x.clear();
+  x.resize(labels.size(), 0.0);
+  int lyr, arm;
+  string s;
+  for (unsigned int i=0; i<labels.size(); i++)
+  {
+    HalfLayerParInfo(labels[i], lyr, arm, s);
+
+    // Get mean radius over ladders in halflayer
+    int first = -1, last  = -1;
+    geo->LadderRange(lyr, arm, first, last);
+    int nladders = 0;
+    for (int ldr = first; ldr <= last; ldr++)
+    {
+      x[i] += geo->SensorRadius(lyr, ldr, 0);
+      ++nladders;
+    }
+    x[i] /= nladders;
+  }
+
 }
 
 void
@@ -320,25 +346,25 @@ WriteHLConstraints(const char *filename,
   {
     // AddConstraint(hlx, geo, Ones, fs, "Total x translation");
     // AddConstraints(wx, ex, geo, Ones,  fs, "x translation");
-    AddConstraints(wx, ex, geo, Radii, fs, "x r shear");
+    // AddConstraints(wx, ex, geo, HLRadii, fs, "x r shear");
   }
   if (ydof)
   {
     // AddConstraint(hly, geo, Ones, fs, "Total y translation");
     // AddConstraints(wy, ey, geo, Ones,  fs, "y translation");
-    AddConstraints(wy, ey, geo, Radii, fs, "y r shear");
+    // AddConstraints(wy, ey, geo, HLRadii, fs, "y r shear");
   }
   if (zdof)
   {
     // AddConstraint(hlz, geo, Ones, fs, "Total z translation");
-    // AddConstraints(wz, ez, geo, Ones,  fs, "z translation");
-    AddConstraints(wz, ez, geo, Radii, fs, "z r shear");
+    AddConstraints(wz, ez, geo, Ones,  fs, "z translation");
+    AddConstraints(wz, ez, geo, HLRadii, fs, "z r shear");
   }
   if (sdof)
   {
     // AddConstraint(hls, geo, Ones, fs, "Total s translation");
     // AddConstraints(ws, es, geo, Ones,  fs, "s translation");
-    AddConstraints(ws, es, geo, Radii, fs, "s r shear");
+    AddConstraints(ws, es, geo, HLRadii, fs, "s r shear");
   }
 
   fs.close();
@@ -445,25 +471,25 @@ WriteLadderConstraints(const char *filename,
   if (sdof)
   {
     AddConstraints(ws, es, geo, Ones,      fs, "s translation");
-    AddConstraints(ws, es, geo, PhiAngles, fs, "s phi shear");
-    AddConstraints(ws, es, geo, RPhi,      fs, "s r-phi shear");
-    AddConstraints(ws, es, geo, Radii,     fs, "s r shear");
-    AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
-    AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
+    // AddConstraints(ws, es, geo, PhiAngles, fs, "s phi shear");
+    // AddConstraints(ws, es, geo, RPhi,      fs, "s r-phi shear");
+    // AddConstraints(ws, es, geo, Radii,     fs, "s r shear");
+    // AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
+    // AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
   }
   if (xdof)
   {
     AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
     AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
-    AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
-    AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
+    // AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
+    // AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
   }
   if (ydof)
   {
     AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
     AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
-    AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
-    AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
+    // AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
+    // AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
   }
   if (zdof)
   {
