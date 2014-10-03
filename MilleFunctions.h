@@ -33,7 +33,6 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
 
   if (bc)
   {
-
     // Reject tracks with huge DCA values
     if (fabs(trk.xydca) > 0.1)
     {
@@ -45,7 +44,6 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     bcvec(0) = bc->GetX()[arm];
     bcvec(1) = bc->GetY()[arm];
     float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
-    float dca = trk.xydca;
 
     float xp = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
     float sderlc[4] = {1.0,   xp, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
@@ -54,8 +52,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float ld[1] = {1};
     float gd[1] = {0}; // placeholder - not used
     int nolabels[1] = {0}; // placeholder - not used
-    m.mille(4, sderlc, 0, gd, nolabels, dca, sigbc);
-    // TODO include z also
+    m.mille(4, sderlc, 0, gd, nolabels, trk.xydca, sigbc);
+    m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, sigbc);
   }
 
   for (int j=0; j<trk.nhits; j++)
@@ -212,15 +210,20 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
 
     // d(Delta_s)/ds -- 0.974 accounts for 13 degree tilt in pixel layers
     if (par == "s")
-      return hit.layer < 2 ? 0.9741 : 1.0;
+      return 1.0;
+      // return hit.layer < 2 ? 0.9741 : 1.0;
 
     // d(Delta_s)/dx
     if (par == "x")
-      return hit.layer < 2 ? -0.9741*hit.y/r : -hit.y/r;
+      return -sin(trk.phirot);
+      // return -hit.y/r;
+      // return hit.layer < 2 ? -0.9741*hit.y/r : -hit.y/r;
 
     // d(Delta_s)/dy
     if (par == "y")
-      return hit.layer < 2 ? 0.9741*hit.x/r : hit.x/r;
+      return cos(trk.phirot);
+      // return hit.x/r;
+      // return hit.layer < 2 ? 0.9741*hit.x/r : hit.x/r;
 
     // d(Delta_s)/dz
     if (par == "z")
@@ -239,11 +242,13 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
 
     // d(Delta_z)/dx
     if (par == "x")
-      return hit.x/r/TMath::Tan(trk.the0);
+      return cos(trk.phirot)/tan(trk.the0);
+      // return hit.x/r/TMath::Tan(trk.the0);
 
     // d(Delta_z)/dy
     if (par == "y")
-      return hit.y/r/TMath::Tan(trk.the0);
+      return sin(trk.phirot)/tan(trk.the0);
+      // return hit.y/r/TMath::Tan(trk.the0);
 
     // d(Delta_z)/dz
     if (par == "z")
