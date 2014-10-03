@@ -346,18 +346,18 @@ WriteHLConstraints(const char *filename,
   {
     // AddConstraint(hlx, geo, Ones, fs, "Total x translation");
     // AddConstraints(wx, ex, geo, Ones,  fs, "x translation");
-    // AddConstraints(wx, ex, geo, HLRadii, fs, "x r shear");
+    AddConstraints(wx, ex, geo, HLRadii, fs, "x r shear");
   }
   if (ydof)
   {
     // AddConstraint(hly, geo, Ones, fs, "Total y translation");
     // AddConstraints(wy, ey, geo, Ones,  fs, "y translation");
-    // AddConstraints(wy, ey, geo, HLRadii, fs, "y r shear");
+    AddConstraints(wy, ey, geo, HLRadii, fs, "y r shear");
   }
   if (zdof)
   {
     // AddConstraint(hlz, geo, Ones, fs, "Total z translation");
-    AddConstraints(wz, ez, geo, Ones,  fs, "z translation");
+    // AddConstraints(wz, ez, geo, Ones,  fs, "z translation");
     AddConstraints(wz, ez, geo, HLRadii, fs, "z r shear");
   }
   if (sdof)

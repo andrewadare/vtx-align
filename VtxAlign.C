@@ -76,6 +76,9 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   vecs sgpars {"s", "x", "y"};
   vecd sgpresigma {0,0,0};
 
+  // vecs sgpars {"x", "y"};
+  // vecd sgpresigma {0,0};
+
   // Assign free global parameter coords for dz residuals here
   // Set includes "x", "y", "z", "r".
   vecs zgpars {"z"};

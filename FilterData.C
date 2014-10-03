@@ -13,9 +13,10 @@
 //      "": vtx only. 
 //      "cnt": vtxtrks & cnttrks. 
 //      "fixed-bc" use beamcenter from rootfiles/bc-411768.root
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no-vtx2cnt.root",
+
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_full.root", //rootfiles/anavtxcluster_411768-pro0-no-vtx2cnt.root",
                 const char *outfilename = "rootfiles/411768-0-0.root",
-                const char *configfilename = "production/config/config-zf-411768-0-0_4.txt",
+                const char *configfilename = "production/config/config-zf-411768-0-0_5.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
@@ -93,7 +94,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no
       Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
       Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
     }
-    FitTracks(vtxevents, gbc);
+    FitTracks(vtxevents, gbc, "");
 
     std::cout << "-- Filtering data --" << std::endl;
     FilterData(vtxevents, cntevents,
@@ -115,7 +116,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-pro0-no
     std::cout << "-- Fitting tracks --" << std::endl;
     if (gbc)
     {
-      Info("", "Using beamcenter from %s", bcf->GetName());
+
       Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
       Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
     }

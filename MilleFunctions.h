@@ -53,7 +53,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float gd[1] = {0}; // placeholder - not used
     int nolabels[1] = {0}; // placeholder - not used
     m.mille(4, sderlc, 0, gd, nolabels, trk.xydca, sigbc);
-    m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, sigbc);
+    m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, 2.0);
   }
 
   for (int j=0; j<trk.nhits; j++)

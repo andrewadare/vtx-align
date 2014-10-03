@@ -14,7 +14,7 @@ void TrackFitL(SvxGeoTrack &gt); // Longitudinal component --> z0, theta
 void TrackFitT(SvxGeoTrack &gt); // Transverse component --> y0', phi
 void FitTracks(geoTracks &tracks, TGraphErrors *bc = 0);
 void FitTracks(geoEvents &events, TGraphErrors *bc = 0, TString opt = "");
-void RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt);
+void CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt);
 
 // It is questionable whether the following functions belong in this file.
 bool East(double phi);
@@ -103,11 +103,22 @@ TrackFitL(SvxGeoTrack &gt)
   TMatrixD Cinv(m, m);
   TVectorD y(m);
 
+  TMatrixD R(2,2);
+  double cp = TMath::Cos(gt.phirot), sp = TMath::Sin(gt.phirot);
+  R(0,0) =  cp; R(0,1) = sp;
+  R(1,0) = -sp; R(1,1) = cp;
+
   for (int ihit=0; ihit < m; ihit++)
   {
     SvxGeoHit hit = gt.GetHit(ihit);
+
+    TVectorD hitxy(2);
+    hitxy(0) = hit.x;
+    hitxy(1) = hit.y;
+    TVectorD hitxyp = R * hitxy;
+
     X(ihit,0) = 1;
-    X(ihit,1) = TMath::Sqrt(hit.x*hit.x + hit.y*hit.y);
+    X(ihit,1) = hitxyp(0); //TMath::Sqrt(hit.x*hit.x + hit.y*hit.y);
 
     // Expecting that hit.zsigma is z_size in integer units 1,2,3....
     double zsigma = hit.zsigma * ClusterZResolution(hit.layer);
@@ -318,8 +329,8 @@ FitTracks(geoTracks &tracks, TGraphErrors * /*bc*/)
 
   for (unsigned int i=0; i<tracks.size(); i++)
   {
-    TrackFitL(tracks[i]);
-    TrackFitT(tracks[i]);
+    TrackFitT(tracks[i]); // Call first
+    TrackFitL(tracks[i]); // Call second
   }
 
   Printf("done.");
@@ -327,7 +338,7 @@ FitTracks(geoTracks &tracks, TGraphErrors * /*bc*/)
 }
 
 void
-RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
+CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt)
 {
 
   // Compute the 2-D distance of closest approach from reference point to track.
@@ -342,12 +353,15 @@ RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
 
   TVectorD xye(2);
   TVectorD xyw(2);
+  double ze=0, zw=0;
   if (opt.Contains("compute_vertex"))
   {
     // Compute x,y vertex position from each VTX arm.
     // Requires that tracks have already been fit.
     xye = XYCenter(event, "east");
     xyw = XYCenter(event, "west");
+    ze  = ZVertex(event, "east");
+    zw  = ZVertex(event, "west");
   }
   else if (bc)
   {
@@ -355,6 +369,8 @@ RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     xye(1) = bc->GetY()[0];
     xyw(0) = bc->GetX()[1];
     xyw(1) = bc->GetY()[1];
+    ze  = ZVertex(event, "east");
+    zw  = ZVertex(event, "west");
   }
   else
   {
@@ -363,6 +379,8 @@ RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     xye(1) = 0.;
     xyw(0) = 0.;
     xyw(1) = 0.;
+    ze = 0;
+    zw = 0;
   }
 
   // Compute radial DCA and save to track.
@@ -371,6 +389,8 @@ RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     SvxGeoTrack &trk = event[t];
     int arm = (trk.hits[0].x < 0.) ? 0 : 1;   // 0 = East, 1 = West.
     TVectorD vxy = arm ? xyw : xye;
+    double vz = arm ? zw : ze;
+
 
     // Printf("gen,calc x: (%.0f, %.0f) | gen,calc y: (%.0f, %.0f)",
     //        1e4*trk.vx, 1e4*vxy(0), 1e4*trk.vy, 1e4*vxy(1));
@@ -379,6 +399,7 @@ RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     {
       vxy(0) = trk.vx;
       vxy(1) = trk.vy;
+      vz     = trk.vz;
     }
     // TVectorD ipvec = IPVec(trk, vxy);         // Impact parameter vector
 
@@ -409,15 +430,26 @@ RadialDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     trknormal(0) = cos(p);
     trknormal(1) = sin(p);
 
-    float dca = trknormal * ipvec;
+    float xydca = trknormal * ipvec;
+    float zdca  = tan(trk.the0)*vxyp(0) + trk.z0 - vz;
 
     // Assignment
-    trk.xydca = dca;
-    if (opt.Contains("compute_vertex"))
-    {
-      trk.vx = vxy(0);
-      trk.vy = vxy(1);
-    }
+    trk.xydca = xydca;
+    trk.zdca  = zdca;
+
+
+    //////////////////// TEMP //////////////////////////////////////////
+    trk.vx = vxy(0);
+    trk.vy = vxy(1);
+    trk.vz = vz;
+    //////////////////// TEMP //////////////////////////////////////////
+
+    // if (opt.Contains("compute_vertex"))
+    // {
+    //   trk.vx = vxy(0);
+    //   trk.vy = vxy(1);
+    //   trk.vz = vz;
+    // }
   }
 
   return;
@@ -442,11 +474,11 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
   {
     for (unsigned int t=0; t<events[ev].size(); t++)
     {
-      TrackFitL(events[ev][t]);
-      TrackFitT(events[ev][t]);
+      TrackFitT(events[ev][t]); // Call this first
+      TrackFitL(events[ev][t]); // And this second
     }
 
-    RadialDCA(events[ev], bc, opt);
+    CalculateDCA(events[ev], bc, opt);
   }
 
   Printf("done.");
@@ -614,15 +646,13 @@ ZVertex(geoTracks &tracks, TString arm)
   {
     bool east = East(tracks[i].phi0);
     if (arm=="")
-      zs[nz++] = tracks[i].vz;
+      zs[nz++] = tracks[i].z0;
     else if ((arm=="east" && east) || (arm=="west" && !east))
-      zs[nz++] = tracks[i].vz;
+      zs[nz++] = tracks[i].z0;
   }
   TMath::Quantiles(nz, 1, zs, quantiles, probs, false);
 
   return quantiles[0];
 }
-
-
 
 #endif

@@ -20,7 +20,7 @@ ProfileSummary(TProfile *prof, const char *name);
 
 void CalcBeamCenter(int run = 411768,
                     int prod = 0,
-                    int subiter = 1)
+                    int subiter = 4)
 {
   bool write = true;
 
@@ -62,7 +62,7 @@ void CalcBeamCenter(int run = 411768,
   TH1D *hdcaw = new TH1D("hdcaw", "", 200, -0.05, 0.05);
   TH2D *hdca2d   = new TH2D("hdca2d", ";#phi [rad];DCA [cm]",
                             100, -TMath::PiOver2(), 3*TMath::PiOver2(),
-                            100, -0.25, +0.25);
+                            100, -0.05, +0.05);
 
   // Event multiplicity histograms
   TH1D *hne = new TH1D("hne", Form("VTXE multiplicity - prod %d step %d;"
