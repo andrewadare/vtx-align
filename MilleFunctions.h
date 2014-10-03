@@ -33,10 +33,18 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
 
   if (bc)
   {
+
+    // Reject tracks with huge DCA values
+    if (fabs(trk.xydca) > 0.1)
+    {
+      Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
+      return;
+    }
+
     TVectorD bcvec(2);
     bcvec(0) = bc->GetX()[arm];
     bcvec(1) = bc->GetY()[arm];
-    float sigbc = bc->GetEX()[arm];   // Usually x error is bigger
+    float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
     float dca = trk.xydca;
 
     float xp = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
@@ -80,8 +88,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = /*4**/hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = /*4**/hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = 1.5*hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = 1.5*hit.zsigma * ClusterZResolution(hit.layer);
 
     if (false)
       Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
@@ -99,10 +107,14 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float sderlc[4] = {1.0,   distance, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
     float zderlc[4] = {0.0, 0.0, 1.0,   distance}; // dz(r)/dz0, dz(r)/dslope
 
-    // Printf("r %5.3f distance %5.3f | x, y, phi %5.3f, %5.3f, %5.3f", 
+    // Printf("r %5.3f distance %5.3f | x, y, phi %5.3f, %5.3f, %5.3f",
     //        r, distance, hit.x, hit.y, trk.phi0);
 
-    assert(abs(distance-r) < 0.1*r);
+    if (abs(distance-r) > 0.1*r)
+    {
+      trk.Print();
+      // assert(abs(distance-r) < 0.1*r);
+    }
 
     m.mille(4, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
     m.mille(4, zderlc, nzgp, &zdergl[0], &zlabels[0], hit.dz, sigz);
