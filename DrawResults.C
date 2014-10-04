@@ -15,13 +15,14 @@ void DrawLadderResidPlots(int ntrees, TObjArray *cList = 0);
 void DrawSummaryPlots(int ntrees, TObjArray *cList = 0);
 void InitResidHists(const char *treename, int ntrees);
 void SetupHist(TH1D *h, int stage);
-void FillHists(TFile *f, const char *treename, int stage, TObjArray *cList = 0);
+void FillHists(TFile *f, const char *treename, int stage,  int prod, int subiter,
+               TObjArray *cList = 0);
 void ModifyPad(TVirtualPad *pad);
 void PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord);
 bool CheckValue(ROOT::TTreeReaderValueBase *value);
 TH1D *Hist(const char *prefix, int layer, int ladder_or_arm, int stage);
 TH1D *Hist(const char *prefix, int layer, int stage);
-TGraphErrors * DeadLadderGraph(int lyr);
+TGraphErrors *DeadLadderGraph(int lyr);
 
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
@@ -57,10 +58,9 @@ void DrawResults(int run = 123456,
   }
 
   InitResidHists(treename, ntrees);
-  for (int stage = 0; stage < ntrees; stage++)
-  {
-    FillHists(inFiles[stage], treename, stage, cList);
-  }
+  FillHists(inFiles[0], treename, 0, prod1, subit1, cList);
+  if (ntrees == 2)
+    FillHists(inFiles[1], treename, 1, prod2, subit2, cList);
 
   DrawHalfLayerResidPlots(ntrees, cList);
   DrawLadderResidPlots(ntrees, cList);
@@ -97,7 +97,8 @@ void DrawResults(int run = 123456,
 }
 
 void
-FillHists(TFile *f, const char *treename, int stage, TObjArray *cList)
+FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
+          TObjArray *cList)
 {
   TH1D *xydcae = new TH1D(Form("xydcae%d",stage), Form("%d",stage), 200, -0.05, 0.05);
   TH1D *xydcaw = new TH1D(Form("xydcaw%d",stage), Form("%d",stage), 200, -0.05, 0.05);
@@ -113,27 +114,39 @@ FillHists(TFile *f, const char *treename, int stage, TObjArray *cList)
                               100, -0.05, +0.05);
 
   // x-y vertex distributions
-  int prod = 9999;
-  int subiter = 9999;
   double x0 = -0.5, y0 = -0.5, x1 = +0.5, y1 = +0.5;
   TH2D *hve = new TH2D(Form("hve%d",stage),
                        Form("East vertex - prod %d step %d;"
                             "x [cm];y [cm]", prod, subiter),
-                       200, x0, x1, 200, y0, y1);
+                       500, x0, x1, 500, y0, y1);
   TH2D *hvw = new TH2D(Form("hvw%d",stage),
                        Form("West vertex - prod %d step %d;"
                             "x [cm];y [cm]", prod, subiter),
-                       200, x0, x1, 200, y0, y1);
+                       500, x0, x1, 500, y0, y1);
 
   // West - East offset histograms
   TH1D *hdv[3];
   const char *xyzstr[3] = {"x", "y", "z"};
   for (int k=0; k<3; k++)
+  {
     hdv[k] = new TH1D(Form("hdv_%d_%d",stage, k),
                       Form("West - East vertex difference #Delta%s "
-                           "- prod %d step %d; #Delta%s [cm];events",
+                           "- prod %d step %d; #Delta%s [cm];tracks",
                            xyzstr[k], prod, subiter, xyzstr[k]),
                       200, -1, 1);
+
+    hdv[k]->GetXaxis()->SetLabelSize(0.06);
+    hdv[k]->GetXaxis()->SetTitleSize(0.07);
+    hdv[k]->GetXaxis()->SetTitleOffset(1.05);
+    hdv[k]->GetXaxis()->SetNdivisions(205);
+    hdv[k]->GetXaxis()->CenterTitle();
+
+    hdv[k]->GetYaxis()->SetLabelSize(0.06);
+    hdv[k]->GetYaxis()->SetTitleSize(0.07);
+    hdv[k]->GetYaxis()->SetTitleOffset(k ? 2.5 : 1.5);
+    hdv[k]->GetYaxis()->SetNdivisions(205);
+    hdv[k]->GetYaxis()->CenterTitle();
+  }
 
   TTreeReader r(treename, f);
 
@@ -238,15 +251,50 @@ FillHists(TFile *f, const char *treename, int stage, TObjArray *cList)
 
   hve->GetXaxis()->SetRangeUser(hve->GetMean(1)-0.1,hve->GetMean(1)+0.1);
   hve->GetYaxis()->SetRangeUser(hve->GetMean(2)-0.1,hve->GetMean(2)+0.1);
-  // DrawObject(hve, "col", Form("xy_vertex%d",stage), cList, 500, 500);
-  // hvw->Draw("same");
+  hvw->GetXaxis()->SetRangeUser(hvw->GetMean(1)-0.1,hvw->GetMean(1)+0.1);
+  hvw->GetYaxis()->SetRangeUser(hvw->GetMean(2)-0.1,hvw->GetMean(2)+0.1);
+  hve->GetXaxis()->CenterTitle();
+  hve->GetYaxis()->CenterTitle();
+  hvw->GetXaxis()->CenterTitle();
+  hvw->GetYaxis()->CenterTitle();
+  hve->GetXaxis()->SetTitleOffset(1.3);
+  hve->GetYaxis()->SetTitleOffset(2.0);
+  hvw->GetXaxis()->SetTitleOffset(1.3);
+  hvw->GetYaxis()->SetTitleOffset(2.0);
 
+  c = new TCanvas(Form("xy_vertex_%d",stage),
+                  Form("xy_vertex_ew_%d",stage), 1000, 500);
+  c->Divide(2,1);
+  c->cd(1);
+  ModifyPad(gPad);
+  hve->Draw("col");
+  ltx.DrawLatex(0.25, 0.92, "East");
+  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
+                                 1e4*hve->GetMean(1), 1e4*hve->GetMean(2)));
+  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
+                                 1e4*hve->GetRMS(1), 1e4*hve->GetRMS(2)));
+  c->cd(2);
+  ModifyPad(gPad);
+  hvw->Draw("col");
+  ltx.DrawLatex(0.25, 0.92, "West");
+  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
+                                 1e4*hvw->GetMean(1), 1e4*hvw->GetMean(2)));
+  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
+                                 1e4*hvw->GetRMS(1), 1e4*hvw->GetRMS(2)));
+  cList->Add(c);
+
+  c = new TCanvas(Form("ew_offsets_%d",stage),
+                  Form("ew_offsets_%d",stage), 1000, 500);
+  c->Divide(3,1, 0.001, 0.001);
   for (int k=0; k<3; k++)
   {
-    DrawObject(hdv[k], "", Form("cdv%d",k), cList);
-    ltx.DrawLatex(0.15, 0.85, Form("Mean %.3f", hdv[k]->GetMean()));
-    ltx.DrawLatex(0.15, 0.80, Form("Std dev %.3f", hdv[k]->GetRMS()));
+    c->cd(k+1);
+    ModifyPad(gPad);
+    hdv[k]->Draw();
+    ltx.DrawLatex(0.25, 0.95, Form("Mean %.3f", hdv[k]->GetMean()));
+    ltx.DrawLatex(0.25, 0.90, Form("Std dev %.3f", hdv[k]->GetRMS()));
   }
+  cList->Add(c);
 
   return;
 }
@@ -620,7 +668,7 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
       }
     }
 
-    TGraphErrors* gdead = DeadLadderGraph(lyr);
+    TGraphErrors *gdead = DeadLadderGraph(lyr);
     DrawObject(Hist("ds",lyr,0), "e0p", Form("ds_lyr%d", lyr), cList);
     // gdead->Draw("e5p,same");
     if (ntrees > 1)
