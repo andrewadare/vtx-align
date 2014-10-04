@@ -131,7 +131,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   {
     hdv[k] = new TH1D(Form("hdv_%d_%d",stage, k),
                       Form("West - East vertex difference #Delta%s "
-                           "- prod %d step %d; #Delta%s [cm];tracks",
+                           "- prod %d step %d; (W-E) #Delta%s [cm];tracks",
                            xyzstr[k], prod, subiter, xyzstr[k]),
                       200, -1, 1);
 
