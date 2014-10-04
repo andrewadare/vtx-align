@@ -16,11 +16,25 @@ void GenerateEvents()
   TRandom3 ran;
   TVectorD vertex(3);
 
+  // Assign a fixed beam x,y position if available
+  double bcx = 0, bcy = 0;  // 0.3532, 0.0528
+  TGraphErrors *gbc = 0;
+  TFile *bcf = new TFile(Form("rootfiles/bc-%d.root", run));
+  if (bcf)
+    gbc = (TGraphErrors *)bcf->Get("gbc");
+  if (gbc)
+  {
+    bcx = gbc->GetX()[1];
+    bcy = gbc->GetY()[1];
+    Info("", "Using a fixed beamcenter from %s", bcf->GetName());
+    Info("", " West: (%.4f, %.4f)", bcx, bcy);
+  }
+
   Printf("Generating %d VTX standalone events...", nvtxevents);
   for (int n=0; n<nvtxevents; n++)
   {
-    vertex(0) = 0.3532 + 0.010*ran.Gaus();
-    vertex(1) = 0.0528 + 0.010*ran.Gaus();
+    vertex(0) = bcx + 0.010*ran.Gaus();
+    vertex(1) = bcy + 0.010*ran.Gaus();
     vertex(2) = 2*ran.Gaus();
 
     geoTracks tracks;
@@ -33,6 +47,11 @@ void GenerateEvents()
       tracks[t].vx = vertex(0);
       tracks[t].vy = vertex(1);
       tracks[t].vz = vertex(2);
+      if (n<10 && t==0) Printf("bc %f %f\n %f %f %f", 
+                       bcx,bcy,
+                       tracks[t].vx,
+                       tracks[t].vy,
+                       tracks[t].vz);
     }
 
     vtxevents[n] = tracks;
@@ -43,8 +62,8 @@ void GenerateEvents()
   Printf("Generating %d CNT events...", ncntevents);
   for (int n=0; n<ncntevents; n++)
   {
-    vertex(0) = 0.010*ran.Gaus();
-    vertex(1) = 0.010*ran.Gaus();
+    vertex(0) = bcx + 0.010*ran.Gaus();
+    vertex(1) = bcy + 0.010*ran.Gaus();
     vertex(2) = 2*ran.Gaus();
 
     geoTracks tracks;
@@ -111,7 +130,7 @@ void GenerateEvents()
   // Without this step, a comparison of residuals before and after alignment
   // would not be apples-to-apples.
   // CNT tracks are not fit here--their parameters are determined externally.
-  FitTracks(vtxevents);
+  FitTracks(vtxevents, gbc, "calc_dca");
 
   // Write out (misaligned) geometry to par file
   Printf("Writing %s", pisaFileOut.Data());
