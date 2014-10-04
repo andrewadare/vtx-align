@@ -16,7 +16,8 @@ void DrawSummaryPlots(int ntrees, TObjArray *cList = 0);
 void InitResidHists(const char *treename, int ntrees);
 void SetupHist(TH1D *h, int stage);
 void FillHists(TFile *f, const char *treename, int stage, TObjArray *cList = 0);
-void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord);
+void ModifyPad(TVirtualPad *pad);
+void PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord);
 bool CheckValue(ROOT::TTreeReaderValueBase *value);
 TH1D *Hist(const char *prefix, int layer, int ladder_or_arm, int stage);
 TH1D *Hist(const char *prefix, int layer, int stage);
@@ -309,11 +310,6 @@ InitResidHists(const char *treename, int ntrees)
         hz[lyr][ldr][stage] = new TH1D(Form("hz%d%d%d", lyr, ldr, stage),
                                        Form("B%dL%d", lyr, ldr),
                                        nbins, -xmax, xmax);
-        SetupHist(hs[lyr][ldr][stage], stage);
-        SetupHist(hz[lyr][ldr][stage], stage);
-
-        // assert(gDirectory->Get(Form("hs%d%d%d", lyr, ldr, stage)));
-        // assert(gDirectory->Get(Form("hz%d%d%d", lyr, ldr, stage)));
       }
 
   // Residuals for half-layer units
@@ -408,13 +404,19 @@ SetupHist(TH1D *h, int stage)
 }
 
 void
-ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord)
+ModifyPad(TVirtualPad *pad)
 {
   pad->SetBottomMargin(0.15);
   pad->SetLeftMargin(0.2);
   pad->SetRightMargin(0.01);
   pad->SetTopMargin(0.01);
 
+  return;
+}
+
+void
+PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord)
+{
   TLatex ltx;
   ltx.SetNDC();
   ltx.SetTextSize(0.07);
@@ -484,10 +486,16 @@ DrawHalfLayerResidPlots(int ntrees, TObjArray *cList)
         cls->cd(arm * 4 + lyr + 1);
         TH1D *h = Hist("ls",lyr,arm,stage);
         h->Draw(stage == 0 ? "" : "same");
+        SetupHist(h, stage);
+        ModifyPad(gPad);
+        PrintMeanToPad(h, (ntrees == 2) ? Hist("ls",lyr,arm,1) : 0, "ds");
 
         clz->cd(arm * 4 + lyr + 1);
         h = Hist("lz",lyr,arm,stage);
         h->Draw(stage == 0 ? "" : "same");
+        ModifyPad(gPad);
+        SetupHist(h, stage);
+        PrintMeanToPad(h, (ntrees == 2) ? Hist("lz",lyr,arm,1) : 0, "dz");
       }
       if (ntrees > 1)
       {
@@ -495,18 +503,16 @@ DrawHalfLayerResidPlots(int ntrees, TObjArray *cList)
         TH1D *h0 = Hist("ls",lyr,arm,0);
         TH1D *h1 = Hist("ls",lyr,arm,1);
         SetYMax(h0, h1);
-        ModifyPad(gPad, h0, h1, "ds");
 
         clz->cd(arm * 4 + lyr + 1);
         h0 = Hist("lz",lyr,arm,0);
         h1 = Hist("lz",lyr,arm,1);
         SetYMax(h0, h1);
-        ModifyPad(gPad, h0, h1, "dz");
       }
     }
-    cList->Add(cls);
-    cList->Add(clz);
   }
+  cList->Add(cls);
+  cList->Add(clz);
   return;
 }
 
@@ -536,10 +542,16 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
         cs->cd(ldr + 1);
         TH1D *h = Hist("s",lyr,ldr,stage);
         h->Draw(stage == 0 ? "" : "same");
+        ModifyPad(gPad);
+        SetupHist(h, stage);
+        PrintMeanToPad(h, (ntrees == 2) ? Hist("s",lyr,ldr,1) : 0, "ds");
 
         cz->cd(ldr + 1);
         h = Hist("z",lyr,ldr,stage);
         h->Draw(stage == 0 ? "" : "same");
+        ModifyPad(gPad);
+        SetupHist(h, stage);
+        PrintMeanToPad(h, (ntrees == 2) ? Hist("z",lyr,ldr,1) : 0, "ds");
       }
       if (ntrees > 1)
       {
@@ -547,13 +559,11 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
         TH1D *h0 = Hist("s",lyr,ldr,0);
         TH1D *h1 = Hist("s",lyr,ldr,1);
         SetYMax(h0, h1);
-        ModifyPad(gPad, h0, h1, "ds");
 
         cz->cd(ldr + 1);
         h0 = Hist("z",lyr,ldr,0);
         h1 = Hist("z",lyr,ldr,1);
         SetYMax(h0, h1);
-        ModifyPad(gPad, h0, h1, "dz");
       }
       //   if (Dead(lyr, ldr)) // Put a big "X" over dead ladders
       //   {
