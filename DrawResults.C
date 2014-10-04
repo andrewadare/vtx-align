@@ -30,8 +30,8 @@ TGraphErrors *DeadLadderGraph(int lyr);
 void DrawResults(int run = 123456,
                  int prod1 = 0,
                  int subit1 = 0,
-                 int prod2 = -1,
-                 int subit2 = -1,
+                 int prod2 = 0,
+                 int subit2 = 1,
                  const char *treename = "vtxtrks")
 {
   gStyle->SetOptStat(0);
@@ -634,14 +634,20 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
   TLatex ltx;
   ltx.SetNDC();
   ltx.SetTextFont(42);
+  ltx.SetTextSize(0.05);
+  TLatex ltx2;
+  ltx2.SetNDC();
+  ltx2.SetTextFont(42);
+  ltx2.SetTextSize(0.07);
 
   // Draw summary plots of residual mean vs ladder index for each layer
   for (int lyr = 0; lyr < 4; lyr++)
   {
     Info("", "Drawing residual summary plots in layer %d", lyr);
-    // Mean of means, mean of std devs
-    double smm = 0, smrms = 0;
-    double zmm = 0, zmrms = 0;
+
+    // Precompute mean of means, mean of std devs
+    double smm[2] = {0}, smrms[2] = {0};
+    double zmm[2] = {0}, zmrms[2] = {0};
     for (int stage = 0; stage < ntrees; stage++)
     {
       for (int ldr = 0; ldr < nLaddersPerLayer[lyr]; ldr++)
@@ -652,13 +658,10 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
         double srms = Hist("s",lyr,ldr,stage)->GetRMS();
         double zrms = Hist("z",lyr,ldr,stage)->GetRMS();
 
-        if (stage == 1)
-        {
-          smm   += sm / nLaddersPerLayer[lyr];
-          zmm   += zm / nLaddersPerLayer[lyr];
-          smrms += srms / nLaddersPerLayer[lyr];
-          zmrms += zrms / nLaddersPerLayer[lyr];
-        }
+        smm[stage]   += sm / nLaddersPerLayer[lyr];
+        zmm[stage]   += zm / nLaddersPerLayer[lyr];
+        smrms[stage] += srms / nLaddersPerLayer[lyr];
+        zmrms[stage] += zrms / nLaddersPerLayer[lyr];
 
         // Assign ladder residual means to bins of summary histograms
         Hist("ds",lyr,stage)->SetBinContent(ldr + 1, sm);
@@ -668,28 +671,39 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
       }
     }
 
-    TGraphErrors *gdead = DeadLadderGraph(lyr);
-    DrawObject(Hist("ds",lyr,0), "e0p", Form("ds_lyr%d", lyr), cList);
-    // gdead->Draw("e5p,same");
-    if (ntrees > 1)
-      Hist("ds",lyr,1)->Draw("e0p,same");
-    gPad->RedrawAxis();
-    ltx.SetTextSize(0.07);
-    ltx.DrawLatex(0.23, 0.92, Hist("ds",lyr,0)->GetTitle());
-    ltx.SetTextSize(0.05);
-    ltx.DrawLatex(0.6, 0.85, Form("#LTmean#GT    %.3f", smm));
-    ltx.DrawLatex(0.6, 0.80, Form("#LTStd dev#GT %.3f", smrms));
+    for (int stage = 0; stage < ntrees; stage++)
+    {
+      // TGraphErrors *gdead = DeadLadderGraph(lyr);
+      if (stage == 0)
+        DrawObject(Hist("ds",lyr,stage), "e0p", Form("ds_lyr%d", lyr), cList);
+      else
+        Hist("ds",lyr,stage)->Draw("e0p,same");
 
-    DrawObject(Hist("dz",lyr,0), "e0p", Form("dz_lyr%d", lyr), cList);
-    // gdead->Draw("e5p,same");
-    if (ntrees > 1)
-      Hist("dz",lyr,1)->Draw("e0p,same");
-    gPad->RedrawAxis();
-    ltx.SetTextSize(0.07);
-    ltx.DrawLatex(0.23, 0.92, Hist("dz",lyr,0)->GetTitle());
-    ltx.SetTextSize(0.05);
-    ltx.DrawLatex(0.6, 0.85, Form("#LTmean#GT    %.3f", zmm));
-    ltx.DrawLatex(0.6, 0.80, Form("#LTStd dev#GT %.3f", zmrms));
+      // gdead->Draw("e5p,same");
+      ltx.SetTextColor(Hist("ds",lyr,stage)->GetMarkerColor()+1);
+      ltx.DrawLatex(stage?0.6:0.2, 0.85, Form("#LTmean#GT    %.3f", smm[0]));
+      ltx.DrawLatex(stage?0.6:0.2, 0.80, Form("#LTStd dev#GT %.3f", smrms[0]));
+      ltx2.DrawLatex(0.3, 0.92, Form("Layer %d #Deltas vs ladder", lyr));
+      gPad->RedrawAxis();
+      gPad->SetRightMargin(0.02);
+    }
+    
+    for (int stage = 0; stage < ntrees; stage++)
+    {
+      if (stage == 0)
+        DrawObject(Hist("dz",lyr,stage), "e0p", Form("dz_lyr%d", lyr), cList);
+      else
+        Hist("dz",lyr,stage)->Draw("e0p,same");
+
+      // gdead->Draw("e5p,same");
+      ltx.SetTextColor(Hist("dz",lyr,stage)->GetMarkerColor()+1);
+      ltx.DrawLatex(stage?0.6:0.2, 0.85, Form("#LTmean#GT    %.3f", zmm[0]));
+      ltx.DrawLatex(stage?0.6:0.2, 0.80, Form("#LTStd dev#GT %.3f", zmrms[0]));
+      ltx2.DrawLatex(0.3, 0.92, Form("Layer %d #Deltaz vs ladder", lyr));
+      gPad->RedrawAxis();
+      gPad->SetRightMargin(0.02);
+    }
+
   }
 
   return;
