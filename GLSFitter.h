@@ -14,7 +14,7 @@ void TrackFitL(SvxGeoTrack &gt); // Longitudinal component --> z0, theta
 void TrackFitT(SvxGeoTrack &gt); // Transverse component --> y0', phi
 void FitTracks(geoTracks &tracks, TGraphErrors *bc = 0);
 void FitTracks(geoEvents &events, TGraphErrors *bc = 0, TString opt = "");
-void CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt);
+void CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt = "");
 
 // It is questionable whether the following functions belong in this file.
 bool East(double phi);
@@ -24,7 +24,7 @@ TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
 double ZVertex(geoTracks &event, TString arm);
-
+void FindVertexEastWest(geoTracks &event, TString opt = "xyz");
 
 TVectorD
 SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov)
@@ -338,49 +338,56 @@ FitTracks(geoTracks &tracks, TGraphErrors * /*bc*/)
 }
 
 void
-CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt)
+FindVertexEastWest(geoTracks &event, TString opt)
 {
+  // Compute vertex position from each VTX arm.
+  // Assign east (west) vertex to east (west) arm tracks.
+  // Requires that tracks have already been fit.
 
+  TVectorD xye = XYCenter(event, "east");
+  TVectorD xyw = XYCenter(event, "west");
+  double ze = ZVertex(event, "east");
+  double zw = ZVertex(event, "west");
+
+  for (unsigned int t=0; t<event.size(); t++)
+  {
+    SvxGeoTrack &trk = event[t];
+    int arm = (trk.hits[0].x < 0.) ? 0 : 1;   // 0 = East, 1 = West.
+
+    if (opt.Contains("xy"))
+    {
+      TVectorD vxy = arm ? xyw : xye;
+      trk.vx = vxy(0);
+      trk.vy = vxy(1);
+    }
+
+    if (opt.Contains("z"))
+    {
+      double vz = arm ? zw : ze;
+      trk.vz = vz;
+    }
+  }
+  return;
+}
+
+void
+CalculateDCA(geoTracks &event, TGraphErrors *bc, TString /*opt*/)
+{
   // Compute the 2-D distance of closest approach from reference point to track.
   // The reference point (x,y) is one of the following:
-  // 1. A primary vertex computed here (compute_vertex). Also assigns vx,vy (!)
-  // 2. A primary vertex already saved with the track (use_stored_vertex)
-  // 3. A beam center provided in the TGraph (opt = "")
-  // 4. Fall-through case: DCA will be computed w.r.t. (0,0).
-
-  if (opt.Contains("no_dca"))
-    return;
+  // 1. A beam center if provided in the TGraph.
+  // 2. The primary vertex saved in the track if no bc is provided.
+  // The reference point z is expected to be already stored in the track.
 
   TVectorD xye(2);
   TVectorD xyw(2);
   double ze=0, zw=0;
-  if (opt.Contains("compute_vertex"))
-  {
-    // Compute x,y vertex position from each VTX arm.
-    // Requires that tracks have already been fit.
-    xye = XYCenter(event, "east");
-    xyw = XYCenter(event, "west");
-    ze  = ZVertex(event, "east");
-    zw  = ZVertex(event, "west");
-  }
-  else if (bc)
+  if (bc)
   {
     xye(0) = bc->GetX()[0];
     xye(1) = bc->GetY()[0];
     xyw(0) = bc->GetX()[1];
     xyw(1) = bc->GetY()[1];
-    ze  = ZVertex(event, "east");
-    zw  = ZVertex(event, "west");
-  }
-  else
-  {
-    // xye, xyw are already initialized to zero; this is just for clarity.
-    xye(0) = 0.;
-    xye(1) = 0.;
-    xyw(0) = 0.;
-    xyw(1) = 0.;
-    ze = 0;
-    zw = 0;
   }
 
   // Compute radial DCA and save to track.
@@ -389,21 +396,13 @@ CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     SvxGeoTrack &trk = event[t];
     int arm = (trk.hits[0].x < 0.) ? 0 : 1;   // 0 = East, 1 = West.
     TVectorD vxy = arm ? xyw : xye;
-    double vz = arm ? zw : ze;
 
-
-    // Printf("gen,calc x: (%.0f, %.0f) | gen,calc y: (%.0f, %.0f)",
-    //        1e4*trk.vx, 1e4*vxy(0), 1e4*trk.vy, 1e4*vxy(1));
-
-    if (opt.Contains("use_stored_vertex"))
+    if (!bc)
     {
       vxy(0) = trk.vx;
       vxy(1) = trk.vy;
-      vz     = trk.vz;
     }
-    // TVectorD ipvec = IPVec(trk, vxy);         // Impact parameter vector
 
-    ///////////////
     // rotate vertex into primed frame. xp is distance from origin.
     // compute ds then rotate [0; ds] out of primed frame --> ipvec.
     TMatrixD R(2,2);
@@ -422,7 +421,6 @@ CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     ipp(1) = mp*vxyp(0) + trk.yp0 - vxyp(1);
 
     // Rotate back out of the primed frame
-
     TVectorD ipvec = R*ipp;
 
     TVectorD trknormal(2);
@@ -431,25 +429,10 @@ CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt)
     trknormal(1) = sin(p);
 
     float xydca = trknormal * ipvec;
-    float zdca  = tan(trk.the0)*vxyp(0) + trk.z0 - vz;
+    float zdca  = tan(trk.the0)*vxyp(0) + trk.z0 - trk.vz;
 
-    // Assignment
     trk.xydca = xydca;
     trk.zdca  = zdca;
-
-
-    //////////////////// TEMP //////////////////////////////////////////
-    trk.vx = vxy(0);
-    trk.vy = vxy(1);
-    trk.vz = vz;
-    //////////////////// TEMP //////////////////////////////////////////
-
-    // if (opt.Contains("compute_vertex"))
-    // {
-    //   trk.vx = vxy(0);
-    //   trk.vy = vxy(1);
-    //   trk.vz = vz;
-    // }
   }
 
   return;
@@ -458,15 +441,20 @@ CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt)
 void
 FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
 {
-  if (opt.Contains("compute_vertex"))
-    Info("", "Vertex and DCA will be computed after track fits "
-         "and (re)assigned to tracks.");
-  else if (opt.Contains("use_stored_vertex"))
-    Info("", "DCA will be computed after track fits using stored vertices.");
-  else if (bc)
-    Info("", "DCA will be computed with respect to beam center.");
-  else if (opt.Contains("no_dca"))
-    Info("", "Skipping DCA calculation.");
+  if (opt.Contains("find_vertex"))
+    Info("", "Vertex will be computed and (re)assigned to tracks.");
+
+  if (opt.Contains("calc_dca"))
+  {
+    if (bc)
+    {
+      Info("", "DCA will be computed with respect to beam center.");
+      Info("", " E: (%.3f, %.3f)", bc->GetX()[0], bc->GetY()[0]);
+      Info("", " W: (%.3f, %.3f)", bc->GetX()[1], bc->GetY()[1]);
+    }
+    else
+      Info("", "DCA will be computed with respect to stored primary vertex.");
+  }
 
   cout << Form("Fitting tracks in %lu events...", events.size()) << flush;
 
@@ -478,7 +466,11 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
       TrackFitL(events[ev][t]); // And this second
     }
 
-    CalculateDCA(events[ev], bc, opt);
+    if (opt.Contains("find_vertex"))
+      FindVertexEastWest(events[ev], opt);
+
+    if (opt.Contains("calc_dca"))
+      CalculateDCA(events[ev], bc);
   }
 
   Printf("done.");
