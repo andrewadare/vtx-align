@@ -9,7 +9,7 @@
 # Latest commit: ea4601240e8bb3313b93c596ed6069455a08d8fb
 # Notes: Using west beam center.
 
-beamcenter: 0.355806 0.054503
-east-to-west: 0.00472419 -0.0008151 -0.0936767
+beamcenter: 0.3532 0.0528
+east-to-west: 0 0 0
 vtx-to-cnt: 0 0 0
 geomfile: 411768-0-1.par
