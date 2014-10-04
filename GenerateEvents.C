@@ -19,8 +19,8 @@ void GenerateEvents()
   Printf("Generating %d VTX standalone events...", nvtxevents);
   for (int n=0; n<nvtxevents; n++)
   {
-    vertex(0) = 0.010*ran.Gaus();
-    vertex(1) = 0.010*ran.Gaus();
+    vertex(0) = 0.3532 + 0.010*ran.Gaus();
+    vertex(1) = 0.0528 + 0.010*ran.Gaus();
     vertex(2) = 2*ran.Gaus();
 
     geoTracks tracks;
@@ -65,9 +65,31 @@ void GenerateEvents()
 
   // ** Apply misalignments here **
   int layer = 1;
-  int arm = 1; // East = 0, West = 1
-  // tgeo->TranslateHalfLayer(layer, arm, 0.02, 0.02, 0.0);
-  tgeo->RotateHalfLayerRPhi(layer, arm, 0.04);
+  int arm = 0; // East = 0, West = 1
+
+  // Experiment 1:
+  // tgeo->RotateHalfLayerRPhi(layer, arm, 0.04);
+
+  // Experiment 2:
+  tgeo->RotateHalfLayerRPhi(0, arm, 0.02);
+  tgeo->RotateHalfLayerRPhi(1, arm, -0.02);
+  tgeo->RotateHalfLayerRPhi(2, arm, 0.03);
+  tgeo->RotateHalfLayerRPhi(3, arm, -0.03);
+  tgeo->TranslateArm(arm, -0.05, 0.02, 0.0);
+  tgeo->TranslateHalfLayer(0, arm, 0.02, 0.02, -0.01);
+  tgeo->TranslateHalfLayer(1, arm, -0.01, 0.01, 0.03);
+  tgeo->TranslateHalfLayer(2, arm, 0.01, 0.005, -0.005);
+  tgeo->TranslateHalfLayer(3, arm, 0.00, -0.02, 0.0);
+
+  // Apply random Gaussian azimuthal misalignments
+  for (int a=0; a<2; a++)
+    for (int lyr=0; lyr<4; lyr++)
+    {
+      int first = -1, last  = -1;
+      tgeo->LadderRange(lyr, a, first, last);
+      for (int ldr = first; ldr <= last; ldr++)
+        tgeo->RotateLadderRPhi(lyr, ldr, 0.002*ran.Gaus()); // 20 microns
+    }
 
   // Update global hit positions to reflect misalignments.
   // Local hit positions (x,z on sensor) remain unchanged.
