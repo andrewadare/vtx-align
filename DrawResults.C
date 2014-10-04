@@ -21,6 +21,7 @@ void PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord);
 bool CheckValue(ROOT::TTreeReaderValueBase *value);
 TH1D *Hist(const char *prefix, int layer, int ladder_or_arm, int stage);
 TH1D *Hist(const char *prefix, int layer, int stage);
+TGraphErrors * DeadLadderGraph(int lyr);
 
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
@@ -61,14 +62,9 @@ void DrawResults(int run = 123456,
     FillHists(inFiles[stage], treename, stage, cList);
   }
 
-  // TGraphErrors *gdead[nlayers];
-  // MarkDeadLadders(gdead);
   DrawHalfLayerResidPlots(ntrees, cList);
   DrawLadderResidPlots(ntrees, cList);
   DrawSummaryPlots(ntrees, cList);
-
-  // ltx.SetTextSize(0.06);
-  // ltx.SetTextFont(42);
 
   if (ntrees == 1)
   {
@@ -447,26 +443,27 @@ CheckValue(ROOT::TTreeReaderValueBase *value)
   return true;
 }
 
-// void
-// MarkDeadLadders(TGraphErrors **gdead)
-// {
-//   for (int lyr = 0; lyr < nlayers; lyr++)
-//   {
-//     gdead[lyr] = new TGraphErrors();
-//     SetGraphProps(gdead[lyr], kNone, kOrange - 8, kNone, kDot);
-//     gdead[lyr]->SetFillColorAlpha(kOrange - 8, 0.5);
-//     gdead[lyr]->SetLineWidth(0);
-//     for (int ldr = 0; ldr < nLaddersPerLayer[lyr]; ldr++)
-//     {
-//       // BadLadders.h lists dead ladders.
-//       double dx = Dead(lyr, ldr) ? 0.5 : 0.0;
-//       double dy = Dead(lyr, ldr) ? 0.089 : 0.0;
-//       gdead[lyr]->SetPoint(ldr, ldr, 0.0);
-//       gdead[lyr]->SetPointError(ldr, dx, dy);
-//     }
-//   }
-//   return;
-// }
+TGraphErrors *
+DeadLadderGraph(int lyr)
+{
+  static int ncalls = 0;
+  TGraphErrors *g = new TGraphErrors(nLaddersPerLayer[lyr]);
+  g->SetName(Form("gdead%d", ncalls));
+
+  SetGraphProps(g, kNone, kOrange - 8, kNone, kDot);
+  g->SetFillColorAlpha(kOrange - 8, 0.5);
+  g->SetLineWidth(0);
+  for (int ldr = 0; ldr < nLaddersPerLayer[lyr]; ldr++)
+  {
+    // BadLadders.h lists dead ladders.
+    double dx = Dead(lyr, ldr) ? 0.5 : 0.0;
+    double dy = Dead(lyr, ldr) ? 0.089 : 0.0;
+    g->SetPoint(ldr, ldr, 0.0);
+    g->SetPointError(ldr, dx, dy);
+  }
+
+  return g;
+}
 
 void
 DrawHalfLayerResidPlots(int ntrees, TObjArray *cList)
@@ -565,18 +562,17 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
         h1 = Hist("z",lyr,ldr,1);
         SetYMax(h0, h1);
       }
-      //   if (Dead(lyr, ldr)) // Put a big "X" over dead ladders
-      //   {
-      //     TLatex l;
-      //     l.SetTextColor(kGray + 2);
-      //     l.SetTextSize(0.4);
-      //     l.SetNDC();
-      //     cs->cd(ldr + 1);
-      //     l.DrawLatex(0.5, 0.5, "#times");
-      //     cz->cd(ldr + 1);
-      //     l.DrawLatex(0.5, 0.5, "#times");
-      //   }
-      // }
+      if (Dead(lyr, ldr)) // Put a big "X" over dead ladders
+      {
+        TLatex l;
+        l.SetTextColor(kGray + 2);
+        l.SetTextSize(0.4);
+        l.SetNDC();
+        cs->cd(ldr + 1);
+        l.DrawLatex(0.5, 0.5, "#times");
+        cz->cd(ldr + 1);
+        l.DrawLatex(0.5, 0.5, "#times");
+      }
     }
     cList->Add((TCanvas *)cs);
     cList->Add((TCanvas *)cz);
@@ -624,8 +620,9 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
       }
     }
 
+    TGraphErrors* gdead = DeadLadderGraph(lyr);
     DrawObject(Hist("ds",lyr,0), "e0p", Form("ds_lyr%d", lyr), cList);
-    // gdead[lyr]->Draw("e5p,same");
+    // gdead->Draw("e5p,same");
     if (ntrees > 1)
       Hist("ds",lyr,1)->Draw("e0p,same");
     gPad->RedrawAxis();
@@ -636,7 +633,7 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
     ltx.DrawLatex(0.6, 0.80, Form("#LTStd dev#GT %.3f", smrms));
 
     DrawObject(Hist("dz",lyr,0), "e0p", Form("dz_lyr%d", lyr), cList);
-    // gdead[lyr]->Draw("e5p,same");
+    // gdead->Draw("e5p,same");
     if (ntrees > 1)
       Hist("dz",lyr,1)->Draw("e0p,same");
     gPad->RedrawAxis();
