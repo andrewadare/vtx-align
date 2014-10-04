@@ -9,18 +9,6 @@
 
 #include "TRandom3.h"
 
-void FilterData(geoEvents &events,
-                TTree *tree = 0,
-                double vertexprobmin = 0.01,
-                double vertexprobmax = 0.99,
-                double maxdca = 0.2,
-                double maxres_s = 0.1,
-                double maxres_z = 0.1,
-                int maxclus = 10,
-                int minmult = 10,
-                int nhitsmin = 3,
-                float frac4hit = -1);
-
 void FilterData(geoEvents &segevents,
                 geoEvents &cntevents,
                 TTree *segtree = 0,
@@ -53,135 +41,35 @@ void Fix4HitFrac(geoEvents &segeventsout, geoEvents &cnteventsout,
 
 
 void
-FilterData(geoEvents &events,
-           TTree *tree,
-           double vertexprobmin,
-           double vertexprobmax,
+FilterData(geoEvents &segevents, geoEvents &cntevents,
+           TTree *segtree, TTree *cnttree,
+           double vertexprobmin, double vertexprobmax ,
            double maxdca,
-           double maxres_s,
-           double maxres_z,
-           int maxclus,
-           int minmult,
-           int nhitsmin,
+           double maxres_s, double maxres_z,
+           int maxclus, int minmult, int nhitsmin,
            float frac4hit)
-{
-  // x-y vertex distributions
-  Printf("Filling mult/vertex distributions...");
-  double x0 = -1.0, y0 = -1.0, x1 = +1.0, y1 = +1.0;
-  TH2D *hve = new TH2D(Form("%s_ve", tree->GetName()),
-                       Form("East vertex;x [cm];y [cm]"),
-                       500, x0, x1, 500, y0, y1);
-  TH2D *hvw = new TH2D(Form("%s_vw", tree->GetName()),
-                       Form("West vertex;x [cm];y [cm]"),
-                       500, x0, x1, 500, y0, y1);
-  for (unsigned int ev = 0; ev < events.size(); ev++)
-  {
-    int mult = events[ev].size();
-    if (mult >= minmult)
-    {
-      TVectorD ve = Vertex(events.at(ev), "east");
-      TVectorD vw = Vertex(events.at(ev), "west");
-      hve->Fill(ve(0), ve(1));
-      hvw->Fill(vw(0), vw(1));
-    }
-  }
-
-  Printf("Computing quantiles for {e,w}{x,y}");
-  const int nq = 5;
-  double probs[nq] = {vertexprobmin, 0.32, 0.50, 0.68, vertexprobmax};
-  double qxe[nq] = {0}, qxw[nq] = {0}, qye[nq] = {0}, qyw[nq] = {0};
-  hve->ProjectionX()->GetQuantiles(nq, qxe, probs);
-  hvw->ProjectionX()->GetQuantiles(nq, qxw, probs);
-  hve->ProjectionY()->GetQuantiles(nq, qye, probs);
-  hvw->ProjectionY()->GetQuantiles(nq, qyw, probs);
-
-  TVectorD bce(2); bce(0) = qxe[2]; bce(1) = qye[2];
-  TVectorD bcw(2); bcw(0) = qxw[2]; bcw(1) = qyw[2];
-
-  Printf("Rejecting outliers in event loop...");
-  int ntracksorig = 0;
-  int ntracksfin = 0;
-  geoEvents accevents;
-  for (unsigned int ev = 0; ev < events.size(); ev++)
-  {
-    bool keep = true;
-    int ntrk = events[ev].size();
-    ntracksorig += ntrk;
-
-    // Reject outlying vertices
-    bool rejectev = RejectOutlierVtx(events.at(ev),
-                                     nq, qxe, qye, qxw, qyw, minmult);
-
-    if (!rejectev)
-    {
-      geoTracks tmp;
-      for (int t = 0; t < ntrk; t++)
-      {
-        bool rejecttrk = RejectOutlierTrk(events[ev][t],
-                                          bce, bcw,
-                                          maxdca, maxres_s, maxres_z,
-                                          maxclus, nhitsmin);
-        if (!rejecttrk)
-        {
-          tmp.push_back(events[ev][t]);
-          ntracksfin++;
-        }
-      }
-      accevents.push_back(tmp);
-    }
-
-  }
-
-  if (frac4hit > 0)
-  {
-    geoEvents filtevents;
-
-    geoEvents tmp1, tmp2;
-
-    Fix4HitFrac(filtevents, tmp1,
-                accevents, tmp2,
-                frac4hit);
-
-    FillTree(filtevents, tree);
-  }
-  else
-  {
-    FillTree(accevents, tree);
-  }
-
-  //double rejectFrac = 1.0 - (float)ntracksfin / (float)ntracksorig;
-  double rejectFrac = 1.0 - (float)tree->GetEntries() / (float)ntracksorig;
-  Printf("%.3f%% of tracks rejected by beam center DCA cut of %.0f um"
-         " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
-         100 * rejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
-
-  return;
-}
-
-void FilterData(geoEvents &segevents, geoEvents &cntevents,
-                TTree *segtree, TTree *cnttree,
-                double vertexprobmin, double vertexprobmax ,
-                double maxdca,
-                double maxres_s, double maxres_z,
-                int maxclus, int minmult, int nhitsmin,
-                float frac4hit)
 {
 
   // This function filters data, keeping
   // svxsegments and svxcnt in sync
+  // if cntevents is included
   assert(segtree);
-  assert(cnttree);
 
-  //first double check that geoEvents are the same size
-  //else they aren't synced and this won't work
-  if (segevents.size() != cntevents.size())
+  if (cntevents.size() > 0 && !cnttree)
   {
-    cout << "ERROR!! Number of svxseg and svxcnt events"
-         << " are not the same!"
-         << " Nsvxseg=" << segevents.size()
-         << " Nsvxcnt=" << cntevents.size()
-         << "... Aborting"
-         << endl;
+    Error("FilterData() in DataRejector.h",
+          "cntevents is non-empty, but cnttree is is NULL");
+    return;
+  }
+
+  //double check that geoEvents are the same size
+  //else they aren't synced and this won't work
+  if (cntevents.size() > 0 && segevents.size() != cntevents.size())
+  {
+    Error("FilterData() in DataRejector.h",
+          "Number of segevents != cntevents! Nsegevents=%i, Ncntevents=%i",
+          segevents.size(),
+          cntevents.size());
     return;
   }
 
@@ -220,9 +108,7 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
 
   Printf("Rejecting outliers in event loop...");
   int nsegin = 0;
-  int nsegout = 0;
   int ncntin = 0;
-  int ncntout = 0;
 
   //temporary containers to hold accepted tracks
   geoEvents accsegevents;
@@ -231,7 +117,8 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
   for (unsigned int ev = 0; ev < segevents.size(); ev++)
   {
     nsegin += segevents.at(ev).size();
-    ncntin += cntevents.at(ev).size();
+    if (cntevents.size() > 0)
+      ncntin += cntevents.at(ev).size();
 
     bool rejectev = RejectOutlierVtx(segevents.at(ev),
                                      nq, qxe, qye, qxw, qyw, minmult);
@@ -255,7 +142,8 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
       if (tmptrks.size() > 0)
       {
         accsegevents.push_back(tmptrks);
-        acccntevents.push_back(cntevents[ev]);
+        if (cntevents.size() > 0)
+          acccntevents.push_back(cntevents[ev]);
       }
     }
   }
@@ -272,13 +160,15 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
                 frac4hit);
 
     FillTree(filtsegevents, segtree);
-    FillTree(filtcntevents, cnttree);
+    if (cntevents.size() > 0)
+      FillTree(filtcntevents, cnttree);
   }
   else
   {
     //write out all the desired tracks
     FillTree(accsegevents, segtree);
-    FillTree(acccntevents, cnttree);
+    if (cntevents.size() > 0)
+      FillTree(acccntevents, cnttree);
   }
 
   double segRejectFrac = 1.0 - (float)segtree->GetEntries() / (float)nsegin;
@@ -286,10 +176,13 @@ void FilterData(geoEvents &segevents, geoEvents &cntevents,
          " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
          100 * segRejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
 
-  double cntRejectFrac = 1.0 - (float)cnttree->GetEntries() / (float)ncntin;
-  Printf("%.3f%% of svxcnt rejected by beam center DCA cut of %.0f um"
-         " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
-         100 * cntRejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
+  if (cntevents.size() > 0)
+  {
+    double cntRejectFrac = 1.0 - (float)cnttree->GetEntries() / (float)ncntin;
+    Printf("%.3f%% of svxcnt rejected by beam center DCA cut of %.0f um"
+           " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
+           100 * cntRejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
+  }
 
   return;
 }
