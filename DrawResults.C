@@ -6,6 +6,8 @@
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
 
+bool openPDF = true; // Mac only, but simple to adapt to other viewers with CLI
+
 int nLaddersPerLayer[4] = {10, 20, 16, 24}; // ladders/layer
 
 void DrawHalfLayerResidPlots(int ntrees, TObjArray *cList = 0);
@@ -67,11 +69,26 @@ void DrawResults(int run = 123456,
   // ltx.SetTextSize(0.06);
   // ltx.SetTextFont(42);
 
-  PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d-%s",
-                        run, prod1, subit1, prod2, subit2, treename), "");
-  PrintPDF(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d-%s",
-                       run, prod1, subit1, prod2, subit2, treename), "");
-
+  if (ntrees == 1)
+  {
+    PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-%s",
+                          run, prod1, subit1, treename), "");
+    const char *pdfName = Form("pdfs/run%d-pro%dsub%d-%s",
+                               run, prod1, subit1, treename);
+    PrintPDF(cList, pdfName, "");
+    if (openPDF)
+      gSystem->Exec(Form("open %s.pdf", pdfName));
+  }
+  if (ntrees == 2)
+  {
+    PrintPDFs(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d-%s",
+                          run, prod1, subit1, prod2, subit2, treename), "");
+    const char *pdfName = Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d-%s",
+                               run, prod1, subit1, prod2, subit2, treename);
+    PrintPDF(cList, pdfName, "");
+    if (openPDF)
+      gSystem->Exec(Form("open %s.pdf", pdfName));
+  }
   if (ntrees == 2)
   {
     gStyle->SetOptTitle(1);
