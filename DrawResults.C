@@ -6,16 +6,12 @@
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
 
-const int nlayers = 4;
-const int narms = 2; // 0=east, 1=west
-const int nladders = 24;
-int nLadders[4] = {10, 20, 16, 24}; // ladders/layer
-const int ntrees = 1;
+int nLaddersPerLayer[4] = {10, 20, 16, 24}; // ladders/layer
 
-void DrawHalfLayerResidPlots(TObjArray *cList = 0);
-void DrawLadderResidPlots(TObjArray *cList = 0);
-void DrawSummaryPlots(TObjArray *cList = 0);
-void InitResidHists(const char *treename = "vtxtrks");
+void DrawHalfLayerResidPlots(int ntrees, TObjArray *cList = 0);
+void DrawLadderResidPlots(int ntrees, TObjArray *cList = 0);
+void DrawSummaryPlots(int ntrees, TObjArray *cList = 0);
+void InitResidHists(const char *treename, int ntrees);
 void SetupHist(TH1D *h, int stage);
 void FillHists(TFile *f, const char *treename, int stage, TObjArray *cList = 0);
 void ModifyPad(TVirtualPad *pad, TH1D *h1, TH1D *h2, TString coord);
@@ -23,11 +19,14 @@ bool CheckValue(ROOT::TTreeReaderValueBase *value);
 TH1D *Hist(const char *prefix, int layer, int ladder_or_arm, int stage);
 TH1D *Hist(const char *prefix, int layer, int stage);
 
+// To plot variables from only one TTree, either:
+// 1. set prod2 and subit2 to any int < 0, or
+// 2. set prod2 = prod1, subit2 = subit1.
 void DrawResults(int run = 123456,
                  int prod1 = 0,
                  int subit1 = 0,
-                 int prod2 = 0,
-                 int subit2 = 1,
+                 int prod2 = -1,
+                 int subit2 = -1,
                  const char *treename = "vtxtrks")
 {
   gStyle->SetOptStat(0);
@@ -35,23 +34,25 @@ void DrawResults(int run = 123456,
 
   TObjArray *cList = new TObjArray();
 
+  int ntrees = 2;
+  if (prod1 == prod2 && subit1 == subit2)
+    ntrees = 1;
+  if (prod2 < 0 && subit2 < 0)
+    ntrees = 1;
 
-  vecs rootFileIn
-  {
-    Form("rootfiles/%d-%d-%d.root", run, prod1, subit1),
-    Form("rootfiles/%d-%d-%d.root", run, prod2, subit2)
-  };
-  vector<TFile *> inFiles
-  {
-    new TFile(rootFileIn[0].c_str(), "read"),
-    new TFile(rootFileIn[1].c_str(), "read")
-  };
+  vecs rootFileIn;
+  rootFileIn.push_back(Form("rootfiles/%d-%d-%d.root", run, prod1, subit1));
+  if (ntrees==2)
+    rootFileIn.push_back(Form("rootfiles/%d-%d-%d.root", run, prod2, subit2));
+
+  vector<TFile *> inFiles;
   for (int stage = 0; stage < ntrees; stage++)
   {
+    inFiles.push_back(new TFile(rootFileIn[0].c_str(), "read"));
     assert(inFiles[stage]);
   }
 
-  InitResidHists(treename);
+  InitResidHists(treename, ntrees);
   for (int stage = 0; stage < ntrees; stage++)
   {
     FillHists(inFiles[stage], treename, stage, cList);
@@ -59,9 +60,9 @@ void DrawResults(int run = 123456,
 
   // TGraphErrors *gdead[nlayers];
   // MarkDeadLadders(gdead);
-  DrawHalfLayerResidPlots(cList);
-  DrawLadderResidPlots(cList);
-  DrawSummaryPlots(cList);
+  DrawHalfLayerResidPlots(ntrees, cList);
+  DrawLadderResidPlots(ntrees, cList);
+  DrawSummaryPlots(ntrees, cList);
 
   // ltx.SetTextSize(0.06);
   // ltx.SetTextFont(42);
@@ -71,11 +72,13 @@ void DrawResults(int run = 123456,
   PrintPDF(cList, Form("pdfs/run%d-pro%dsub%d-vs-pro%dsub%d-%s",
                        run, prod1, subit1, prod2, subit2, treename), "");
 
-  gStyle->SetOptTitle(1);
-  const char *parfile1 = Form("geom/%d-%d-%d.par", run, prod1, subit1);
-  const char *parfile2 = Form("geom/%d-%d-%d.par", run, prod2, subit2);
-  gROOT->Macro(Form("DiffGeometry.C(\"%s\", \"%s\")", parfile1, parfile2));
-
+  if (ntrees == 2)
+  {
+    gStyle->SetOptTitle(1);
+    const char *parfile1 = Form("geom/%d-%d-%d.par", run, prod1, subit1);
+    const char *parfile2 = Form("geom/%d-%d-%d.par", run, prod2, subit2);
+    gROOT->Macro(Form("DiffGeometry.C(\"%s\", \"%s\")", parfile1, parfile2));
+  }
   return;
 }
 
@@ -265,14 +268,18 @@ Hist(const char *prefix, int layer, int stage)
 }
 
 void
-InitResidHists(const char *treename)
+InitResidHists(const char *treename, int ntrees)
 {
+  const int nlayers = 4;
+  const int narms = 2; // 0=east, 1=west
+  const int nladders = 24;
+
   Info("", "Initializing histograms");
   // Residuals for ladder units
   TH1D *hs[nlayers][nladders][ntrees];
   TH1D *hz[nlayers][nladders][ntrees];
   for (int lyr = 0; lyr < nlayers; lyr++)
-    for (int ldr = 0; ldr < nLadders[lyr]; ldr++)
+    for (int ldr = 0; ldr < nLaddersPerLayer[lyr]; ldr++)
       for (int stage = 0; stage < ntrees; stage++)
       {
         int nbins   = 100;
@@ -321,10 +328,12 @@ InitResidHists(const char *treename)
     {
       hdz[lyr][stage] = new TH1D(Form("hdz%d%d", lyr, stage),
                                  Form("z-resid layer %d", lyr),
-                                 nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
+                                 nLaddersPerLayer[lyr], -0.5,
+                                 nLaddersPerLayer[lyr] - 0.5);
       hds[lyr][stage] = new TH1D(Form("hds%d%d", lyr, stage),
                                  Form("s-resid layer %d", lyr),
-                                 nLadders[lyr], -0.5, nLadders[lyr] - 0.5);
+                                 nLaddersPerLayer[lyr], -0.5,
+                                 nLaddersPerLayer[lyr] - 0.5);
       SetHistProps(hds[lyr][stage], kRed, kNone, kRed, kFullCircle, 1.5);
       SetHistProps(hdz[lyr][stage], kBlue, kNone, kBlue, kFullCircle, 1.5);
       if (stage == 0)
@@ -428,7 +437,7 @@ CheckValue(ROOT::TTreeReaderValueBase *value)
 //     SetGraphProps(gdead[lyr], kNone, kOrange - 8, kNone, kDot);
 //     gdead[lyr]->SetFillColorAlpha(kOrange - 8, 0.5);
 //     gdead[lyr]->SetLineWidth(0);
-//     for (int ldr = 0; ldr < nLadders[lyr]; ldr++)
+//     for (int ldr = 0; ldr < nLaddersPerLayer[lyr]; ldr++)
 //     {
 //       // BadLadders.h lists dead ladders.
 //       double dx = Dead(lyr, ldr) ? 0.5 : 0.0;
@@ -441,7 +450,7 @@ CheckValue(ROOT::TTreeReaderValueBase *value)
 // }
 
 void
-DrawHalfLayerResidPlots(TObjArray *cList)
+DrawHalfLayerResidPlots(int ntrees, TObjArray *cList)
 {
   // Draw halflayer s and z residuals on sub pads
   TCanvas *cls = new TCanvas(Form("cls%d", 0), Form("%d", 0), 1200, 800);
@@ -485,13 +494,13 @@ DrawHalfLayerResidPlots(TObjArray *cList)
 }
 
 void
-DrawLadderResidPlots(TObjArray *cList)
+DrawLadderResidPlots(int ntrees, TObjArray *cList)
 {
   // Draw individual s and z ladder residual distributions on sub-pads
   for (int lyr = 0; lyr < 4; lyr++)
   {
     Info("", "Drawing ladder residuals in layer %d", lyr);
-    int nl = nLadders[lyr];
+    int nl = nLaddersPerLayer[lyr];
     int nx = lyr ? nl / 4 : nl / 2; // Number of pads along x
     int ny = lyr ? 4 : 2;       // Number of pads along y
     int ph = 200;               // pad height in px
@@ -542,14 +551,14 @@ DrawLadderResidPlots(TObjArray *cList)
       //   }
       // }
     }
-      cList->Add((TCanvas *)cs);
-      cList->Add((TCanvas *)cz);
+    cList->Add((TCanvas *)cs);
+    cList->Add((TCanvas *)cz);
   }
   return;
 }
 
 void
-DrawSummaryPlots(TObjArray *cList)
+DrawSummaryPlots(int ntrees, TObjArray *cList)
 {
   TLatex ltx;
   ltx.SetNDC();
@@ -564,7 +573,7 @@ DrawSummaryPlots(TObjArray *cList)
     double zmm = 0, zmrms = 0;
     for (int stage = 0; stage < ntrees; stage++)
     {
-      for (int ldr = 0; ldr < nLadders[lyr]; ldr++)
+      for (int ldr = 0; ldr < nLaddersPerLayer[lyr]; ldr++)
       {
         // Get mean and width from individual ladder residual dists
         double sm   = Hist("s",lyr,ldr,stage)->GetMean();
@@ -574,10 +583,10 @@ DrawSummaryPlots(TObjArray *cList)
 
         if (stage == 1)
         {
-          smm   += sm / nLadders[lyr];
-          zmm   += zm / nLadders[lyr];
-          smrms += srms / nLadders[lyr];
-          zmrms += zrms / nLadders[lyr];
+          smm   += sm / nLaddersPerLayer[lyr];
+          zmm   += zm / nLaddersPerLayer[lyr];
+          smrms += srms / nLaddersPerLayer[lyr];
+          zmrms += zrms / nLaddersPerLayer[lyr];
         }
 
         // Assign ladder residual means to bins of summary histograms
