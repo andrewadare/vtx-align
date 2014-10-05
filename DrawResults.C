@@ -15,7 +15,7 @@ void DrawLadderResidPlots(int ntrees, TObjArray *cList = 0);
 void DrawSummaryPlots(int ntrees, TObjArray *cList = 0);
 void InitResidHists(const char *treename, int ntrees);
 void SetupHist(TH1D *h, int stage);
-void FillHists(TFile *f, const char *treename, int stage,  int prod, int subiter,
+void FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                TObjArray *cList = 0);
 void ModifyPad(TVirtualPad *pad);
 void PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord);
@@ -53,7 +53,7 @@ void DrawResults(int run = 123456,
   vector<TFile *> inFiles;
   for (int stage = 0; stage < ntrees; stage++)
   {
-    inFiles.push_back(new TFile(rootFileIn[0].c_str(), "read"));
+    inFiles.push_back(new TFile(rootFileIn[stage].c_str(), "read"));
     assert(inFiles[stage]);
   }
 
@@ -92,6 +92,10 @@ void DrawResults(int run = 123456,
     const char *parfile1 = Form("geom/%d-%d-%d.par", run, prod1, subit1);
     const char *parfile2 = Form("geom/%d-%d-%d.par", run, prod2, subit2);
     gROOT->Macro(Form("DiffGeometry.C(\"%s\", \"%s\")", parfile1, parfile2));
+
+    if (openPDF)
+      gSystem->Exec(Form("open pdfs/%d-%d-%d-vs-%d-%d-%d.pdf",
+                         run, prod1, subit1, run, prod2, subit2));
   }
   return;
 }
@@ -533,14 +537,16 @@ DrawHalfLayerResidPlots(int ntrees, TObjArray *cList)
         h->Draw(stage == 0 ? "" : "same");
         SetupHist(h, stage);
         ModifyPad(gPad);
-        PrintMeanToPad(h, (ntrees == 2) ? Hist("ls",lyr,arm,1) : 0, "ds");
+        if (ntrees == 1)
+          PrintMeanToPad(h, 0, "ds");
 
         clz->cd(arm * 4 + lyr + 1);
         h = Hist("lz",lyr,arm,stage);
         h->Draw(stage == 0 ? "" : "same");
         ModifyPad(gPad);
         SetupHist(h, stage);
-        PrintMeanToPad(h, (ntrees == 2) ? Hist("lz",lyr,arm,1) : 0, "dz");
+        if (ntrees == 1)
+          PrintMeanToPad(h, 0, "dz");
       }
       if (ntrees > 1)
       {
@@ -548,11 +554,13 @@ DrawHalfLayerResidPlots(int ntrees, TObjArray *cList)
         TH1D *h0 = Hist("ls",lyr,arm,0);
         TH1D *h1 = Hist("ls",lyr,arm,1);
         SetYMax(h0, h1);
+        PrintMeanToPad(h0, h1, "ds");
 
         clz->cd(arm * 4 + lyr + 1);
         h0 = Hist("lz",lyr,arm,0);
         h1 = Hist("lz",lyr,arm,1);
         SetYMax(h0, h1);
+        PrintMeanToPad(h0, h1, "dz");
       }
     }
   }
@@ -589,26 +597,32 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
         h->Draw(stage == 0 ? "" : "same");
         ModifyPad(gPad);
         SetupHist(h, stage);
-        PrintMeanToPad(h, (ntrees == 2) ? Hist("s",lyr,ldr,1) : 0, "ds");
+        if (ntrees == 1)
+          PrintMeanToPad(h, 0, "ds");
 
         cz->cd(ldr + 1);
         h = Hist("z",lyr,ldr,stage);
         h->Draw(stage == 0 ? "" : "same");
         ModifyPad(gPad);
         SetupHist(h, stage);
-        PrintMeanToPad(h, (ntrees == 2) ? Hist("z",lyr,ldr,1) : 0, "ds");
+        if (ntrees == 1)
+          PrintMeanToPad(h, 0, "dz");
+
       }
+
       if (ntrees > 1)
       {
         cs->cd(ldr + 1);
         TH1D *h0 = Hist("s",lyr,ldr,0);
         TH1D *h1 = Hist("s",lyr,ldr,1);
         SetYMax(h0, h1);
+        PrintMeanToPad(h0, h1, "ds");
 
         cz->cd(ldr + 1);
         h0 = Hist("z",lyr,ldr,0);
         h1 = Hist("z",lyr,ldr,1);
         SetYMax(h0, h1);
+        PrintMeanToPad(h0, h1, "dz");
       }
       if (Dead(lyr, ldr)) // Put a big "X" over dead ladders
       {
@@ -681,13 +695,15 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
 
       // gdead->Draw("e5p,same");
       ltx.SetTextColor(Hist("ds",lyr,stage)->GetMarkerColor()+1);
-      ltx.DrawLatex(stage?0.6:0.2, 0.85, Form("#LTmean#GT    %.3f", smm[0]));
-      ltx.DrawLatex(stage?0.6:0.2, 0.80, Form("#LTStd dev#GT %.3f", smrms[0]));
+      ltx.DrawLatex(stage?0.6:0.2, 0.85,
+                    Form("#LTmean#GT    %.0f #mum", 1e4*smm[stage]));
+      ltx.DrawLatex(stage?0.6:0.2, 0.80,
+                    Form("#LTStd dev#GT %.0f #mum", 1e4*smrms[stage]));
       ltx2.DrawLatex(0.3, 0.92, Form("Layer %d #Deltas vs ladder", lyr));
       gPad->RedrawAxis();
       gPad->SetRightMargin(0.02);
     }
-    
+
     for (int stage = 0; stage < ntrees; stage++)
     {
       if (stage == 0)
@@ -697,8 +713,10 @@ DrawSummaryPlots(int ntrees, TObjArray *cList)
 
       // gdead->Draw("e5p,same");
       ltx.SetTextColor(Hist("dz",lyr,stage)->GetMarkerColor()+1);
-      ltx.DrawLatex(stage?0.6:0.2, 0.85, Form("#LTmean#GT    %.3f", zmm[0]));
-      ltx.DrawLatex(stage?0.6:0.2, 0.80, Form("#LTStd dev#GT %.3f", zmrms[0]));
+      ltx.DrawLatex(stage?0.6:0.2, 0.85,
+                    Form("#LTmean#GT    %.0f #mum", 1e4*zmm[stage]));
+      ltx.DrawLatex(stage?0.6:0.2, 0.80,
+                    Form("#LTStd dev#GT %.0f #mum", 1e4*zmrms[stage]));
       ltx2.DrawLatex(0.3, 0.92, Form("Layer %d #Deltaz vs ladder", lyr));
       gPad->RedrawAxis();
       gPad->SetRightMargin(0.02);
