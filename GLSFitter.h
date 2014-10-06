@@ -429,7 +429,7 @@ CalculateDCA(geoTracks &event, TGraphErrors *bc, TString /*opt*/)
     trknormal(1) = sin(p);
 
     float xydca = trknormal * ipvec;
-    float zdca  = tan(trk.the0)*vxyp(0) + trk.z0 - trk.vz;
+    float zdca  = trk.z0 + vxyp(0)/tan(trk.the0) - trk.vz;
 
     trk.xydca = xydca;
     trk.zdca  = zdca;
