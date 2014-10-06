@@ -4,7 +4,6 @@
 #include "VtxAlignBase.h"
 #include "GLSFitter.h"
 #include "ParameterDefs.h"
-#include "DcaFunctions.h"
 
 using namespace std;
 
@@ -36,7 +35,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Reject tracks with huge DCA values
     if (fabs(trk.xydca) > 0.1)
     {
-      Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
+      // Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
       return;
     }
 
@@ -53,7 +52,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float gd[1] = {0}; // placeholder - not used
     int nolabels[1] = {0}; // placeholder - not used
     m.mille(4, sderlc, 0, gd, nolabels, trk.xydca, sigbc);
-    m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, 2.0);
+    m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, 0.10);
   }
 
   for (int j=0; j<trk.nhits; j++)
@@ -86,8 +85,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 1.5*hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 1.5*hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = 2*hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = 2*hit.zsigma * ClusterZResolution(hit.layer);
 
     if (false)
       Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
