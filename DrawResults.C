@@ -162,7 +162,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   const char *xyzstr[3] = {"x", "y", "z"};
   for (int k=0; k<3; k++)
   {
-    double lim = 0.11;
+    double lim = 0.21;
     if (k == 2)
       lim *= 10;
 
@@ -340,6 +340,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   {
     c->cd(k+1);
     gPad->SetMargin(0.15, 0.02, 0.12, 0.02); // L, R, B, T
+    hdv[k]->GetYaxis()->SetRangeUser(0, 1.2*hdv[k]->GetMaximum());
     hdv[k]->Draw();
     ltx.DrawLatex(0.25, 0.95, Form("Mean %.3f", hdv[k]->GetMean()));
     ltx.DrawLatex(0.25, 0.90, Form("Std dev %.3f", hdv[k]->GetRMS()));
