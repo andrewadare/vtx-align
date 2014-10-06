@@ -2,9 +2,10 @@ import sys
 import os
 
 on = True # enable/disable execution
-run = 411768
+log = False # Redirect stdout from alignment to logfile
+run = 123456
 p = 0  # production step
-itersteps = [0,1]
+itersteps = [0]
 
 pat = '{}-{}-{}'.format(run, p, 0)
 g = 'geom/{}.par'.format(pat)
@@ -20,29 +21,11 @@ if os.path.isfile(r) == False:
     sys.exit()
 
 for i in itersteps:
-
-    # Run CalcBeamCenter.C
-    m = "'CalcBeamCenter.C+({},{},{})'".format(run, p, i)
-    print('Executing ' + root + m)
-    if on:
-        os.system(root + m)
-        os.system("open pdfs/beam-center-run{}-pro{}-sub{}.pdf".format(run,p,i))
-
-    # Run DrawResults.C
-    m = "'DiffGeometry.C(\"geom/svxPISA-ideal.par\", \"geom/{}-{}-{}.par\")'".format(run, p, i)
-    print('Executing ' + root + m)
-    if on:
-        os.system(root + m)
-        os.system("open pdfs/svxPISA-ideal-vs-{}-{}-{}.pdf".format(run,p,i))
-
-    if i != itersteps[-1]:
-        
-        # Run VtxAlign.C
+    if log:
         m = "'VtxAlign.C+({},{},{})' >& logs/{}-{}-{}.log".format(run, p, i,
                                                                   run, p, i)
-        print('Executing ' + root + m)
-        if on:
-            os.system(root + m)
-            os.system("open pdfs/run{}-pro{}sub{}-vs-pro{}sub{}-vtxtrks.pdf".\
-                      format(run,p,i,p,i+1))
-
+    else:
+        m = "'VtxAlign.C+({},{},{})'".format(run, p, i)
+    print('Executing ' + root + m)
+    if on:
+        os.system(root + m)
