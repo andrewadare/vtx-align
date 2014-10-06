@@ -15,6 +15,11 @@ void DrawLadderResidPlots(int ntrees, TObjArray *cList = 0);
 void DrawSummaryPlots(int ntrees, TObjArray *cList = 0);
 void InitResidHists(const char *treename, int ntrees);
 void SetupHist(TH1D *h, int stage);
+void SetAxisProps(TH1 *h, int xdivs = 208, int ydivs = 208,
+                  double labelSize = 0.04, double titleSize = 0.04,
+                  double xTitleOffset = 1.1, double yTitleOffset = 1.5,
+                  bool centerX = true, bool centerY = true);
+
 void FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                TObjArray *cList = 0);
 void ModifyPad(TVirtualPad *pad);
@@ -104,52 +109,63 @@ void
 FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
           TObjArray *cList)
 {
-  TH1D *xydcae = new TH1D(Form("xydcae%d",stage), Form("%d",stage), 200, -0.05, 0.05);
-  TH1D *xydcaw = new TH1D(Form("xydcaw%d",stage), Form("%d",stage), 200, -0.05, 0.05);
-  TH1D *zdcae = new TH1D(Form("zdcae%d",stage), Form("%d",stage), 200, -0.05, 0.05);
-  TH1D *zdcaw = new TH1D(Form("zdcaw%d",stage), Form("%d",stage), 200, -0.05, 0.05);
-  TH1D *hvze = new TH1D(Form("hvze%d",stage), Form("%d",stage), 200, -5, 5);
-  TH1D *hvzw = new TH1D(Form("hvzw%d",stage), Form("%d",stage), 200, -5, 5);
-  TH2D *xydcaphi  = new TH2D(Form("xydcaphi%d",stage), ";#phi [rad];x-y DCA [cm]",
+  TAxis *ax = 0, *ay = 0;
+  TH1D *xydcae = new TH1D(Form("xydcae_%d_%d",prod,subiter),
+                          Form(";east arm x-y DCA [cm];tracks"), 200, -0.05, 0.05);
+  SetAxisProps(xydcae);
+  TH1D *xydcaw = new TH1D(Form("xydcaw_%d_%d",prod,subiter),
+                          Form(";west arm x-y DCA [cm];tracks"), 200, -0.05, 0.05);
+  SetAxisProps(xydcaw);
+  TH1D *zdcae = new TH1D(Form("zdcae_%d_%d",prod,subiter), 
+                         ";east z DCA [cm];tracks", 200, -0.05, 0.05);
+  SetAxisProps(zdcae);
+  TH1D *zdcaw = new TH1D(Form("zdcaw_%d_%d",prod,subiter), 
+                         ";west z DCA [cm];tracks", 200, -0.05, 0.05);
+  SetAxisProps(zdcaw);
+  TH1D *hvze = new TH1D(Form("hvze_%d_%d",prod,subiter),
+                        Form(";east arm z vertex [cm];tracks"), 200, -15, 15);
+  SetAxisProps(hvze);
+  TH1D *hvzw = new TH1D(Form("hvzw_%d_%d",prod,subiter),
+                        Form(";west arm z vertex [cm];tracks"), 200, -15, 15);
+  SetAxisProps(hvzw);
+  TH2D *xydcaphi  = new TH2D(Form("xydcaphi_%d_%d",prod,subiter), ";#phi [rad];x-y DCA [cm]",
                              100, -TMath::PiOver2(), 3*TMath::PiOver2(),
                              100, -0.05, +0.05);
-  TH2D *zdcatheta  = new TH2D(Form("zdcatheta%d",stage), ";#theta [rad];z DCA [cm]",
-                              100, 0.0*TMath::Pi(), 1.0*TMath::Pi(),
-                              100, -0.05, +0.05);
+  SetAxisProps(xydcaphi);
+  TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter), ";#theta [rad];z DCA [cm]",
+                               100, 0.0*TMath::Pi(), 1.0*TMath::Pi(),
+                               100, -0.05, +0.05);
+  SetAxisProps(ezdcatheta);
+  TH2D *wzdcatheta  = new TH2D(Form("wzdcatheta_%d_%d",prod,subiter), ";#theta [rad];z DCA [cm]",
+                               100, 0.0*TMath::Pi(), 1.0*TMath::Pi(),
+                               100, -0.05, +0.05);
+  SetAxisProps(wzdcatheta);
 
   // x-y vertex distributions
   double x0 = -0.5, y0 = -0.5, x1 = +0.5, y1 = +0.5;
-  TH2D *hve = new TH2D(Form("hve%d",stage),
+  TH2D *hve = new TH2D(Form("hve_%d_%d",prod,subiter),
                        Form("East vertex - prod %d step %d;"
                             "x [cm];y [cm]", prod, subiter),
                        500, x0, x1, 500, y0, y1);
-  TH2D *hvw = new TH2D(Form("hvw%d",stage),
+  SetAxisProps(hve, 205, 205);
+
+  TH2D *hvw = new TH2D(Form("hvw_%d_%d",prod,subiter),
                        Form("West vertex - prod %d step %d;"
                             "x [cm];y [cm]", prod, subiter),
                        500, x0, x1, 500, y0, y1);
+  SetAxisProps(hvw, 205, 205);
 
   // West - East offset histograms
   TH1D *hdv[3];
   const char *xyzstr[3] = {"x", "y", "z"};
   for (int k=0; k<3; k++)
   {
-    hdv[k] = new TH1D(Form("hdv_%d_%d",stage, k),
+    hdv[k] = new TH1D(Form("hdv_%d__%d_%d",prod,subiter, k),
                       Form("West - East vertex difference #Delta%s "
                            "- prod %d step %d; (W-E) #Delta%s [cm];tracks",
                            xyzstr[k], prod, subiter, xyzstr[k]),
                       200, -1, 1);
-
-    hdv[k]->GetXaxis()->SetLabelSize(0.06);
-    hdv[k]->GetXaxis()->SetTitleSize(0.07);
-    hdv[k]->GetXaxis()->SetTitleOffset(1.05);
-    hdv[k]->GetXaxis()->SetNdivisions(205);
-    hdv[k]->GetXaxis()->CenterTitle();
-
-    hdv[k]->GetYaxis()->SetLabelSize(0.06);
-    hdv[k]->GetYaxis()->SetTitleSize(0.07);
-    hdv[k]->GetYaxis()->SetTitleOffset(k ? 2.5 : 1.5);
-    hdv[k]->GetYaxis()->SetNdivisions(205);
-    hdv[k]->GetYaxis()->CenterTitle();
+    SetAxisProps(hdv[k]);
   }
 
   TTreeReader r(treename, f);
@@ -208,6 +224,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
       xydcae->Fill(*xydca);
       zdcae->Fill(*zdca);
       hve->Fill(vertex[0], vertex[1]);
+      hvze->Fill(vertex[2]);
+      ezdcatheta->Fill(*theta, *zdca);
     }
     if (arm == 1)
     {
@@ -217,13 +235,14 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
       xydcaw->Fill(*xydca);
       zdcaw->Fill(*zdca);
       hvw->Fill(vertex[0], vertex[1]);
+      hvzw->Fill(vertex[2]);
+      wzdcatheta->Fill(*theta, *zdca);
     }
 
     for (int k=0; k<3; k++)
       hdv[k]->Fill(vw(k) - ve(k));
 
     xydcaphi->Fill(phiwrap, *xydca);
-    zdcatheta->Fill(*theta, *zdca);
   }
 
 
@@ -233,44 +252,17 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   ltx.SetNDC();
   ltx.SetTextFont(42);
   TCanvas *c = 0;
-  c = new TCanvas(Form("cdca%d",stage),
-                  Form("dca_east_west_%d",stage), 1000, 500);
-  SetYMax(xydcae, xydcaw);
-  c->Divide(2,1,0,0);
-  c->cd(1);
-  xydcae->Draw();
-  ltx.DrawLatex(0.15, 0.90, Form("East: (Mean, Std Dev) = (%.0f, %.0f) #mum",
-                                 1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
-  c->cd(2);
-  xydcaw->Draw();
-  ltx.DrawLatex(0.15, 0.90, Form("West: (Mean, Std Dev) = (%.0f, %.0f) #mum",
-                                 1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
-  cList->Add(c);
 
-  DrawObject(zdcae, "",  Form("zdcae_%d", stage), cList);
-  DrawObject(zdcaw, "",  Form("zdcae_%d", stage), cList);
-
-  DrawObject(xydcaphi, "col",  Form("xydca_vs_phi_%d",stage), cList);
-  DrawObject(zdcatheta, "col", Form("zdca_vs_theta_%d",stage), cList);
-
+  // East and West xy vertex distributions
   hve->GetXaxis()->SetRangeUser(hve->GetMean(1)-0.1,hve->GetMean(1)+0.1);
   hve->GetYaxis()->SetRangeUser(hve->GetMean(2)-0.1,hve->GetMean(2)+0.1);
   hvw->GetXaxis()->SetRangeUser(hvw->GetMean(1)-0.1,hvw->GetMean(1)+0.1);
   hvw->GetYaxis()->SetRangeUser(hvw->GetMean(2)-0.1,hvw->GetMean(2)+0.1);
-  hve->GetXaxis()->CenterTitle();
-  hve->GetYaxis()->CenterTitle();
-  hvw->GetXaxis()->CenterTitle();
-  hvw->GetYaxis()->CenterTitle();
-  hve->GetXaxis()->SetTitleOffset(1.3);
-  hve->GetYaxis()->SetTitleOffset(2.0);
-  hvw->GetXaxis()->SetTitleOffset(1.3);
-  hvw->GetYaxis()->SetTitleOffset(2.0);
-
   c = new TCanvas(Form("xy_vertex_%d",stage),
                   Form("xy_vertex_ew_%d",stage), 1000, 500);
   c->Divide(2,1);
   c->cd(1);
-  ModifyPad(gPad);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   hve->Draw("col");
   ltx.DrawLatex(0.25, 0.92, "East");
   ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
@@ -278,7 +270,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
                                  1e4*hve->GetRMS(1), 1e4*hve->GetRMS(2)));
   c->cd(2);
-  ModifyPad(gPad);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   hvw->Draw("col");
   ltx.DrawLatex(0.25, 0.92, "West");
   ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
@@ -287,18 +279,103 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                                  1e4*hvw->GetRMS(1), 1e4*hvw->GetRMS(2)));
   cList->Add(c);
 
+  // East and West z vertex distributions
+  c = new TCanvas(Form("z_vertex_%d",stage),
+                  Form("z_vertex_ew_%d",stage), 1000, 500);
+  c->Divide(2,1);
+  c->cd(1);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  hvze->Draw("");
+  ltx.DrawLatex(0.25, 0.92, "East");
+  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) cm",
+                                 hvze->GetMean(1), hvze->GetMean(2)));
+  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) cm",
+                                 hvze->GetRMS(1), hvze->GetRMS(2)));
+  c->cd(2);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  hvzw->Draw("");
+  ltx.DrawLatex(0.25, 0.92, "West");
+  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) cm",
+                                 hvzw->GetMean(1), hvzw->GetMean(2)));
+  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) cm",
+                                 hvzw->GetRMS(1), hvzw->GetRMS(2)));
+  cList->Add(c);
+
+  // East-west offsets in x, y, and z
   c = new TCanvas(Form("ew_offsets_%d",stage),
                   Form("ew_offsets_%d",stage), 1000, 500);
   c->Divide(3,1, 0.001, 0.001);
   for (int k=0; k<3; k++)
   {
     c->cd(k+1);
-    ModifyPad(gPad);
+    gPad->SetMargin(0.15, 0.02, 0.12, 0.02); // L, R, B, T
     hdv[k]->Draw();
     ltx.DrawLatex(0.25, 0.95, Form("Mean %.3f", hdv[k]->GetMean()));
     ltx.DrawLatex(0.25, 0.90, Form("Std dev %.3f", hdv[k]->GetRMS()));
   }
   cList->Add(c);
+
+  // XY DCA - East and West
+  c = new TCanvas(Form("cxydca_%d_%d",prod,subiter),
+                  Form("xy_dca_east_west__%d_%d",prod,subiter), 1000, 500);
+  SetYMax(xydcae, xydcaw);
+  c->Divide(2,1);
+  c->cd(1);
+  gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  xydcae->Draw();
+  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+                                 1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
+  c->cd(2);
+  gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  xydcaw->Draw();
+  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+                                 1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
+  cList->Add(c);
+
+  // XY DCA vs phi
+  DrawObject(xydcaphi, "col",  Form("xydca_vs_phi_%d",stage), cList);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+
+  // Z DCA - East and West
+  c = new TCanvas(Form("czdca_%d_%d",prod,subiter),
+                  Form("z_dca_east_west_%d",stage), 1000, 500);
+  SetYMax(xydcae, xydcaw);
+  c->Divide(2,1);
+  c->cd(1);
+  gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  zdcae->Draw();
+  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+                                 1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
+  c->cd(2);
+  gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  zdcaw->Draw();
+  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+                                 1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
+  cList->Add(c);
+
+
+  // Z DCA vs theta - East and West
+  c = new TCanvas(Form("z_dca_vs_theta_%d",stage),
+                  Form("z_dca_vs_theta_ew_%d",stage), 1000, 500);
+  c->Divide(2,1);
+  c->cd(1);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  ezdcatheta->Draw("col");
+  ltx.DrawLatex(0.25, 0.92, "East");
+  // ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
+  //                                1e4*hve->GetMean(1), 1e4*hve->GetMean(2)));
+  // ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
+  //                                1e4*hve->GetRMS(1), 1e4*hve->GetRMS(2)));
+  c->cd(2);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  wzdcatheta->Draw("col");
+  ltx.DrawLatex(0.25, 0.92, "West");
+  // ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
+  //                                1e4*hvw->GetMean(1), 1e4*hvw->GetMean(2)));
+  // ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
+  //                                1e4*hvw->GetRMS(1), 1e4*hvw->GetRMS(2)));
+  cList->Add(c);
+
 
   return;
 }
@@ -413,10 +490,6 @@ InitResidHists(const char *treename, int ntrees)
 
       hds[lyr][stage]->GetYaxis()->SetRangeUser(-0.045, 0.045);
       hdz[lyr][stage]->GetYaxis()->SetRangeUser(-0.045, 0.045);
-
-      hds[lyr][stage]->GetXaxis()->SetNdivisions(210);
-      hdz[lyr][stage]->GetXaxis()->SetNdivisions(210);
-
     }
   }
 
@@ -440,14 +513,34 @@ SetupHist(TH1D *h, int stage)
   else if (TString(h->GetName()).Contains("hlz"))
     h->SetLineColor(kAzure + 2);
 
+  h->GetYaxis()->SetRangeUser(0, 1.3 * h->GetMaximum());
+  SetAxisProps(h, 205, 205, 0.06, 0.0);
+  return;
+}
+
+void
+SetAxisProps(TH1 *h, int xdivs, int ydivs,
+             double labelSize, double titleSize,
+             double xTitleOffset, double yTitleOffset,
+             bool centerX, bool centerY)
+{
   TAxis *ax = h->GetXaxis();
   TAxis *ay = h->GetYaxis();
-  ay->SetRangeUser(0, 1.3 * h->GetMaximum());
-  ax->SetNdivisions(205);
-  ax->SetLabelSize(0.06);
-  ay->SetNdivisions(205);
-  ay->SetLabelSize(0.05);
-  ax->SetTitleSize(0);
+  ax->SetNdivisions(xdivs);
+  ay->SetNdivisions(ydivs);
+
+  ax->SetLabelSize(labelSize);
+  ay->SetLabelSize(labelSize);
+
+  ax->SetTitleSize(titleSize);
+  ay->SetTitleSize(titleSize);
+
+  ax->SetTitleOffset(xTitleOffset);
+  ay->SetTitleOffset(yTitleOffset);
+
+  ax->CenterTitle(centerX);
+  ay->CenterTitle(centerY);
+
   return;
 }
 
