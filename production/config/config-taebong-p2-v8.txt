@@ -1,0 +1,15 @@
+# This is a configuration file to test Taebongs standard alignment
+# par file copied from /direct/phenix+hhj2/tmoon/1.OutputDir/1.VTX/1.Calibration/1.Run14/1.Run14AuAu200/7.0730_v8/svxPISA_Run14AuAu200_dchp2_v8.par on 7/31/2014
+# offsets copied from /direct/phenix+hhj2/tmoon/1.OutputDir/1.VTX/1.Calibration/1.Run14/1.Run14AuAu200/7.0730_v8/Print.C output on 7/31/2014
+#
+# Processing Print.C...
+#  VTX to CNT  : -0.409232  0.0168409  0
+#  EAST to WEST: 0.0538184  -0.0210091  -0.0284974
+#  CNTBEAM_WEST: -0.120756  0.0741091
+
+beamcenter: -0.120756 0.0741091
+east-to-west: 0.0538184 -0.0210091 -0.0284974
+vtx-to-cnt: -0.409232 0.0168409 0
+geomfile: taebong-run14p10.par
+
+

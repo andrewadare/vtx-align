@@ -174,7 +174,7 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     SvxStandAloneReco *svxstandalone         = new SvxStandAloneReco();
     svxstandalone->setVertexRecoFlag(2);
 
-    //SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
+    SvxPrimVertexFinder *svxprimvtxfinder    = new SvxPrimVertexFinder();
 
     SubsysReco *svxprimvtxfinder_west = new SvxPrimVertexFinder("SVXPRIMVTXFINDERW", 1);
 
