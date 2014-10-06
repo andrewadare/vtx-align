@@ -21,6 +21,7 @@ bool East(double phi);
 double ClusterXResolution(int layer);
 double ClusterZResolution(int layer);
 TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
+TVectorD ZVertexGLS(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
 double ZVertex(geoTracks &event, TString arm);
@@ -222,105 +223,6 @@ TrackFitT(SvxGeoTrack &gt)
 
   return;
 }
-// void
-// TrackFitT(SvxGeoTrack &gt, double *pars, TGraphErrors * /*bc*/)
-// {
-//   // Perform straight-line fit y' = m'*x' + b' after rotating points
-//   // to approximately lie along the x axis. Then by construction,
-//   // x' ~ r, m' ~ 0, and the error is (mostly) in the y' = phi direction.
-//   // Assign s = r*phi residual to gt.hits[i].ds.
-//   // Optionally put [y0, phi] from fit in pars array.
-//   // Use beam center info if provided.
-
-//   // int m = (bc) ? gt.nhits + 1 : gt.nhits;
-//   int m = gt.nhits;
-//   int n = 2;
-//   TMatrixD points(n, m); // Datapoints. Columns are x',y' pairs
-//   TMatrixD X(m, n);      // Column 0 is 1's, column 1 is x' (~r) hit coords.
-//   TMatrixD Cinv(m, m);   // Inverse covariance matrix. Currently diagonal.
-//   TVectorD y(m);         // Dependent variables y'.
-//   double phirot = 0;     // <phi_cluster> used to rotate clusters
-
-//   for (int ihit=0; ihit<m; ihit++)
-//   {
-//     SvxGeoHit hit = gt.GetHit(ihit);
-//     points(0,ihit) = hit.x;
-//     points(1,ihit) = hit.y;
-
-//     X(ihit,0) = 1;
-//     // Note that hit.xsigma is expected to be in integer units 1,2,3....
-//     double xsigma = hit.xsigma * ClusterXResolution(hit.layer);
-//     Cinv(ihit,ihit) = (xsigma > 0) ? 1./xsigma : 1.;
-//     phirot += 1./m * TMath::ATan2(hit.y, hit.x);
-//   }
-
-//   // Rotate x, y by -phirot so error is approximately in y' direction only.
-//   // In rotated frame (xp, yp) = (cx + sy, cy - sx)
-//   TMatrixD R(2,2);
-//   double c = TMath::Cos(phirot), s = TMath::Sin(phirot);
-//   R(0,0) =  c; R(0,1) = s;
-//   R(1,0) = -s; R(1,1) = c;
-
-//   points = R * points;
-
-//   TMatrixDColumn(X, 1) = TMatrixDRow(points, 0);
-//   y = TMatrixDRow(points, 1);
-//   // Fit track to get beta prime = [b', m'] in rotated system.
-//   TVectorD betap = SolveGLS(X,y,Cinv);
-//   double bp = betap(0), mp = betap(1); // Intercept and slope, both small.
-
-//   // Rotate back to get y-intercept b and slope m of track.
-//   double y0 = bp / (c - mp*s);
-//   double slope = (s + mp*c) / (c - mp*s);
-
-//   double phi = phirot + TMath::ATan(mp);
-//   if (phi < 0)
-//     phi += TMath::TwoPi();
-//   if (pars)
-//   {
-//     pars[0] = y0;
-//     pars[1] = phi;
-//   }
-
-//   // Assign residuals to hits
-//   for (int ihit=0; ihit<gt.nhits; ihit++)
-//   {
-//     double xp  = points(0, ihit); // x' in rotated system--always positive
-//     assert(xp > 0);
-
-//     double ds = mp*xp + bp - points(1, ihit); // projected - measured y'
-//     gt.hits[ihit].ds = ds;
-//   }
-
-//   // Assign rotation angle and y-intercept of rotated track
-//   gt.yp0 = bp;
-//   gt.phirot = phirot;
-
-//   return;
-// }
-
-// void
-// ZeroFieldResiduals(SvxGeoTrack &gt,
-//                    double *pars, /* y0, z0, yslope, zslope */
-//                    TGraphErrors *bc /* bcx, bcy, sigma */)
-// {
-//   if (gt.nhits < 1)
-//   {
-//     Printf("ZeroFieldResiduals(): No hits in track. Skipping.");
-//     return;
-//   }
-
-//   double zpars[2] = {0}, spars[2] = {0};
-//   TrackFitL(gt, zpars);
-//   TrackFitT(gt, spars, bc);
-
-//   pars[0] = spars[0]; // y0 (y-intercept)
-//   pars[1] = zpars[0]; // z0 (z-intercept)
-//   pars[2] = spars[1]; // slope in transverse (y vs x) plane
-//   pars[3] = zpars[1]; // slope in longitudinal (z vs r) plane
-
-//   return;
-// }
 
 void
 FitTracks(geoTracks &tracks, TGraphErrors * /*bc*/)
@@ -346,8 +248,8 @@ FindVertexEastWest(geoTracks &event, TString opt)
 
   TVectorD xye = XYCenter(event, "east");
   TVectorD xyw = XYCenter(event, "west");
-  double ze = ZVertex(event, "east");
-  double zw = ZVertex(event, "west");
+  TVectorD rze = ZVertexGLS(event, "east");
+  TVectorD rzw = ZVertexGLS(event, "west");
 
   for (unsigned int t=0; t<event.size(); t++)
   {
@@ -363,7 +265,7 @@ FindVertexEastWest(geoTracks &event, TString opt)
 
     if (opt.Contains("z"))
     {
-      double vz = arm ? zw : ze;
+      double vz = arm ? rzw(1) : rze(1);
       trk.vz = vz;
     }
   }
@@ -467,7 +369,7 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
     }
 
     if (opt.Contains("find_vertex"))
-      FindVertexEastWest(events[ev], opt);
+      FindVertexEastWest(events[ev], "xyz");
 
     if (opt.Contains("calc_dca"))
       CalculateDCA(events[ev], bc);
@@ -532,7 +434,6 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
     SvxGeoTrack trk = tracks[i];
     double mp = tan(trk.phi0 - trk.phirot);
     double yint = trk.yp0/(cos(trk.phirot) - mp*sin(trk.phirot));
-    // double yint = trk.yp0; // CHECK!! NEED TO ROTATE Y INTERCEPT?
     double phi = trk.phi0;
     bool east = East(phi);
 
@@ -566,6 +467,83 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
   }
 
   return xy;
+}
+
+TVectorD
+ZVertexGLS(geoTracks &tracks, TString arm, int ntrk, TString opt)
+{
+  assert(ntrk <= (int)tracks.size());
+  int n = ntrk > 0 ? ntrk : (int)tracks.size();
+  TVectorD rz(2);
+
+  if ((arm=="east" || arm=="west") && ntrk <= 0)
+  {
+    int nsub = 0;
+    for (int i=0; i<n; i++)
+    {
+      bool east = East(tracks[i].phi0);
+      if ((arm=="east" && east) || (arm=="west" && !east))
+        nsub++;
+    }
+    n = nsub;
+  }
+
+  if (n < 2)
+  {
+    rz(0) = -9999;
+    rz(1) = -9999;
+    return rz;
+  }
+
+  TMatrixD M(n,2);   // "Design matrix" containing track slopes
+  TVectorD z0(n);    // Vector of track y-intercept values
+  TMatrixD L(n,n);   // Error (co)variance for track fit parameters z0, m
+  L.UnitMatrix();
+  L *= 0.01;         // TODO: Get mean dm, dz0 from track fits
+  TMatrixD cov(2,2); // Assigned in SolveGLS()
+
+  int row=0;
+  for (unsigned int i=0; i<tracks.size(); i++)
+  {
+    if (row==n)
+      break;
+
+    SvxGeoTrack trk = tracks[i];
+    // double mp = tan(trk.phi0 - trk.phirot);
+    // double yint = trk.yp0/(cos(trk.phirot) - mp*sin(trk.phirot));
+    double slope = 1./tan(trk.the0);
+    bool east = East(trk.phi0);
+
+    if (opt.Contains("hitw") && trk.nhits == 4)
+      L(row,row) *= 0.5;
+
+    if (arm=="")
+    {
+      M(row, 0) = -slope;
+      M(row, 1) = 1;
+      z0(row) = trk.z0;
+      row++;
+    }
+    else if ((arm=="east" && east) || (arm=="west" && !east))
+    {
+      M(row, 0) = -slope;
+      M(row, 1) = 1;
+      z0(row) = trk.z0;
+      row++;
+    }
+  }
+  rz = SolveGLS(M, z0, L, cov);
+
+  if (opt.Contains("print"))
+  {
+    Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
+           arm.Data(),
+           rz(0), sqrt(cov(0,0)),
+           rz(1), sqrt(cov(1,1)));
+    cov.Print();
+  }
+
+  return rz;
 }
 
 bool
@@ -627,6 +605,7 @@ IPVec(SvxGeoTrack &t, TVectorD &p)
 double
 ZVertex(geoTracks &tracks, TString arm)
 {
+  // Assumes XYCenter() has already been called!
   int nz = 0;
   const int maxnz = tracks.size();
   assert(maxnz>0);
@@ -636,11 +615,16 @@ ZVertex(geoTracks &tracks, TString arm)
 
   for (unsigned int i=0; i<tracks.size(); i++)
   {
-    bool east = East(tracks[i].phi0);
+    SvxGeoTrack trk = tracks[i];
+    bool east = East(trk.phi0);
+
+    // Radial distance of primary vertex from z axis
+    double vr = sqrt(trk.vx*trk.vx + trk.vy*trk.vy);
+
     if (arm=="")
-      zs[nz++] = tracks[i].z0;
+      zs[nz++] = trk.z0;// + vr/tan(trk.phirot);
     else if ((arm=="east" && east) || (arm=="west" && !east))
-      zs[nz++] = tracks[i].z0;
+      zs[nz++] = trk.z0;// + vr/tan(trk.phirot);
   }
   TMath::Quantiles(nz, 1, zs, quantiles, probs, false);
 
