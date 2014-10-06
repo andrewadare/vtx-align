@@ -14,8 +14,8 @@
 //      "cnt": vtxtrks & cnttrks.
 //      "fixed-bc" use beamcenter from rootfiles/bc-411768.root
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_full.root", //rootfiles/anavtxcluster_411768-pro0-no-vtx2cnt.root",
-                const char *outfilename = "rootfiles/411768-0-0.root",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-0-1_full.root",
+                const char *outfilename = "rootfiles/411768-0-1.root",
                 const char *configfilename = "production/config/config-zf-411768-0-0_5.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
@@ -23,9 +23,9 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_f
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
                 int nhitsmin = 3,
-                int nevents = 10000, // -1 = everything
+                int nevents = -1, // -1 = everything
                 float frac4hit = -1, // -1 = no filter
-                TString opt = "fixed-bc") // see above
+                TString opt = "no-bc") // see above
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");
@@ -43,8 +43,12 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_f
   GetParamFromConfig(configfilename, bc, e2w, v2c, parFileName);
   SvxTGeo *tgeo = VTXModel(parFileName.c_str());
 
-  TGraphErrors *gbc;
-  if (opt.Contains("fixed-bc"))
+  TGraphErrors *gbc = NULL;
+  if (opt.Contains("no-bc"))
+  {
+    //don't use a beamcenter in the fit
+  }
+  else if (opt.Contains("fixed-bc"))
   {
     //use fixed bc from designated file
     TString bcFileIn   = "rootfiles/bc-411768.root";
@@ -95,18 +99,19 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_f
 
   //need to fit segments to get phi, theta
   std::cout << "-- Fitting tracks --" << std::endl;
+
   if (gbc)
   {
     Info("", "Using beamcenter in fit:");
     Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
     Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
   }
-  FitTracks(vtxevents, gbc, "");
-
+  FitTracks(vtxevents, gbc, "find_vertex, calc_dca");
 
   std::cout << "-- Filtering data --" << std::endl;
   FilterData(vtxevents, cntevents,
              vtxtrks, cnttrks,
+             gbc,
              vertexprobmin, vertexprobmax,
              maxdca,
              maxres_s, maxres_z,
