@@ -109,36 +109,38 @@ void
 FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
           TObjArray *cList)
 {
-  TAxis *ax = 0, *ay = 0;
   TH1D *xydcae = new TH1D(Form("xydcae_%d_%d",prod,subiter),
                           Form(";east arm x-y DCA [cm];tracks"), 200, -0.05, 0.05);
-  SetAxisProps(xydcae);
   TH1D *xydcaw = new TH1D(Form("xydcaw_%d_%d",prod,subiter),
                           Form(";west arm x-y DCA [cm];tracks"), 200, -0.05, 0.05);
-  SetAxisProps(xydcaw);
-  TH1D *zdcae = new TH1D(Form("zdcae_%d_%d",prod,subiter), 
+  TH1D *zdcae = new TH1D(Form("zdcae_%d_%d",prod,subiter),
                          ";east z DCA [cm];tracks", 200, -0.25, 0.25);
-  SetAxisProps(zdcae);
-  TH1D *zdcaw = new TH1D(Form("zdcaw_%d_%d",prod,subiter), 
+  TH1D *zdcaw = new TH1D(Form("zdcaw_%d_%d",prod,subiter),
                          ";west z DCA [cm];tracks", 200, -0.25, 0.25);
-  SetAxisProps(zdcaw);
   TH1D *hvze = new TH1D(Form("hvze_%d_%d",prod,subiter),
                         Form(";east arm z vertex [cm];tracks"), 200, -15, 15);
-  SetAxisProps(hvze);
   TH1D *hvzw = new TH1D(Form("hvzw_%d_%d",prod,subiter),
                         Form(";west arm z vertex [cm];tracks"), 200, -15, 15);
-  SetAxisProps(hvzw);
-  TH2D *xydcaphi  = new TH2D(Form("xydcaphi_%d_%d",prod,subiter), ";#phi [rad];x-y DCA [cm]",
+  TH2D *xydcaphi  = new TH2D(Form("xydcaphi_%d_%d",prod,subiter),
+                             ";#phi [rad];x-y DCA [cm]",
                              100, -TMath::PiOver2(), 3*TMath::PiOver2(),
                              100, -0.05, +0.05);
+  TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter),
+                               ";#theta [rad];z DCA [cm]",
+                               100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
+                               100, -0.25, +0.25);
+  TH2D *wzdcatheta  = new TH2D(Form("wzdcatheta_%d_%d",prod,subiter),
+                               ";#theta [rad];z DCA [cm]",
+                               100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
+                               100, -0.25, +0.25);
+  SetAxisProps(xydcae);
+  SetAxisProps(xydcaw);
+  SetAxisProps(zdcae, 208, 208, 0.04, 0.04, 1.1, 1.7);
+  SetAxisProps(zdcaw, 208, 208, 0.04, 0.04, 1.1, 1.7);
+  SetAxisProps(hvze);
+  SetAxisProps(hvzw);
   SetAxisProps(xydcaphi);
-  TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter), ";#theta [rad];z DCA [cm]",
-                               100, 0.2*TMath::Pi(), 0.8*TMath::Pi(),
-                               100, -0.25, +0.25);
   SetAxisProps(ezdcatheta);
-  TH2D *wzdcatheta  = new TH2D(Form("wzdcatheta_%d_%d",prod,subiter), ";#theta [rad];z DCA [cm]",
-                               100, 0.2*TMath::Pi(), 0.8*TMath::Pi(),
-                               100, -0.25, +0.25);
   SetAxisProps(wzdcatheta);
 
   // x-y vertex distributions
@@ -160,7 +162,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   const char *xyzstr[3] = {"x", "y", "z"};
   for (int k=0; k<3; k++)
   {
-    double lim = 0.5;
+    double lim = 0.11;
     if (k == 2)
       lim *= 10;
 
@@ -174,6 +176,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
 
   TTreeReader r(treename, f);
 
+  TTreeReaderValue<int>   event(r, "event");
   TTreeReaderValue<float> xydca(r, "xydca");
   TTreeReaderValue<float>  zdca(r, "zdca");
   TTreeReaderValue<float>   phi(r, "trkphi");
@@ -187,8 +190,31 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TTreeReaderArray<float> vertex(r, "primvtx");
 
   Info("", "Filling histograms from %s", f->GetName());
+  int prevev = -1;
+  int ne = 0, nw = 0;
+  TVectorD ve(3);
+  TVectorD vw(3);
   while (r.Next())
   {
+    // Check for a new event
+    if (*event != prevev)
+    {
+
+      // Fill West - East vertex difference histograms
+      if (ne > 0 && nw > 0)
+      {
+        for (int k=0; k<3; k++)
+          hdv[k]->Fill(vw(k) - ve(k));
+      }
+
+      // Reset for next event
+      prevev = *event;
+      ve *= 0;
+      vw *= 0;
+      ne = 0;
+      nw = 0;
+    }
+
     int arm = (gx[0] < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
     // Hit-level variables
@@ -218,13 +244,15 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
     if (phiwrap > 1.5*TMath::Pi())
       phiwrap -= TMath::TwoPi();
     // Track/event level variables
-    TVectorD ve(3);
-    TVectorD vw(3);
     if (arm == 0)
     {
-      ve(0) = vertex[0];
-      ve(1) = vertex[1];
-      ve(2) = vertex[2];
+      ++ne;
+      if (ne == 1)
+      {
+        ve(0) = vertex[0];
+        ve(1) = vertex[1];
+        ve(2) = vertex[2];
+      }
       xydcae->Fill(*xydca);
       zdcae->Fill(*zdca);
       hve->Fill(vertex[0], vertex[1]);
@@ -233,18 +261,19 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
     }
     if (arm == 1)
     {
-      vw(0) = vertex[0];
-      vw(1) = vertex[1];
-      vw(2) = vertex[2];
+      ++nw;
+      if (nw == 1)
+      {
+        vw(0) = vertex[0];
+        vw(1) = vertex[1];
+        vw(2) = vertex[2];
+      }
       xydcaw->Fill(*xydca);
       zdcaw->Fill(*zdca);
       hvw->Fill(vertex[0], vertex[1]);
       hvzw->Fill(vertex[2]);
       wzdcatheta->Fill(*theta, *zdca);
     }
-
-    for (int k=0; k<3; k++)
-      hdv[k]->Fill(vw(k) - ve(k));
 
     xydcaphi->Fill(phiwrap, *xydca);
   }
@@ -289,20 +318,18 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   c->Divide(2,1);
   c->cd(1);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  hvze->GetYaxis()->SetRangeUser(0, 1.2*hvze->GetMaximum());
   hvze->Draw("");
   ltx.DrawLatex(0.25, 0.92, "East");
-  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) cm",
-                                 hvze->GetMean(1), hvze->GetMean(2)));
-  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) cm",
-                                 hvze->GetRMS(1), hvze->GetRMS(2)));
+  ltx.DrawLatex(0.45, 0.92, Form("mean %.3f cm", hvze->GetMean(1)));
+  ltx.DrawLatex(0.45, 0.87, Form("std dev %.3f cm", hvze->GetRMS(1)));
   c->cd(2);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  hvzw->GetYaxis()->SetRangeUser(0, 1.2*hvze->GetMaximum());
   hvzw->Draw("");
   ltx.DrawLatex(0.25, 0.92, "West");
-  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) cm",
-                                 hvzw->GetMean(1), hvzw->GetMean(2)));
-  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) cm",
-                                 hvzw->GetRMS(1), hvzw->GetRMS(2)));
+  ltx.DrawLatex(0.45, 0.92, Form("mean %.3f cm", hvzw->GetMean(1)));
+  ltx.DrawLatex(0.45, 0.87, Form("std dev %.3f cm", hvzw->GetRMS(1)));
   cList->Add(c);
 
   // East-west offsets in x, y, and z
@@ -327,12 +354,12 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   c->cd(1);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
   xydcae->Draw();
-  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+  ltx.DrawLatex(0.16, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
                                  1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
   c->cd(2);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
   xydcaw->Draw();
-  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+  ltx.DrawLatex(0.16, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
                                  1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
   cList->Add(c);
 
@@ -347,13 +374,15 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   c->Divide(2,1);
   c->cd(1);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  zdcae->GetYaxis()->SetRangeUser(0, 1.2*zdcae->GetMaximum());
   zdcae->Draw();
-  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+  ltx.DrawLatex(0.15, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
                                  1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
   c->cd(2);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  zdcaw->GetYaxis()->SetRangeUser(0, 1.2*zdcaw->GetMaximum());
   zdcaw->Draw();
-  ltx.DrawLatex(0.15, 0.95, Form("Mean, Std Dev = %.0f, %.0f #mum",
+  ltx.DrawLatex(0.15, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
                                  1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
   cList->Add(c);
 
@@ -704,7 +733,6 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
         SetupHist(h, stage);
         if (ntrees == 1)
           PrintMeanToPad(h, 0, "dz");
-
       }
 
       if (ntrees > 1)
