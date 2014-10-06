@@ -35,8 +35,8 @@ TGraphErrors *DeadLadderGraph(int lyr);
 void DrawResults(int run = 123456,
                  int prod1 = 0,
                  int subit1 = 0,
-                 int prod2 = 0,
-                 int subit2 = 1,
+                 int prod2 = -1,
+                 int subit2 = -1,
                  const char *treename = "vtxtrks")
 {
   gStyle->SetOptStat(0);
@@ -117,10 +117,10 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                           Form(";west arm x-y DCA [cm];tracks"), 200, -0.05, 0.05);
   SetAxisProps(xydcaw);
   TH1D *zdcae = new TH1D(Form("zdcae_%d_%d",prod,subiter), 
-                         ";east z DCA [cm];tracks", 200, -0.05, 0.05);
+                         ";east z DCA [cm];tracks", 200, -0.25, 0.25);
   SetAxisProps(zdcae);
   TH1D *zdcaw = new TH1D(Form("zdcaw_%d_%d",prod,subiter), 
-                         ";west z DCA [cm];tracks", 200, -0.05, 0.05);
+                         ";west z DCA [cm];tracks", 200, -0.25, 0.25);
   SetAxisProps(zdcaw);
   TH1D *hvze = new TH1D(Form("hvze_%d_%d",prod,subiter),
                         Form(";east arm z vertex [cm];tracks"), 200, -15, 15);
@@ -133,12 +133,12 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                              100, -0.05, +0.05);
   SetAxisProps(xydcaphi);
   TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter), ";#theta [rad];z DCA [cm]",
-                               100, 0.0*TMath::Pi(), 1.0*TMath::Pi(),
-                               100, -0.05, +0.05);
+                               100, 0.2*TMath::Pi(), 0.8*TMath::Pi(),
+                               100, -0.25, +0.25);
   SetAxisProps(ezdcatheta);
   TH2D *wzdcatheta  = new TH2D(Form("wzdcatheta_%d_%d",prod,subiter), ";#theta [rad];z DCA [cm]",
-                               100, 0.0*TMath::Pi(), 1.0*TMath::Pi(),
-                               100, -0.05, +0.05);
+                               100, 0.2*TMath::Pi(), 0.8*TMath::Pi(),
+                               100, -0.25, +0.25);
   SetAxisProps(wzdcatheta);
 
   // x-y vertex distributions
@@ -160,11 +160,15 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   const char *xyzstr[3] = {"x", "y", "z"};
   for (int k=0; k<3; k++)
   {
+    double lim = 0.5;
+    if (k == 2)
+      lim *= 10;
+
     hdv[k] = new TH1D(Form("hdv_%d__%d_%d",prod,subiter, k),
                       Form("West - East vertex difference #Delta%s "
                            "- prod %d step %d; (W-E) #Delta%s [cm];tracks",
                            xyzstr[k], prod, subiter, xyzstr[k]),
-                      200, -1, 1);
+                      200, -lim, lim);
     SetAxisProps(hdv[k]);
   }
 
