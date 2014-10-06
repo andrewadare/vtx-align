@@ -47,11 +47,6 @@ void GenerateEvents()
       tracks[t].vx = vertex(0);
       tracks[t].vy = vertex(1);
       tracks[t].vz = vertex(2);
-      if (n<10 && t==0) Printf("bc %f %f\n %f %f %f", 
-                       bcx,bcy,
-                       tracks[t].vx,
-                       tracks[t].vy,
-                       tracks[t].vz);
     }
 
     vtxevents[n] = tracks;
@@ -130,7 +125,7 @@ void GenerateEvents()
   // Without this step, a comparison of residuals before and after alignment
   // would not be apples-to-apples.
   // CNT tracks are not fit here--their parameters are determined externally.
-  FitTracks(vtxevents, gbc, "calc_dca");
+  FitTracks(vtxevents, gbc, "find_vertex,calc_dca");
 
   // Write out (misaligned) geometry to par file
   Printf("Writing %s", pisaFileOut.Data());
