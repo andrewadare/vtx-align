@@ -1,5 +1,12 @@
 TODO items for VTX alignment
 ----------------------------
+# Parse the "sim" option in ConstraintBuilder.h to keep all ladders.
+*10/7/2014*
+We do not want to exclude any ladders in simulations. Currently I hack this by editing BadLadders.h directly (commenting the ladder list or returning immediately).
+
+Now VtxAlign takes the option "sim" as part of alignMode.
+
+I need to pass the option "sim" through to LadderLabels(), or do something with equivalent effect. LadderLabels() should skip checking the Dead() function from BadLadders.h when using simulated data.
 
 # Modify FilterData() in DataRejector.h to use input beam center #
 *10/2/2014*
