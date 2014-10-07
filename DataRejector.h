@@ -3,8 +3,6 @@
 
 #include "VtxAlignBase.h"
 #include "GLSFitter.h"
-#include "VertexFinder.h"
-#include "DcaFunctions.h"
 #include "VtxIO.h"
 
 #include "TRandom3.h"
