@@ -9,9 +9,8 @@
 
 void FilterData(geoEvents &segevents,
                 geoEvents &cntevents,
-                TTree *segtree = 0,
-                TTree *cnttree = 0,
-                TGraphErrors *gbc = 0,
+                geoEvents &accsegevents,
+                geoEvents &acccntevents,
                 double vertexprobmin = 0.01,
                 double vertexprobmax = 0.99,
                 double maxdca = 0.2,
@@ -38,11 +37,12 @@ void Fix4HitFrac(geoEvents &segeventsout, geoEvents &cnteventsout,
                  geoEvents &segeventsin, geoEvents &cnteventsin,
                  float frac = 0.5);
 
+double CalcRejectFrac(geoEvents &eventsin, geoEvents &eventsout);
+
 
 void
 FilterData(geoEvents &segevents, geoEvents &cntevents,
-           TTree *segtree, TTree *cnttree,
-           TGraphErrors *gbc,
+           geoEvents &accsegevents, geoEvents &acccntevents,
            double vertexprobmin, double vertexprobmax ,
            double maxdca,
            double maxres_s, double maxres_z,
@@ -53,14 +53,6 @@ FilterData(geoEvents &segevents, geoEvents &cntevents,
   // This function filters data, keeping
   // svxsegments and svxcnt in sync
   // if cntevents is included
-  assert(segtree);
-
-  if (cntevents.size() > 0 && !cnttree)
-  {
-    Error("FilterData() in DataRejector.h",
-          "cntevents is non-empty, but cnttree is is NULL");
-    return;
-  }
 
   //double check that geoEvents are the same size
   //else they aren't synced and this won't work
@@ -76,85 +68,53 @@ FilterData(geoEvents &segevents, geoEvents &cntevents,
   // get the bc & uncertainties for rejecting outlying events
   TVectorD bce(2), bcw(2); //beamcenter values
   TVectorD ebce(2), ebcw(2);//beamcenter error values
-  if (gbc)
+
+  // x-y vertex distributions
+  Printf("Filling mult/vertex distributions...");
+  double x0 = -1.0, y0 = -1.0, x1 = +1.0, y1 = +1.0;
+  TH2D *hve = new TH2D("vtxtrks_ve",
+                       Form("East vertex;x [cm];y [cm]"),
+                       500, x0, x1, 500, y0, y1);
+  TH2D *hvw = new TH2D("vtxtrks_vw",
+                       Form("West vertex;x [cm];y [cm]"),
+                       500, x0, x1, 500, y0, y1);
+  for (unsigned int ev = 0; ev < segevents.size(); ev++)
   {
-    // Use a fixed beam center
-
-    //East
-    bce(0) = gbc->GetX()[0]; bce(1) = gbc->GetY()[0];
-    ebce(0) = 4 * gbc->GetErrorX(0); 
-    ebce(1) = 4 * gbc->GetErrorY(0);
-
-    //West
-    bcw(0) = gbc->GetX()[1]; bcw(1) = gbc->GetY()[1];
-    ebcw(0) = 4 * gbc->GetErrorX(1); 
-    ebcw(1) = 4 * gbc->GetErrorY(1);
-
-  }
-  else
-  {
-    // Calculate the beam center
-
-    // x-y vertex distributions
-    Printf("Filling mult/vertex distributions...");
-    double x0 = -1.0, y0 = -1.0, x1 = +1.0, y1 = +1.0;
-    TH2D *hve = new TH2D(Form("%s_ve", segtree->GetName()),
-                         Form("East vertex;x [cm];y [cm]"),
-                         500, x0, x1, 500, y0, y1);
-    TH2D *hvw = new TH2D(Form("%s_vw", segtree->GetName()),
-                         Form("West vertex;x [cm];y [cm]"),
-                         500, x0, x1, 500, y0, y1);
-    for (unsigned int ev = 0; ev < segevents.size(); ev++)
+    int mult = segevents[ev].size();
+    if (mult >= minmult)
     {
-      int mult = segevents[ev].size();
-      if (mult >= minmult)
-      {
-        TVectorD ve = RetrieveVertex(segevents[ev], "east");
-        hve->Fill(ve(0), ve(1));
+      TVectorD ve = RetrieveVertex(segevents[ev], "east");
+      hve->Fill(ve(0), ve(1));
 
-        TVectorD vw = RetrieveVertex(segevents[ev], "west");
-        hvw->Fill(vw(0), vw(1));
-      }
+      TVectorD vw = RetrieveVertex(segevents[ev], "west");
+      hvw->Fill(vw(0), vw(1));
     }
-
-    Printf("Computing quantiles for {e,w}{x,y}");
-    const int nq = 5;
-    double probs[nq] = {vertexprobmin, 0.32, 0.50, 0.68, vertexprobmax};
-    double qxe[nq] = {0}, qxw[nq] = {0}, qye[nq] = {0}, qyw[nq] = {0};
-    hve->ProjectionX()->GetQuantiles(nq, qxe, probs);
-    hvw->ProjectionX()->GetQuantiles(nq, qxw, probs);
-    hve->ProjectionY()->GetQuantiles(nq, qye, probs);
-    hvw->ProjectionY()->GetQuantiles(nq, qyw, probs);
-
-    bce(0) = qxe[2]; bce(1) = qye[2];
-    ebce(0) = 0.5 * (qxe[nq - 1] - qxe[0]);
-    ebce(1) = 0.5 * (qye[nq - 1] - qye[0]);
-
-    bcw(0) = qxw[2]; bcw(1) = qyw[2];
-    ebcw(0) = 0.5 * (qxw[nq - 1] - qxw[0]);
-    ebcw(1) = 0.5 * (qyw[nq - 1] - qyw[0]);
-
-    Printf("  bcE=(%.4f+/-%.4f, %.4f+/-%.4f)", bce(0), ebce(0), bce(1), ebce(1));
-    Printf("  bcW=(%.4f+/-%.4f, %.4f+/-%.4f)", bcw(0), ebcw(0), bcw(1), ebcw(1));
-
-
   }
+
+  Printf("Computing quantiles for {e,w}{x,y}");
+  const int nq = 5;
+  double probs[nq] = {vertexprobmin, 0.32, 0.50, 0.68, vertexprobmax};
+  double qxe[nq] = {0}, qxw[nq] = {0}, qye[nq] = {0}, qyw[nq] = {0};
+  hve->ProjectionX()->GetQuantiles(nq, qxe, probs);
+  hvw->ProjectionX()->GetQuantiles(nq, qxw, probs);
+  hve->ProjectionY()->GetQuantiles(nq, qye, probs);
+  hvw->ProjectionY()->GetQuantiles(nq, qyw, probs);
+
+  bce(0) = qxe[2]; bce(1) = qye[2];
+  ebce(0) = 0.5 * (qxe[nq - 1] - qxe[0]);
+  ebce(1) = 0.5 * (qye[nq - 1] - qye[0]);
+
+  bcw(0) = qxw[2]; bcw(1) = qyw[2];
+  ebcw(0) = 0.5 * (qxw[nq - 1] - qxw[0]);
+  ebcw(1) = 0.5 * (qyw[nq - 1] - qyw[0]);
+
+  Printf("  bcE=(%.4f+/-%.4f, %.4f+/-%.4f)", bce(0), ebce(0), bce(1), ebce(1));
+  Printf("  bcW=(%.4f+/-%.4f, %.4f+/-%.4f)", bcw(0), ebcw(0), bcw(1), ebcw(1));
 
 
   Printf("Rejecting outliers in event loop...");
-  int nsegin = 0;
-  int ncntin = 0;
-
-  //temporary containers to hold accepted tracks
-  geoEvents accsegevents;
-  geoEvents acccntevents;
-
   for (unsigned int ev = 0; ev < segevents.size(); ev++)
   {
-    nsegin += segevents.at(ev).size();
-    if (cntevents.size() > 0)
-      ncntin += cntevents.at(ev).size();
-
     bool rejectev = RejectOutlierVtx(segevents.at(ev),
                                      bce, ebce,
                                      bcw, ebcw,
@@ -195,26 +155,21 @@ FilterData(geoEvents &segevents, geoEvents &cntevents,
                 accsegevents, acccntevents,
                 frac4hit);
 
-    FillTree(filtsegevents, segtree);
-    if (cntevents.size() > 0)
-      FillTree(filtcntevents, cnttree);
-  }
-  else
-  {
-    //write out all the desired tracks
-    FillTree(accsegevents, segtree);
-    if (cntevents.size() > 0)
-      FillTree(acccntevents, cnttree);
+    //copy filtered to output objects
+    accsegevents.clear();
+    acccntevents.clear();
+    accsegevents = filtsegevents;
+    acccntevents = filtcntevents;
   }
 
-  double segRejectFrac = 1.0 - (float)segtree->GetEntries() / (float)nsegin;
+  double segRejectFrac = CalcRejectFrac(segevents, accsegevents);
   Printf("%.3f%% of segments rejected by beam center DCA cut of %.0f um"
          " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
          100 * segRejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
 
   if (cntevents.size() > 0)
   {
-    double cntRejectFrac = 1.0 - (float)cnttree->GetEntries() / (float)ncntin;
+    double cntRejectFrac = CalcRejectFrac(cntevents, acccntevents);
     Printf("%.3f%% of svxcnt rejected by beam center DCA cut of %.0f um"
            " and residual (s,z) outlier cut of (%.0f,%.0f) um.",
            100 * cntRejectFrac, 1e4 * maxdca, 1e4 * maxres_s, 1e4 * maxres_z);
@@ -251,16 +206,6 @@ RejectOutlierVtx(geoTracks &trks,
   double wx = ebcw(0);
   double wy = ebcw(1);
 
-  /*
-  Printf("\n");
-  Printf("  bcE=(%.4f+/-%.4f, %.4f+/-%.4f)", bce(0), ebce(0), bce(1), ebce(1));
-  Printf("  bcW=(%.4f+/-%.4f, %.4f+/-%.4f)", bcw(0), ebcw(0), bcw(1), ebcw(1));
-  Printf("   vE=(%.4f, %.4f)", ve(0), ve(1));
-  Printf("   vW=(%.4f, %.4f)", vw(0), vw(1));
-  Printf("   fE=%f", dxe * dxe / ex / ex + dye * dye / ey / ey);
-  Printf("   fW=%f", dxw * dxw / wx / wx + dyw * dyw / wy / wy);
-  */
-
   if (dxe * dxe / ex / ex + dye * dye / ey / ey < 1.0 &&
       dxw * dxw / wx / wx + dyw * dyw / wy / wy < 1.0)
   {
@@ -268,17 +213,10 @@ RejectOutlierVtx(geoTracks &trks,
   }
   else
   {
-    //Printf("  FAILED RejectOutlierVtx()");
     return true;
   }
 
   return false;
-  // keep = false;
-  // if (ve(0) > qxe[0] && ve(0) < qxe[nq-1]) // East x vertex
-  //   if (ve(1) > qye[0] && ve(1) < qye[nq-1]) // East y vertex
-  //     if (vw(0) > qxw[0] && vw(0) < qxw[nq-1]) // West x vertex
-  //       if (vw(1) > qyw[0] && vw(1) < qyw[nq-1]) // West y vertex
-  //         keep = true;
 }
 
 bool
@@ -405,6 +343,26 @@ void Fix4HitFrac(geoEvents &segeventsout, geoEvents &cnteventsout,
 
   return;
 
+
+}
+
+double
+CalcRejectFrac(geoEvents &eventsin, geoEvents &eventsout)
+{
+  //calculate the fraction of rejected tracks
+
+  if (eventsout.size() == 0)
+    return -9999.;
+
+  int nin = 0;
+  for (unsigned int i = 0; i < eventsin.size(); i++)
+    nin += eventsin[i].size();
+
+  int nout = 0;
+  for (unsigned int i = 0; i < eventsout.size(); i++)
+    nout += eventsout[i].size();
+
+  return (float)nout / (float)nin;
 
 }
 
