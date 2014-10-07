@@ -587,7 +587,7 @@ TVectorD
 IPVec(SvxGeoTrack &trk, TVectorD &p)
 {
   double mp = tan(trk.phi0 - trk.phirot);
-  double y0 = trk.yp0 / (cos(trk.phirot) - mp * sin(trk.phirot));
+  // double y0 = trk.yp0 / (cos(trk.phirot) - mp * sin(trk.phirot));
 
   TVectorD a(2);
   a(0) = 0;
