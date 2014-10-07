@@ -23,6 +23,16 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
   // measured and expected residual sizes, and how the residuals change with
   // respect to local (track) and global (detector position) parameters.
   // The actual fitting is performed afterward by the pede program.
+  //
+  // Comments on local fitting and local derivatives
+  // ===============================================
+  // Use rotated coordinates (x',y') such that s residuals are approximately
+  // parallel to the y' axis.
+  // The cluster x' position in the rotated frame is
+  //   x' = hit (x,y) dot track p_T unit vector (cos phi, sin phi).
+  // Split into two independent fits per track:
+  //   1. in the x-y plane: y' = y0' + slope*x'
+  //   2. in the r-z plane: z = z0 + slope*x'
 
   // Get the number of global parameters for s and for z. This sets the number
   // of derivatives ds/d* and dz/d* to be computed.
@@ -30,10 +40,11 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
   int nzgp = zgpars.size();
   int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
+  // Include the beam center as a point in the local fits, if provided.
   if (bc)
   {
-    // Reject tracks with huge DCA values
-    if (fabs(trk.xydca) > 0.1)
+    // Reject tracks with outlying DCA values
+    if (fabs(trk.xydca < 1e-15) || fabs(trk.xydca) > 1e-1)
     {
       // Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
       return;
@@ -45,8 +56,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
 
     float xp = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
-    float sderlc[4] = {1.0,   xp, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
-    float zderlc[4] = {0.0, 0.0, 1.0,   xp}; // dz(r)/dz0, dz(r)/dslope
+    float sderlc[4] = {1, xp, 0, 0}; // dy'(x')/dy0, dy'(x')/dslope
+    float zderlc[4] = {0, 0, 1, xp}; // dz(x')/dz0, dz(x')/dslope
 
     float ld[1] = {1};
     float gd[1] = {0}; // placeholder - not used
@@ -85,32 +96,27 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 2*hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 2*hit.zsigma * ClusterZResolution(hit.layer);
+    float sSigFactor = (opt.Contains("sim")) ? 1.5 : 3.0;
+    float zSigFactor = (opt.Contains("sim")) ? 1.5 : 3.0;
+    float sigs = sSigFactor * hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = zSigFactor * hit.zsigma * ClusterZResolution(hit.layer);
 
     if (false)
       Printf("hit.ds %.3g, sigs %.3g, hit.dz %.3g, sigz %.3g",
              hit.ds, sigs, hit.dz, sigz);
 
-    // Local derivatives
-    // Split into two independent fits per track:
-    // 1. in the r-z plane: z = z0 + slope*r
-    // 2. in the x-y plane: y' = y0' + slope*r (where y' \perp r)
-    // r is an approximation.
-    // TODO: the exact r would be hit position dot pt unit vector (cos phi, sin phi).
+    float xp = hit.x*cos(trk.phi0) + hit.y*sin(trk.phi0);
+    float sderlc[4] = {1, xp, 0, 0}; // dy'(x')/dy0, dy'(x')/dslope
+    float zderlc[4] = {0, 0, 1, xp}; // dz(x')/dz0, dz(x')/dslope
+
+    // Printf("r %5.3f xp %5.3f | x, y, phi %5.3f, %5.3f, %5.3f",
+    //        r, xp, hit.x, hit.y, trk.phi0);
 
     float r = sqrt(hit.x*hit.x + hit.y*hit.y);
-    float distance = hit.x*cos(trk.phi0) + hit.y*sin(trk.phi0);
-    float sderlc[4] = {1.0,   distance, 0.0, 0.0}; // dy(r)/dy0, dy(r)/dslope
-    float zderlc[4] = {0.0, 0.0, 1.0,   distance}; // dz(r)/dz0, dz(r)/dslope
-
-    // Printf("r %5.3f distance %5.3f | x, y, phi %5.3f, %5.3f, %5.3f",
-    //        r, distance, hit.x, hit.y, trk.phi0);
-
-    if (abs(distance-r) > 0.1*r)
+    if (abs(xp - r) > 0.1*r)
     {
       trk.Print();
-      // assert(abs(distance-r) < 0.1*r);
+      // assert(abs(xp-r) < 0.1*r);
     }
 
     m.mille(4, sderlc, nsgp, &sdergl[0], &slabels[0], hit.ds, sigs);
@@ -210,19 +216,19 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
     // d(Delta_s)/ds -- 0.974 accounts for 13 degree tilt in pixel layers
     if (par == "s")
       return 1.0;
-      // return hit.layer < 2 ? 0.9741 : 1.0;
+    // return hit.layer < 2 ? 0.9741 : 1.0;
 
     // d(Delta_s)/dx
     if (par == "x")
       return -sin(trk.phirot);
-      // return -hit.y/r;
-      // return hit.layer < 2 ? -0.9741*hit.y/r : -hit.y/r;
+    // return -hit.y/r;
+    // return hit.layer < 2 ? -0.9741*hit.y/r : -hit.y/r;
 
     // d(Delta_s)/dy
     if (par == "y")
       return cos(trk.phirot);
-      // return hit.x/r;
-      // return hit.layer < 2 ? 0.9741*hit.x/r : hit.x/r;
+    // return hit.x/r;
+    // return hit.layer < 2 ? 0.9741*hit.x/r : hit.x/r;
 
     // d(Delta_s)/dz
     if (par == "z")
@@ -242,12 +248,12 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
     // d(Delta_z)/dx
     if (par == "x")
       return cos(trk.phirot)/tan(trk.the0);
-      // return hit.x/r/TMath::Tan(trk.the0);
+    // return hit.x/r/TMath::Tan(trk.the0);
 
     // d(Delta_z)/dy
     if (par == "y")
       return sin(trk.phirot)/tan(trk.the0);
-      // return hit.y/r/TMath::Tan(trk.the0);
+    // return hit.y/r/TMath::Tan(trk.the0);
 
     // d(Delta_z)/dz
     if (par == "z")
