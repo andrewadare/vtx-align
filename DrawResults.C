@@ -32,11 +32,11 @@ TGraphErrors *DeadLadderGraph(int lyr);
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
 // 2. set prod2 = prod1, subit2 = subit1.
-void DrawResults(int run = 123456,
+void DrawResults(int run = 411768,
                  int prod1 = 0,
                  int subit1 = 0,
-                 int prod2 = -1,
-                 int subit2 = -1,
+                 int prod2 = 0,
+                 int subit2 = 1,
                  const char *treename = "vtxtrks")
 {
   gStyle->SetOptStat(0);
@@ -110,9 +110,9 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
           TObjArray *cList)
 {
   TH1D *xydcae = new TH1D(Form("xydcae_%d_%d",prod,subiter),
-                          Form(";east arm x-y DCA [cm];tracks"), 200, -0.05, 0.05);
+                          Form(";east arm x-y DCA [cm];tracks"), 200, -0.1, 0.1);
   TH1D *xydcaw = new TH1D(Form("xydcaw_%d_%d",prod,subiter),
-                          Form(";west arm x-y DCA [cm];tracks"), 200, -0.05, 0.05);
+                          Form(";west arm x-y DCA [cm];tracks"), 200, -0.1, 0.1);
   TH1D *zdcae = new TH1D(Form("zdcae_%d_%d",prod,subiter),
                          ";east z DCA [cm];tracks", 200, -0.25, 0.25);
   TH1D *zdcaw = new TH1D(Form("zdcaw_%d_%d",prod,subiter),
@@ -124,7 +124,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TH2D *xydcaphi  = new TH2D(Form("xydcaphi_%d_%d",prod,subiter),
                              ";#phi [rad];x-y DCA [cm]",
                              100, -TMath::PiOver2(), 3*TMath::PiOver2(),
-                             100, -0.05, +0.05);
+                             100, -0.1, +0.1);
   TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter),
                                ";#theta [rad];z DCA [cm]",
                                100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
@@ -162,9 +162,9 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   const char *xyzstr[3] = {"x", "y", "z"};
   for (int k=0; k<3; k++)
   {
-    double lim = 0.21;
+    double lim = 0.41;
     if (k == 2)
-      lim *= 10;
+      lim *= 2;
 
     hdv[k] = new TH1D(Form("hdv_%d__%d_%d",prod,subiter, k),
                       Form("West - East vertex difference #Delta%s "
@@ -196,6 +196,11 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TVectorD vw(3);
   while (r.Next())
   {
+    // TEMP //////////////////////////////////////////////////
+    if (fabs(*xydca) < 1e-12)
+      continue;
+    // TEMP //////////////////////////////////////////////////
+
     // Check for a new event
     if (*event != prevev)
     {
@@ -355,36 +360,38 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   c->cd(1);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
   xydcae->Draw();
-  ltx.DrawLatex(0.16, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
+  ltx.DrawLatex(0.16, 0.93, Form("Mean %.0f #mum    Std dev %.0f #mum",
                                  1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
   c->cd(2);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
   xydcaw->Draw();
-  ltx.DrawLatex(0.16, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
+  ltx.DrawLatex(0.16, 0.93, Form("Mean %.0f #mum    Std dev %.0f #mum",
                                  1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
   cList->Add(c);
 
   // XY DCA vs phi
   DrawObject(xydcaphi, "col",  Form("xydca_vs_phi_%d",stage), cList);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  TProfile *dca2dprof = xydcaphi->ProfileX(Form("dca2dprof%d_%d",prod,subiter), 
+                                           1, -1, "d,same");
+  dca2dprof->SetMarkerStyle(kFullCircle);
 
   // Z DCA - East and West
   c = new TCanvas(Form("czdca_%d_%d",prod,subiter),
                   Form("z_dca_east_west_%d",stage), 1000, 500);
-  SetYMax(xydcae, xydcaw);
   c->Divide(2,1);
   c->cd(1);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
   zdcae->GetYaxis()->SetRangeUser(0, 1.2*zdcae->GetMaximum());
   zdcae->Draw();
-  ltx.DrawLatex(0.15, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
-                                 1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
+  ltx.DrawLatex(0.15, 0.93, Form("Mean %.0f #mum    Std dev %.0f #mum",
+                                 1e4*zdcae->GetMean(), 1e4*zdcae->GetRMS()));
   c->cd(2);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
   zdcaw->GetYaxis()->SetRangeUser(0, 1.2*zdcaw->GetMaximum());
   zdcaw->Draw();
-  ltx.DrawLatex(0.15, 0.93, Form("Mean, Std Dev = %.0f, %.0f #mum",
-                                 1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
+  ltx.DrawLatex(0.15, 0.93, Form("Mean %.0f #mum    Std dev %.0f #mum",
+                                 1e4*zdcaw->GetMean(), 1e4*zdcaw->GetRMS()));
   cList->Add(c);
 
 
@@ -395,21 +402,16 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   c->cd(1);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   ezdcatheta->Draw("col");
+  TProfile *zeprof = ezdcatheta->ProfileX(Form("zeprof%d_%d",prod,subiter), 1, -1, "d,same");
+  zeprof->SetMarkerStyle(kFullCircle);
   ltx.DrawLatex(0.25, 0.92, "East");
-  // ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
-  //                                1e4*hve->GetMean(1), 1e4*hve->GetMean(2)));
-  // ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
-  //                                1e4*hve->GetRMS(1), 1e4*hve->GetRMS(2)));
   c->cd(2);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   wzdcatheta->Draw("col");
+  TProfile *zwprof = wzdcatheta->ProfileX(Form("zwprof%d_%d",prod,subiter), 1, -1, "d,same");
+  zwprof->SetMarkerStyle(kFullCircle);
   ltx.DrawLatex(0.25, 0.92, "West");
-  // ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
-  //                                1e4*hvw->GetMean(1), 1e4*hvw->GetMean(2)));
-  // ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
-  //                                1e4*hvw->GetRMS(1), 1e4*hvw->GetRMS(2)));
   cList->Add(c);
-
 
   return;
 }
