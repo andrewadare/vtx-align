@@ -44,16 +44,15 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
   if (bc)
   {
     // Reject tracks with outlying DCA values
-    if (fabs(trk.xydca < 1e-15) || fabs(trk.xydca) > 1e-1)
+    if (fabs(trk.xydca) < 1e-15 || fabs(trk.xydca) > 1e-1)
     {
-      // Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
+      Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
       return;
     }
 
     TVectorD bcvec(2);
     bcvec(0) = bc->GetX()[arm];
     bcvec(1) = bc->GetY()[arm];
-    float sigbc = 2*bc->GetEX()[arm];   // Usually x error is bigger
 
     float xp = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
     float sderlc[4] = {1, xp, 0, 0}; // dy'(x')/dy0, dy'(x')/dslope
@@ -62,8 +61,12 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     float ld[1] = {1};
     float gd[1] = {0}; // placeholder - not used
     int nolabels[1] = {0}; // placeholder - not used
+
+    float sigbc   = (opt.Contains("sim")) ? 0.015 : 2*bc->GetEX()[arm];
+    float sigzdca = (opt.Contains("sim")) ? 0.05 : 0.1;
+
     m.mille(4, sderlc, 0, gd, nolabels, trk.xydca, sigbc);
-    m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, 0.10);
+    m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, sigzdca);
   }
 
   for (int j=0; j<trk.nhits; j++)
@@ -96,8 +99,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sSigFactor = (opt.Contains("sim")) ? 1.5 : 3.0;
-    float zSigFactor = (opt.Contains("sim")) ? 1.5 : 3.0;
+    float sSigFactor = (opt.Contains("sim")) ? 1.3 : 3.0;
+    float zSigFactor = (opt.Contains("sim")) ? 1.3 : 3.0;
     float sigs = sSigFactor * hit.xsigma * ClusterXResolution(hit.layer);
     float sigz = zSigFactor * hit.zsigma * ClusterZResolution(hit.layer);
 
