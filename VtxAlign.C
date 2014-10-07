@@ -32,10 +32,10 @@ void CorrectFromFile(const char *filename,
                      geoEvents &vtxevents,
                      geoEvents &cntevents);
 
-void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
+void VtxAlign(int run = 123456,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
               int subiter = 0,     // Geometry update step. Starts at 0.
-              TString alignMode = "halflayer") // "ladder" or "halflayer"
+              TString alignMode = "halflayer,sim") // "ladder" or "halflayer"
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -56,28 +56,15 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, subiter + 1);
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, subiter + 1);
 
-  // Select global parameters and derivatives for s and z residuals
-  // ==============================================================
-  // Best combinations (mainly based on trial & error):
-  //      Delta s  |  Delta z
-  // --------------+------------
-  // 1.      s     |     z       <-- for rotational misalignments
-  // 2.     x,y    |     z       <-- for translational misalignments
-  // --------------+------------
-  // Other combinations can be explored, but many lead to rank deficiencies.
-
   // Assign free global parameter coords for ds=r*dphi residuals here
   // Set includes "s", "x", "y", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
-
-  // vecs sgpars {"s"};
-  // vecd sgpresigma {0};
-
   vecs sgpars {"s", "x", "y"};
   vecd sgpresigma {0,0,0};
-
   // vecs sgpars {"x", "y"};
   // vecd sgpresigma {0,0};
+  // vecs sgpars {"s"};
+  // vecd sgpresigma {0};
 
   // Assign free global parameter coords for dz residuals here
   // Set includes "x", "y", "z", "r".
@@ -102,17 +89,17 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Write constraints to text file
   vecs constfiles;
   vecs binfiles;
-  if (alignMode == "halflayer" && useCntTracks == false)
+  if (alignMode.Contains("halflayer") && useCntTracks == false)
   {
     constfiles.push_back(hluConstFile);
     WriteHLConstraints(hluConstFile, sgpars, zgpars,
-                       sgpresigma, zgpresigma, tgeo);
+                       sgpresigma, zgpresigma, tgeo, alignMode);
   }
-  else if (alignMode == "ladder")
+  else if (alignMode.Contains("ladder"))
   {
     constfiles.push_back(ladderConstFile);
     WriteLadderConstraints(ladderConstFile, sgpars, zgpars,
-                           sgpresigma, zgpresigma, tgeo);
+                           sgpresigma, zgpresigma, tgeo, alignMode);
   }
 
   // Write Millepede steering file
@@ -135,7 +122,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
       Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
       Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
     }
-    // FitTracks(vtxevents, gbc, ""); // Let's assume tracks are already fit
+    // FitTracks(vtxevents, gbc, "find_vertex,calc_dca");
     EventLoop(pedeBinFileStd, vtxevents, sgpars, zgpars, gbc, alignMode);
   }
   if (useCntTracks)
@@ -223,6 +210,10 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
     Printf(" - ladder mode");
   if (opt.Contains("halflayer"))
     Printf(" - halflayer mode");
+  if (opt.Contains("sim"))
+    Printf(" - chi^2 tuned for simulated data. No ladders masked.");
+  else
+    Printf(" - chi^2 tuned for real data. Bad ladders will be masked.");
 
   // If asBinary is false, write a text file instead of binary file.
   // For debugging only - text file is not readable by pede.
