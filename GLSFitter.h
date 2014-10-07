@@ -509,8 +509,6 @@ ZVertexGLS(geoTracks &tracks, TString arm, int ntrk, TString opt)
       break;
 
     SvxGeoTrack trk = tracks[i];
-    // double mp = tan(trk.phi0 - trk.phirot);
-    // double yint = trk.yp0/(cos(trk.phirot) - mp*sin(trk.phirot));
     double slope = 1./tan(trk.the0);
     bool east = East(trk.phi0);
 
@@ -617,20 +615,20 @@ RetrieveVertex(geoTracks &event, TString opt)
   }
 
 
-  for (unsigned int trk = 0; trk < event.size(); trk++)
+  for (unsigned int t = 0; t < event.size(); t++)
   {
-    int arm = (event[trk].hits[0].x < 0.) ? 0 : 1;   // 0 = East, 1 = West.
+    int arm = (event[t].hits[0].x < 0.) ? 0 : 1;   // 0 = East, 1 = West.
 
     if (arm == 0 && opt.Contains("east"))
     {
-      v(0) = event[trk].vx;
-      v(1) = event[trk].vy;
+      v(0) = event[t].vx;
+      v(1) = event[t].vy;
       return v;
     }
     if (arm == 1 && opt.Contains("west"))
     {
-      v(0) = event[trk].vx;
-      v(1) = event[trk].vy;
+      v(0) = event[t].vx;
+      v(1) = event[t].vy;
       return v;
     }
   }
