@@ -155,6 +155,10 @@ TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc)
 
   int m = gt.nhits;
   int n = 2;
+
+  if (bc)
+    m += 1; // Add beamcenter as a new datapoint
+
   TMatrixD points(n, m); // Datapoints. Columns are x',y' pairs
   TMatrixD X(m, n);      // Column 0 is 1's, column 1 is x' (~r) hit coords.
   TMatrixD Cinv(m, m);   // Inverse covariance matrix. Currently diagonal.
@@ -162,7 +166,7 @@ TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc)
   double phirot = 0;     // <phi_cluster> used to rotate clusters
 
   int outermostLayer = 0;
-  for (int ihit = 0; ihit < m; ihit++)
+  for (int ihit = 0; ihit < gt.nhits; ihit++)
   {
     SvxGeoHit hit = gt.GetHit(ihit);
     points(0, ihit) = hit.x;
@@ -183,10 +187,22 @@ TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc)
   if (phirot < 0)
     phirot += TMath::TwoPi();
 
+  if (bc)
+  {
+    // Append beamcenter to the system
+    int arm = (gt.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
+    points(0, m-1) = bc->GetX()[arm];
+    points(1, m-1) = bc->GetY()[arm];
+    X(m-1, 0) = 1;
+    float sigbc = bc->GetEX()[arm];
+    assert(sigbc > 0);
+    Cinv(m-1, m-1) = 1./sigbc;
+  }
+
   // Rotate x, y by -phirot so error is approximately in y' direction only.
   // In rotated frame (xp, yp) = (cx + sy, cy - sx)
   TMatrixD R(2, 2);
-  double c = TMath::Cos(phirot), s = TMath::Sin(phirot);
+  double c = cos(phirot), s = sin(phirot);
   R(0, 0) =  c; R(0, 1) = s;
   R(1, 0) = -s; R(1, 1) = c;
 
@@ -225,13 +241,13 @@ TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc)
 }
 
 void
-FitTracks(geoTracks &tracks, TGraphErrors * /*bc*/)
+FitTracks(geoTracks &tracks, TGraphErrors *bc)
 {
   cout << Form("Fitting %lu tracks...", tracks.size()) << flush;
 
   for (unsigned int i = 0; i < tracks.size(); i++)
   {
-    TrackFitT(tracks[i]); // Call first
+    TrackFitT(tracks[i], bc); // Call first
     TrackFitL(tracks[i]); // Call second
   }
 
@@ -346,6 +362,12 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
   if (opt.Contains("find_vertex"))
     Info("", "Vertex will be computed and (re)assigned to tracks.");
 
+  if (opt.Contains("fit_to_bc"))
+  {
+    Info("", "Track fits will include fixed beamcenter position.");
+    assert(bc);
+  }
+
   if (opt.Contains("calc_dca"))
   {
     if (bc)
@@ -364,8 +386,14 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
   {
     for (unsigned int t = 0; t < events[ev].size(); t++)
     {
-      TrackFitT(events[ev][t]); // Call this first
-      TrackFitL(events[ev][t]); // And this second
+      // Do transverse fit first
+      if (opt.Contains("fit_to_bc"))
+        TrackFitT(events[ev][t], bc);
+      else
+        TrackFitT(events[ev][t]);
+
+      // And longitudinal fit second
+      TrackFitL(events[ev][t]);
     }
 
     if (opt.Contains("find_vertex"))
