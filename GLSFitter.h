@@ -11,7 +11,7 @@ typedef vector<geoTracks> geoEvents;
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L);
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov);
 void TrackFitL(SvxGeoTrack &gt); // Longitudinal component --> z0, theta
-void TrackFitT(SvxGeoTrack &gt); // Transverse component --> y0', phi
+void TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc = 0); // Transverse component --> y0', phi
 void FitTracks(geoTracks &tracks, TGraphErrors *bc = 0);
 void FitTracks(geoEvents &events, TGraphErrors *bc = 0, TString opt = "");
 void CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt = "");
@@ -145,7 +145,7 @@ TrackFitL(SvxGeoTrack &gt)
 }
 
 void
-TrackFitT(SvxGeoTrack &gt)
+TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc)
 {
   // Transverse/azimuthal component
   // Perform straight-line fit y' = m'*x' + b' after rotating points
