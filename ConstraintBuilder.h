@@ -445,14 +445,17 @@ WriteLadderConstraints(const char *filename,
   // ApplyPreSigma(fs, slabels_bad, 1e-4);
   // ApplyPreSigma(fs, zlabels_bad, 1e-4);
 
-  // Regularize a hand picked set of poorly-constrained ladders.
-  // (low-stats, low-eff, faulty electronics, behind a dead ladder, etc).
-  veci slabels_bad;
-  veci zlabels_bad;
-  RegularizedLadders(geo, sgpars, slabels_bad);
-  RegularizedLadders(geo, zgpars, zlabels_bad);
-  ApplyPreSigma(fs, slabels_bad, 1e-4);
-  ApplyPreSigma(fs, zlabels_bad, 1e-4);
+  if (!opt.Contains("sim"))
+  {
+    // Regularize a hand picked set of poorly-constrained ladders.
+    // (low-stats, low-eff, faulty electronics, behind a dead ladder, etc).
+    veci slabels_bad;
+    veci zlabels_bad;
+    RegularizedLadders(geo, sgpars, slabels_bad);
+    RegularizedLadders(geo, zgpars, zlabels_bad);
+    ApplyPreSigma(fs, slabels_bad, 1e-4);
+    ApplyPreSigma(fs, zlabels_bad, 1e-4);
+  }
 
   for (unsigned int ic=0; ic<sgpars.size(); ++ic)
   {
