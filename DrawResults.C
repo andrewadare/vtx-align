@@ -32,11 +32,11 @@ TGraphErrors *DeadLadderGraph(int lyr);
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
 // 2. set prod2 = prod1, subit2 = subit1.
-void DrawResults(int run = 411768,
+void DrawResults(int run = 123456,
                  int prod1 = 0,
                  int subit1 = 0,
-                 int prod2 = 0,
-                 int subit2 = 1,
+                 int prod2 = -1,
+                 int subit2 = -1,
                  const char *treename = "vtxtrks")
 {
   gStyle->SetOptStat(0);
@@ -110,9 +110,9 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
           TObjArray *cList)
 {
   TH1D *xydcae = new TH1D(Form("xydcae_%d_%d",prod,subiter),
-                          Form(";east arm x-y DCA [cm];tracks"), 200, -0.1, 0.1);
+                          Form(";east arm x-y DCA [cm];tracks"), 200, -0.11, 0.11);
   TH1D *xydcaw = new TH1D(Form("xydcaw_%d_%d",prod,subiter),
-                          Form(";west arm x-y DCA [cm];tracks"), 200, -0.1, 0.1);
+                          Form(";west arm x-y DCA [cm];tracks"), 200, -0.11, 0.11);
   TH1D *zdcae = new TH1D(Form("zdcae_%d_%d",prod,subiter),
                          ";east z DCA [cm];tracks", 200, -0.25, 0.25);
   TH1D *zdcaw = new TH1D(Form("zdcaw_%d_%d",prod,subiter),
@@ -124,7 +124,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TH2D *xydcaphi  = new TH2D(Form("xydcaphi_%d_%d",prod,subiter),
                              ";#phi [rad];x-y DCA [cm]",
                              100, -TMath::PiOver2(), 3*TMath::PiOver2(),
-                             100, -0.1, +0.1);
+                             100, -0.11, +0.11);
   TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter),
                                ";#theta [rad];z DCA [cm]",
                                100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
