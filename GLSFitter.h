@@ -584,19 +584,17 @@ IPVec(TVectorD &a, TVectorD &n, TVectorD &p)
 }
 
 TVectorD
-IPVec(SvxGeoTrack &t, TVectorD &p)
+IPVec(SvxGeoTrack &trk, TVectorD &p)
 {
-  // TVectorD a(2); a(1) = t.yp0; // CHECK!! NEED TO ROTATE Y INTERCEPT?
-
-  double mp = tan(t.phi0 - t.phirot);
-  double y0 = t.yp0 / (cos(t.phirot) - mp * sin(t.phirot));
+  double mp = tan(trk.phi0 - trk.phirot);
+  double y0 = trk.yp0 / (cos(trk.phirot) - mp * sin(trk.phirot));
 
   TVectorD a(2);
   a(0) = 0;
-  a(1) = t.yp0; //t.yp0/cos(t.phirot);
+  a(1) = trk.yp0; //trk.yp0/cos(trk.phirot);
   TVectorD n(2);
-  n(0) = cos(t.phi0);
-  n(1) = sin(t.phi0);
+  n(0) = cos(trk.phi0);
+  n(1) = sin(trk.phi0);
   return IPVec(a, n, p);
 }
 
