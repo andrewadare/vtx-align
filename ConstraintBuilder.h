@@ -14,6 +14,7 @@ typedef vector<int>    veci;
 template<typename T> bool In(T val, vector<T> &v);
 template<typename T> int Idx(T val, vector<T> &v);
 veci LadderLabels(SvxTGeo *geo, string arm, string coord);
+veci LadderLabels(SvxTGeo *geo, int arm, int layer, string coord);
 veci EdgeLadderLabels(SvxTGeo *geo, string arm, string coord, string t_or_b);
 veci HalfLayerLabels(SvxTGeo *geo, string arm, string coord);
 
@@ -115,6 +116,19 @@ LadderLabels(SvxTGeo *geo, string arm, string coord)
         if (!Dead(lyr,ldr))
           l.push_back(Label(lyr, ldr, coord));
   }
+  return l;
+}
+
+veci
+LadderLabels(SvxTGeo *geo, int arm, int layer, string coord)
+{
+  veci l;
+  int first = -1, last  = -1;
+  geo->LadderRange(layer, arm, first, last);
+  for (int ldr = first; ldr <= last; ldr++)
+    if (!Dead(layer,ldr))
+      l.push_back(Label(layer, ldr, coord));
+
   return l;
 }
 
@@ -477,8 +491,8 @@ WriteLadderConstraints(const char *filename,
     // AddConstraints(ws, es, geo, PhiAngles, fs, "s phi shear");
     // AddConstraints(ws, es, geo, RPhi,      fs, "s r-phi shear");
     // AddConstraints(ws, es, geo, Radii,     fs, "s r shear");
-    // AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
-    // AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
+    AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
+    AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
   }
   if (xdof)
   {
@@ -486,6 +500,12 @@ WriteLadderConstraints(const char *filename,
     AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
     // AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
     // AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
+    // for (int lyr=0; lyr<4; lyr++)
+    // {
+    //   veci e = LadderLabels(geo, 0, lyr, "x");
+    //   veci w = LadderLabels(geo, 1, lyr, "x");
+    //   AddConstraints(w,e,geo,Ones,fs,Form("x translation (layer %d)", lyr));
+    // }
   }
   if (ydof)
   {
@@ -493,11 +513,17 @@ WriteLadderConstraints(const char *filename,
     AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
     // AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
     // AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
+    // for (int lyr=0; lyr<4; lyr++)
+    // {
+    //   veci e = LadderLabels(geo, 0, lyr, "y");
+    //   veci w = LadderLabels(geo, 1, lyr, "y");
+    //   AddConstraints(w,e,geo,Ones,fs,Form("y translation (layer %d)", lyr));
+    // }
   }
   if (zdof)
   {
     AddConstraints(wz, ez, geo, Ones,      fs, "z translation");
-    // AddConstraints(wz, ez, geo, PhiAngles, fs, "z phi shear");
+    AddConstraints(wz, ez, geo, PhiAngles, fs, "z phi shear");
     // AddConstraints(wz, ez, geo, RPhi,      fs, "z r-phi shear");
     AddConstraints(wz, ez, geo, Radii,     fs, "z r shear");
     AddConstraints(wtz, etz, geo, Radii,   fs, "top z r shear");
