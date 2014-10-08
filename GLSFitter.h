@@ -10,7 +10,7 @@ typedef vector<geoTracks> geoEvents;
 
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L);
 TVectorD SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L, TMatrixD &cov);
-void TrackFitL(SvxGeoTrack &gt); // Longitudinal component --> z0, theta
+void TrackFitL(SvxGeoTrack &gt, TString opt = ""); // Longitudinal component --> z0, theta
 void TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc = 0); // Transverse component --> y0', phi
 void FitTracks(geoTracks &tracks, TGraphErrors *bc = 0);
 void FitTracks(geoEvents &events, TGraphErrors *bc = 0, TString opt = "");
@@ -20,6 +20,7 @@ void CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt = "");
 bool East(double phi);
 double ClusterXResolution(int layer);
 double ClusterZResolution(int layer);
+double ZVertexResolution();
 TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 TVectorD ZVertexGLS(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
@@ -92,34 +93,28 @@ SolveGLS(TMatrixD &X, TVectorD &y, TMatrixD &L)
 }
 
 void
-TrackFitL(SvxGeoTrack &gt)
+TrackFitL(SvxGeoTrack &gt, TString opt)
 {
   // Longitudinal/polar component
-  // Fit track using a straight line z(r) = z0 + c*r.
+  // Fit track using a straight line z(r) = z0 + c*x'.
   // Assigns residuals, z-intercept, and polar angle.
 
   // m = # measurements; n = # parameters.
   int m = gt.nhits, n = 2;
+  if (opt.Contains("fit_to_zvertex"))
+    m += 1;
+
   TMatrixD X(m, n);
   TMatrixD Cinv(m, m);
   TVectorD y(m);
+  TVectorD xp(m); // This is x', the abcissa in the rotated system.
 
-  TMatrixD R(2, 2);
-  double cp = TMath::Cos(gt.phirot), sp = TMath::Sin(gt.phirot);
-  R(0, 0) =  cp; R(0, 1) = sp;
-  R(1, 0) = -sp; R(1, 1) = cp;
-
-  for (int ihit = 0; ihit < m; ihit++)
+  for (int ihit = 0; ihit < gt.nhits; ihit++)
   {
     SvxGeoHit hit = gt.GetHit(ihit);
-
-    TVectorD hitxy(2);
-    hitxy(0) = hit.x;
-    hitxy(1) = hit.y;
-    TVectorD hitxyp = R * hitxy;
-
+    xp(ihit) = cos(gt.phirot)*hit.x + sin(gt.phirot)*hit.y;
     X(ihit, 0) = 1;
-    X(ihit, 1) = hitxyp(0); //TMath::Sqrt(hit.x*hit.x + hit.y*hit.y);
+    X(ihit, 1) = xp(ihit);
 
     // Expecting that hit.zsigma is z_size in integer units 1,2,3....
     double zsigma = hit.zsigma * ClusterZResolution(hit.layer);
@@ -127,15 +122,23 @@ TrackFitL(SvxGeoTrack &gt)
     y(ihit) = hit.z;
   }
 
+  if (opt.Contains("fit_to_zvertex"))
+  {
+    // Append vertex x' and z to the system
+    X(m-1, 0) = 1;
+    X(m-1, 1) = cos(gt.phirot)*gt.vx + sin(gt.phirot)*gt.vy;
+    y(m-1) = gt.vz;
+    Cinv(m-1, m-1) = 1./ZVertexResolution();
+  }
+
   TVectorD beta = SolveGLS(X, y, Cinv);
   double z0 = beta(0), c = beta(1);
 
-  for (int ihit = 0; ihit < m; ihit++)
+  for (int ihit = 0; ihit < gt.nhits; ihit++)
   {
+    // Assign z residual: projected - measured
     SvxGeoHit hit = gt.GetHit(ihit);
-    double zproj = z0 + c * TMath::Sqrt(hit.x * hit.x + hit.y * hit.y);
-
-    gt.hits[ihit].dz = zproj - hit.z;
+    gt.hits[ihit].dz = z0 + c*xp(ihit) - hit.z;
   }
 
   gt.z0 = z0;
@@ -598,6 +601,13 @@ ClusterZResolution(int layer)
   double zres[4] = {res, res, 2 * res, 2 * res};
 
   return zres[layer];
+}
+
+double
+ZVertexResolution()
+{
+  // Roughly based on std dev of z DCA distribution in data
+  return 600e-4;
 }
 
 TVectorD
