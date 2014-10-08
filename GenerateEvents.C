@@ -3,6 +3,7 @@
 
 void GenerateEvents()
 {
+  bool drawOutput = true;
   int run = 123456;
   int prod = 0;
   const int nvtxevents = (int)9e3;
@@ -125,7 +126,7 @@ void GenerateEvents()
   // Without this step, a comparison of residuals before and after alignment
   // would not be apples-to-apples.
   // CNT tracks are not fit here--their parameters are determined externally.
-  FitTracks(vtxevents, gbc, "find_vertex,calc_dca");
+  FitTracks(vtxevents, gbc, "fit_to_bc, find_vertex, calc_dca");
 
   // Write out (misaligned) geometry to par file
   Printf("Writing %s", pisaFileOut.Data());
@@ -144,6 +145,14 @@ void GenerateEvents()
   outFile->cd();
   outFile->Write(0, TObject::kOverwrite);
   Printf("Done!");
+
+  if (drawOutput)
+  {
+    Printf("\n\nDrawing results...\n\n");
+    const char *macro = Form("DrawResults.C(%d,%d,%d,%d,%d,\"vtxtrks\")",
+                             run, prod, 0, -1, -1);
+    gROOT->Macro(macro);
+  }
 
   return;
 }
