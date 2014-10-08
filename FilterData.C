@@ -16,9 +16,9 @@
 //      "fixed-bc": use beamcenter from rootfiles/bc-411768.root when refitting
 //                  tracks after filtering
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_full.root",
-                const char *outfilename = "rootfiles/411768-0-0.root",
-                const char *configfilename = "production/config/config-zf-411768-0-0_5.txt",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-0-1_30segs.root",
+                const char *outfilename = "rootfiles/411768-1-0.root",
+                const char *configfilename = "production/config/config-411768-0-1.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
@@ -121,10 +121,10 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-0_5_f
 
   if (gbc)
   {
-    Printf("\n-- Reffitting tracks with desired bc --");
+    Printf("\n-- Refitting tracks with desired bc --");
     Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
     Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
-    FitTracks(accvtxevents, gbc, "find_vertex, calc_dca");
+    FitTracks(accvtxevents, gbc, "fit_to_bc, find_vertex, calc_dca");
   }
 
   Printf("\n-- Writing output to %s --", outfilename);
