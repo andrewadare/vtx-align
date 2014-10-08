@@ -32,8 +32,8 @@ TGraphErrors *DeadLadderGraph(int lyr);
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
 // 2. set prod2 = prod1, subit2 = subit1.
-void DrawResults(int run = 123456,
-                 int prod1 = 0,
+void DrawResults(int run = 411768,
+                 int prod1 = 1,
                  int subit1 = 0,
                  int prod2 = -1,
                  int subit2 = -1,
@@ -128,11 +128,11 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter),
                                ";#theta [rad];z DCA [cm]",
                                100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
-                               100, -0.25, +0.25);
+                               100, -0.15, +0.15);
   TH2D *wzdcatheta  = new TH2D(Form("wzdcatheta_%d_%d",prod,subiter),
                                ";#theta [rad];z DCA [cm]",
                                100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
-                               100, -0.25, +0.25);
+                               100, -0.15, +0.15);
   SetAxisProps(xydcae);
   SetAxisProps(xydcaw);
   SetAxisProps(zdcae, 208, 208, 0.04, 0.04, 1.1, 1.7);
@@ -354,16 +354,17 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
 
   // XY DCA - East and West
   c = new TCanvas(Form("cxydca_%d_%d",prod,subiter),
-                  Form("xy_dca_east_west__%d_%d",prod,subiter), 1000, 500);
-  SetYMax(xydcae, xydcaw);
+                  Form("xy_dca_east_west_%d_%d",prod,subiter), 1000, 500);
   c->Divide(2,1);
   c->cd(1);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  xydcae->GetYaxis()->SetRangeUser(0, 1.2*xydcae->GetMaximum());
   xydcae->Draw();
   ltx.DrawLatex(0.16, 0.93, Form("Mean %.0f #mum    Std dev %.0f #mum",
                                  1e4*xydcae->GetMean(), 1e4*xydcae->GetRMS()));
   c->cd(2);
   gPad->SetMargin(0.12, 0.01, 0.12, 0.01); // L, R, B, T
+  xydcaw->GetYaxis()->SetRangeUser(0, 1.2*xydcaw->GetMaximum());
   xydcaw->Draw();
   ltx.DrawLatex(0.16, 0.93, Form("Mean %.0f #mum    Std dev %.0f #mum",
                                  1e4*xydcaw->GetMean(), 1e4*xydcaw->GetRMS()));
@@ -372,9 +373,12 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   // XY DCA vs phi
   DrawObject(xydcaphi, "col",  Form("xydca_vs_phi_%d",stage), cList);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
-  TProfile *dca2dprof = xydcaphi->ProfileX(Form("dca2dprof%d_%d",prod,subiter), 
-                                           1, -1, "d,same");
+  TProfile *dca2dprof = xydcaphi->ProfileX(Form("dca2dprof%d_%d",prod,subiter),
+                        1, -1, "d,same");
   dca2dprof->SetMarkerStyle(kFullCircle);
+  ltx.DrawLatex(0.8, 0.9, Form("%d-%d",prod,subiter));
+  ltx.DrawLatex(0.25, 0.88, Form("West"));
+  ltx.DrawLatex(0.65, 0.88, Form("East"));
 
   // Z DCA - East and West
   c = new TCanvas(Form("czdca_%d_%d",prod,subiter),
