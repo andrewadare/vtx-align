@@ -46,7 +46,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Reject tracks with outlying DCA values
     if (fabs(trk.xydca) < 1e-15 || fabs(trk.xydca) > 1e-1)
     {
-      Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
+      // Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
       return;
     }
 
@@ -99,8 +99,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sSigFactor = (opt.Contains("sim")) ? 1.3 : 3.0;
-    float zSigFactor = (opt.Contains("sim")) ? 1.3 : 3.0;
+    float sSigFactor = (opt.Contains("sim")) ? 1.3 : 4.0;
+    float zSigFactor = (opt.Contains("sim")) ? 1.3 : 4.0;
     float sigs = sSigFactor * hit.xsigma * ClusterXResolution(hit.layer);
     float sigz = zSigFactor * hit.zsigma * ClusterZResolution(hit.layer);
 
