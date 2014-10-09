@@ -124,7 +124,13 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-0-1_
     Printf("\n-- Refitting tracks with desired bc --");
     Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
     Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
-    FitTracks(accvtxevents, gbc, "fit_to_bc, find_vertex, calc_dca");
+
+    // Use gbc in track fits. Find primary vertex.
+    FitTracks(accvtxevents, gbc, "fit_to_bc, find_vertex");
+
+    // Refit using z vertex from previous fit.
+    // Finally, compute DCA wrt gbc and z vertex.
+    FitTracks(accvtxevents, gbc, "fit_to_bc, fit_to_z_vertex, calc_dca");
   }
 
   Printf("\n-- Writing output to %s --", outfilename);
