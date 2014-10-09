@@ -125,8 +125,14 @@ void GenerateEvents()
   // This puts the tracks on the same footing as the post-aligned refit sample.
   // Without this step, a comparison of residuals before and after alignment
   // would not be apples-to-apples.
+
+  // Initial fit: Use gbc in track fits. Find primary vertex.
+  FitTracks(vtxevents, gbc, "fit_to_bc, find_vertex");
+
+  // Refit using z vertex from initial fit. Finally, compute DCA wrt gbc and vz.
+  FitTracks(vtxevents, gbc, "fit_to_bc, fit_to_z_vertex, calc_dca");
+
   // CNT tracks are not fit here--their parameters are determined externally.
-  FitTracks(vtxevents, gbc, "fit_to_bc, find_vertex, calc_dca");
 
   // Write out (misaligned) geometry to par file
   Printf("Writing %s", pisaFileOut.Data());
