@@ -197,8 +197,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   while (r.Next())
   {
     // TEMP //////////////////////////////////////////////////
-    if (fabs(*xydca) < 1e-12)
-      continue;
+    // if (fabs(*xydca) < 1e-12)
+    //   continue;
     // TEMP //////////////////////////////////////////////////
 
     // Check for a new event
@@ -297,23 +297,23 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   hvw->GetXaxis()->SetRangeUser(hvw->GetMean(1)-0.1,hvw->GetMean(1)+0.1);
   hvw->GetYaxis()->SetRangeUser(hvw->GetMean(2)-0.1,hvw->GetMean(2)+0.1);
   c = new TCanvas(Form("xy_vertex_%d",stage),
-                  Form("xy_vertex_ew_%d",stage), 1000, 500);
+                  Form("xy_vertex_ew_%d",stage), 1000, 600);
   c->Divide(2,1);
   c->cd(1);
-  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.15); // L, R, B, T
   hve->Draw("col");
-  ltx.DrawLatex(0.25, 0.92, "East");
-  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
+  ltx.DrawLatex(0.25, 0.95, "East");
+  ltx.DrawLatex(0.45, 0.95, Form("mean (%.0f, %.0f) #mum",
                                  1e4*hve->GetMean(1), 1e4*hve->GetMean(2)));
-  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
+  ltx.DrawLatex(0.45, 0.90, Form("std dev (%.0f, %.0f) #mum",
                                  1e4*hve->GetRMS(1), 1e4*hve->GetRMS(2)));
   c->cd(2);
-  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.15); // L, R, B, T
   hvw->Draw("col");
-  ltx.DrawLatex(0.25, 0.92, "West");
-  ltx.DrawLatex(0.45, 0.92, Form("mean (%.0f, %.0f) #mum",
+  ltx.DrawLatex(0.25, 0.95, "West");
+  ltx.DrawLatex(0.45, 0.95, Form("mean (%.0f, %.0f) #mum",
                                  1e4*hvw->GetMean(1), 1e4*hvw->GetMean(2)));
-  ltx.DrawLatex(0.45, 0.87, Form("std dev (%.0f, %.0f) #mum",
+  ltx.DrawLatex(0.45, 0.90, Form("std dev (%.0f, %.0f) #mum",
                                  1e4*hvw->GetRMS(1), 1e4*hvw->GetRMS(2)));
   cList->Add(c);
 
@@ -330,7 +330,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   ltx.DrawLatex(0.45, 0.87, Form("std dev %.3f cm", hvze->GetRMS(1)));
   c->cd(2);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
-  hvzw->GetYaxis()->SetRangeUser(0, 1.2*hvze->GetMaximum());
+  hvzw->GetYaxis()->SetRangeUser(0, 1.2*hvzw->GetMaximum());
   hvzw->Draw("");
   ltx.DrawLatex(0.25, 0.92, "West");
   ltx.DrawLatex(0.45, 0.92, Form("mean %.3f cm", hvzw->GetMean(1)));
@@ -376,9 +376,9 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TProfile *dca2dprof = xydcaphi->ProfileX(Form("dca2dprof%d_%d",prod,subiter),
                         1, -1, "d,same");
   dca2dprof->SetMarkerStyle(kFullCircle);
-  ltx.DrawLatex(0.8, 0.9, Form("%d-%d",prod,subiter));
-  ltx.DrawLatex(0.25, 0.88, Form("West"));
-  ltx.DrawLatex(0.65, 0.88, Form("East"));
+  ltx.DrawLatex(0.8, 0.92, Form("%d-%d",prod,subiter));
+  ltx.DrawLatex(0.29, 0.03, Form("West"));
+  ltx.DrawLatex(0.72, 0.03, Form("East"));
 
   // Z DCA - East and West
   c = new TCanvas(Form("czdca_%d_%d",prod,subiter),
@@ -406,13 +406,15 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   c->cd(1);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   ezdcatheta->Draw("col");
-  TProfile *zeprof = ezdcatheta->ProfileX(Form("zeprof%d_%d",prod,subiter), 1, -1, "d,same");
+  TProfile *zeprof = ezdcatheta->ProfileX(Form("zeprof%d_%d",prod,subiter), 
+                                          1, -1, "d,same");
   zeprof->SetMarkerStyle(kFullCircle);
   ltx.DrawLatex(0.25, 0.92, "East");
   c->cd(2);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   wzdcatheta->Draw("col");
-  TProfile *zwprof = wzdcatheta->ProfileX(Form("zwprof%d_%d",prod,subiter), 1, -1, "d,same");
+  TProfile *zwprof = wzdcatheta->ProfileX(Form("zwprof%d_%d",prod,subiter), 
+                                          1, -1, "d,same");
   zwprof->SetMarkerStyle(kFullCircle);
   ltx.DrawLatex(0.25, 0.92, "West");
   cList->Add(c);
