@@ -14,7 +14,7 @@ void TrackFitL(SvxGeoTrack &gt, TString opt = ""); // Longitudinal component -->
 void TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc = 0); // Transverse component --> y0', phi
 void FitTracks(geoTracks &tracks, TGraphErrors *bc = 0);
 void FitTracks(geoEvents &events, TGraphErrors *bc = 0, TString opt = "");
-void CalculateDCA(geoTracks &event, TGraphErrors *bc, TString opt = "");
+void CalculateDCA(geoTracks &event, TGraphErrors *bc, TVectorD &xpz, TString opt = "");
 
 // It is questionable whether the following functions belong in this file.
 bool East(double phi);
@@ -96,12 +96,12 @@ void
 TrackFitL(SvxGeoTrack &gt, TString opt)
 {
   // Longitudinal/polar component
-  // Fit track using a straight line z(r) = z0 + c*x'.
+  // Fit track using a straight line z(x') = z0 + c*x'.
   // Assigns residuals, z-intercept, and polar angle.
 
   // m = # measurements; n = # parameters.
   int m = gt.nhits, n = 2;
-  if (opt.Contains("fit_to_zvertex"))
+  if (opt.Contains("fit_to_z_vertex"))
     m += 1;
 
   TMatrixD X(m, n);
@@ -122,7 +122,7 @@ TrackFitL(SvxGeoTrack &gt, TString opt)
     y(ihit) = hit.z;
   }
 
-  if (opt.Contains("fit_to_zvertex"))
+  if (opt.Contains("fit_to_z_vertex"))
   {
     // Append vertex x' and z to the system
     X(m-1, 0) = 1;
@@ -292,13 +292,14 @@ FindVertexEastWest(geoTracks &event, TString opt)
 }
 
 void
-CalculateDCA(geoTracks &event, TGraphErrors *bc, TString /*opt*/)
+CalculateDCA(geoTracks &event, TGraphErrors *bc, TVectorD &xpz, TString opt)
 {
   // Compute the 2-D distance of closest approach from reference point to track.
   // The reference point (x,y) is one of the following:
   // 1. A beam center if provided in the TGraph.
   // 2. The primary vertex saved in the track if no bc is provided.
-  // The reference point z is expected to be already stored in the track.
+  // The reference point z is provided as xpz(1) unless the option
+  // "use_stored_vertex" is passed in.
 
   TVectorD xye(2);
   TVectorD xyw(2);
@@ -349,8 +350,14 @@ CalculateDCA(geoTracks &event, TGraphErrors *bc, TString /*opt*/)
     trknormal(0) = cos(p);
     trknormal(1) = sin(p);
 
+    double vz = xpz(1);
+    if (opt.Contains("use_stored_vertex"))
+    {
+      vz = trk.vz;
+    }
+
     float xydca = trknormal * ipvec;
-    float zdca  = trk.z0 + vxyp(0) / tan(trk.the0) - trk.vz;
+    float zdca  = trk.z0 + vxyp(0) / tan(trk.the0) - vz;
 
     trk.xydca = xydca;
     trk.zdca  = zdca;
@@ -363,24 +370,60 @@ void
 FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
 {
   if (opt.Contains("find_vertex"))
-    Info("", "Vertex will be computed and (re)assigned to tracks.");
+  {
+    Info("FitTracks()", "Vertex will be computed and (re)assigned to tracks.");
+
+    // Prevent incompatible option. Vertex shouldn't exist yet.
+    assert(!opt.Contains("fit_to_z_vertex"));
+  }
 
   if (opt.Contains("fit_to_bc"))
   {
-    Info("", "Track fits will include fixed beamcenter position.");
     assert(bc);
+    Info("FitTracks()",
+         "Track fits will include fixed beamcenter position (%.4f, %.4f).",
+         bc->GetX()[1], bc->GetY()[1]);
+  }
+  if (opt.Contains("fit_to_z_vertex"))
+  {
+    // Check the first event for occurrences of trk.vz == zero (the initialized
+    // value). Issue a warning if all zeros.
+    int nzero = 0;
+    for (unsigned int t = 0; t < events[0].size(); t++)
+      if (fabs(events[0][t].vz) < 1e-15)
+        nzero++;
+    Info("FitTracks()", "Track fits will include stored z-vertex position.");
+
+    if (nzero == (int)events[0].size())
+      Warning("FitTracks()",
+              "\n\nfit_to_z_vertex requested, but z vertex of all tracks in "
+              "first event is ZERO!\n\n");
+
+    if (opt.Contains("find_vertex"))
+      Warning("FitTracks()",
+              "Both fit_to_z_vertex and find_vertex options are requested.\n"
+              "Z-vertex used for track fits will be overwritten!\n"
+              "Combining these options is not recommended.");
   }
 
   if (opt.Contains("calc_dca"))
   {
     if (bc)
     {
-      Info("", "DCA will be computed with respect to beam center.");
-      Info("", " E: (%.3f, %.3f)", bc->GetX()[0], bc->GetY()[0]);
-      Info("", " W: (%.3f, %.3f)", bc->GetX()[1], bc->GetY()[1]);
+      // Info("FitTracks()",
+      //      "x-y DCA will be computed with respect to beam center.");
+      // Info("FitTracks()", " E: (%.3f, %.3f)", bc->GetX()[0], bc->GetY()[0]);
+      // Info("FitTracks()", " W: (%.3f, %.3f)", bc->GetX()[1], bc->GetY()[1]);
+      Info("FitTracks()",
+           "x-y DCA will use fixed beamcenter position (%.4f, %.4f) (east), "
+           "(%.4f, %.4f) (west).",
+           bc->GetX()[0], bc->GetY()[0], bc->GetX()[1], bc->GetY()[1]);
     }
     else
-      Info("", "DCA will be computed with respect to stored primary vertex.");
+      Info("FitTracks()",
+           "DCA will be computed with respect to stored primary vertex.");
+    Info("FitTracks()",
+         "z DCA will be computed with respect to global (E+W) z vertex.");
   }
 
   cout << Form("Fitting tracks in %lu events...", events.size()) << flush;
@@ -395,15 +438,24 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
       else
         TrackFitT(events[ev][t]);
 
-      // And longitudinal fit second
-      TrackFitL(events[ev][t]);
+      // And longitudinal fit second (uses track data assigned in TrackFitT)
+      if (opt.Contains("fit_to_z_vertex"))
+        TrackFitL(events[ev][t], "fit_to_z_vertex");
+      else
+        TrackFitL(events[ev][t]);
     }
 
     if (opt.Contains("find_vertex"))
       FindVertexEastWest(events[ev], "xyz");
 
     if (opt.Contains("calc_dca"))
-      CalculateDCA(events[ev], bc);
+    {
+      // Calculate z vertex using both arms of VTX.
+      // xpz(0) is the x' vertex position (essentially r).
+      // xpz(1) is the vertex z position.
+      TVectorD xpz = ZVertexGLS(events[ev], "");
+      CalculateDCA(events[ev], bc, xpz, "");
+    }
   }
 
   Printf("done.");
@@ -503,6 +555,10 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
 TVectorD
 ZVertexGLS(geoTracks &tracks, TString arm, int ntrk, TString opt)
 {
+  // Compute z vertex using tracks from east arm only ("east"),
+  // west arm only ("west"), or both arms ("").
+  // Tracks are not modified by calling this function.
+
   assert(ntrk <= (int)tracks.size());
   int n = ntrk > 0 ? ntrk : (int)tracks.size();
   TVectorD rz(2);
@@ -607,6 +663,7 @@ double
 ZVertexResolution()
 {
   // Roughly based on std dev of z DCA distribution in data
+  // TODO: Make this a settable value
   return 600e-4;
 }
 
