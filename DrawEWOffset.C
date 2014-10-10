@@ -42,7 +42,7 @@ void DrawEWOffset(int run = 411768,
   //read tree into geoEvents
   Info("", "--Reading events from tree %s--", treename);
   geoEvents events;
-  GetEventsFromTree(t, tgeo, events, 10000);
+  GetEventsFromTree(t, tgeo, events);
 
   //refit w/o vertex and recalculate east/west vertex
   Info("", "--Re-fitting tracks--");
