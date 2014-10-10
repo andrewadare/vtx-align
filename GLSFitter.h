@@ -311,6 +311,28 @@ void
 FindVertex(geoEvents &events, TString opt)
 {
   //wrapper for finding the vertex from multiple events
+  if (opt.Contains("east"))
+  {
+    Info("FindVertex()", "(x,y,z) vertex will be computed for the east arm.");
+  }
+  else if (opt.Contains("west"))
+  {
+    Info("FindVertex()", "(x,y,z) vertex will be computed for the west arm.");
+  }
+  else
+  {
+    Info("FindVertex()", "(x,y,z) vertex will be computed for the east+west arm.");
+  }
+
+  if (opt.Contains("xy"))
+  {
+    Info("FindVertex()", "Will Store xy vertex.");
+  }
+  if (opt.Contains("z"))
+  {
+    Info("FindVertex()", "Will Store z vertex.");
+  }
+
   for (unsigned int ev = 0; ev < events.size(); ev++)
   {
     FindVertex(events[ev], opt);
@@ -458,7 +480,7 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
       Info("FitTracks()",
            "DCA will be computed with respect to stored primary vertex.");
     Info("FitTracks()",
-         "z DCA will be computed with respect to global (E+W) z vertex.");
+         "z DCA will be computed with respect to stored z vertex.");
   }
 
   cout << Form("Fitting tracks in %lu events...", events.size()) << flush;
