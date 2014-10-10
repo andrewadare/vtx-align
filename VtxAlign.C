@@ -35,7 +35,7 @@ void CorrectFromFile(const char *filename,
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
               int subiter = 1,     // Geometry update step. Starts at 0.
-              TString alignMode = "ladder") // "ladder","halflayer" (+"sim")
+              TString alignMode = "halflayer") // "ladder","halflayer" (+"sim")
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -60,11 +60,11 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Set includes "s", "x", "y", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
 
-  // vecs sgpars {"s", "x", "y"};
-  // vecd sgpresigma {0,0,0};
+  vecs sgpars {"s", "x", "y"};
+  vecd sgpresigma {0, 0, 0};
 
-  vecs sgpars {"x", "y"};
-  vecd sgpresigma {0,0};
+  // vecs sgpars {"x", "y"};
+  // vecd sgpresigma {0, 0};
 
   // vecs sgpars {"s"};
   // vecd sgpresigma {0};
@@ -151,7 +151,8 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   //  - VTX track residuals are updated by refitting.
   CorrectFromFile("millepede.res", tgeo, vtxevents, cntevents);
   Printf("Refitting in post-alignment geometry to update residuals.");
-  FitTracks(vtxevents, gbc, "fit_to_bc, find_vertex, calc_dca");
+  FitTracks(vtxevents, 0, "find_vertex, common_xyz");
+  FitTracks(vtxevents, gbc, "fit_to_bc, fit_to_z_vertex, calc_dca");
 
   cout << "Filling output tree(s)..." << flush;
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
