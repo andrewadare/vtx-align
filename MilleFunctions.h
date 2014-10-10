@@ -63,7 +63,7 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     int nolabels[1] = {0}; // placeholder - not used
 
     float sigbc   = (opt.Contains("sim")) ? 0.015 : 2*bc->GetEX()[arm];
-    float sigzdca = (opt.Contains("sim")) ? 0.05 : 0.1;
+    float sigzdca = (opt.Contains("sim")) ? 0.05 : 0.07;
 
     m.mille(4, sderlc, 0, gd, nolabels, trk.xydca, sigbc);
     m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, sigzdca);
