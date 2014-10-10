@@ -740,7 +740,7 @@ RetrieveVertex(geoTracks &event, TString opt)
 {
   // Get the event vertex for either the
   // East or West arm stored in the geoTrack
-  TVectorD v(2);
+  TVectorD v(3);
 
   if (!opt.Contains("east") && !opt.Contains("west"))
   {
@@ -758,12 +758,14 @@ RetrieveVertex(geoTracks &event, TString opt)
     {
       v(0) = event[t].vx;
       v(1) = event[t].vy;
+      v(2) = event[t].vz;
       return v;
     }
     if (arm == 1 && opt.Contains("west"))
     {
       v(0) = event[t].vx;
       v(1) = event[t].vy;
+      v(2) = event[t].vz;
       return v;
     }
   }
