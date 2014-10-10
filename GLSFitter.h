@@ -21,11 +21,12 @@ bool East(double phi);
 double ClusterXResolution(int layer);
 double ClusterZResolution(int layer);
 double ZVertexResolution();
-TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
-TVectorD ZVertexGLS(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
+TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt = "");
+TVectorD ZVertexGLS(geoTracks &event, TString arm, int ntrk = -1, TString opt = "");
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
-void FindVertexEastWest(geoTracks &event, TString opt = "xyz");
+void FindVertex(geoTracks &event, TString opt = "xyz");
+void FindVertex(geoEvents &events, TString opt = "xyz");
 TVectorD RetrieveVertex(geoTracks &event, TString opt);
 
 TVectorD
@@ -112,7 +113,7 @@ TrackFitL(SvxGeoTrack &gt, TString opt)
   for (int ihit = 0; ihit < gt.nhits; ihit++)
   {
     SvxGeoHit hit = gt.GetHit(ihit);
-    xp(ihit) = cos(gt.phirot)*hit.x + sin(gt.phirot)*hit.y;
+    xp(ihit) = cos(gt.phirot) * hit.x + sin(gt.phirot) * hit.y;
     X(ihit, 0) = 1;
     X(ihit, 1) = xp(ihit);
 
@@ -125,10 +126,10 @@ TrackFitL(SvxGeoTrack &gt, TString opt)
   if (opt.Contains("fit_to_z_vertex"))
   {
     // Append vertex x' and z to the system
-    X(m-1, 0) = 1;
-    X(m-1, 1) = cos(gt.phirot)*gt.vx + sin(gt.phirot)*gt.vy;
-    y(m-1) = gt.vz;
-    Cinv(m-1, m-1) = 1./ZVertexResolution();
+    X(m - 1, 0) = 1;
+    X(m - 1, 1) = cos(gt.phirot) * gt.vx + sin(gt.phirot) * gt.vy;
+    y(m - 1) = gt.vz;
+    Cinv(m - 1, m - 1) = 1. / ZVertexResolution();
   }
 
   TVectorD beta = SolveGLS(X, y, Cinv);
@@ -138,7 +139,7 @@ TrackFitL(SvxGeoTrack &gt, TString opt)
   {
     // Assign z residual: projected - measured
     SvxGeoHit hit = gt.GetHit(ihit);
-    gt.hits[ihit].dz = z0 + c*xp(ihit) - hit.z;
+    gt.hits[ihit].dz = z0 + c * xp(ihit) - hit.z;
   }
 
   gt.z0 = z0;
@@ -194,12 +195,12 @@ TrackFitT(SvxGeoTrack &gt, TGraphErrors *bc)
   {
     // Append beamcenter to the system
     int arm = (gt.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
-    points(0, m-1) = bc->GetX()[arm];
-    points(1, m-1) = bc->GetY()[arm];
-    X(m-1, 0) = 1;
+    points(0, m - 1) = bc->GetX()[arm];
+    points(1, m - 1) = bc->GetY()[arm];
+    X(m - 1, 0) = 1;
     float sigbc = bc->GetEX()[arm];
     assert(sigbc > 0);
-    Cinv(m-1, m-1) = 1./sigbc;
+    Cinv(m - 1, m - 1) = 1. / sigbc;
   }
 
   // Rotate x, y by -phirot so error is approximately in y' direction only.
@@ -259,34 +260,60 @@ FitTracks(geoTracks &tracks, TGraphErrors *bc)
 }
 
 void
-FindVertexEastWest(geoTracks &event, TString opt)
+FindVertex(geoTracks &event, TString opt)
 {
   // Compute vertex position from each VTX arm.
   // Assign east (west) vertex to east (west) arm tracks.
   // Requires that tracks have already been fit.
+  TVectorD vxy(2), vz(2);
 
-  TVectorD xye = XYCenter(event, "east");
-  TVectorD xyw = XYCenter(event, "west");
-  TVectorD rze = ZVertexGLS(event, "east");
-  TVectorD rzw = ZVertexGLS(event, "west");
+  if (opt.Contains("east"))
+  {
+    vxy = XYCenter(event, "east");
+    vz = ZVertexGLS(event, "east");
+  }
+  else if (opt.Contains("west"))
+  {
+    vxy = XYCenter(event, "west");
+    vz = ZVertexGLS(event, "west");
+  }
+  else
+  {
+    vxy = XYCenter(event, "");
+    vz = ZVertexGLS(event, "");
+  }
 
   for (unsigned int t = 0; t < event.size(); t++)
   {
     SvxGeoTrack &trk = event[t];
     int arm = (trk.hits[0].x < 0.) ? 0 : 1;   // 0 = East, 1 = West.
 
+    if (arm == 1 && opt.Contains("east"))
+      continue;
+    if (arm == 0 && opt.Contains("west"))
+      continue;
+
     if (opt.Contains("xy"))
     {
-      TVectorD vxy = arm ? xyw : xye;
       trk.vx = vxy(0);
       trk.vy = vxy(1);
     }
 
     if (opt.Contains("z"))
     {
-      double vz = arm ? rzw(1) : rze(1);
-      trk.vz = vz;
+      trk.vz = vz(1);
     }
+  }
+  return;
+}
+
+void
+FindVertex(geoEvents &events, TString opt)
+{
+  //wrapper for finding the vertex from multiple events
+  for (unsigned int ev = 0; ev < events.size(); ev++)
+  {
+    FindVertex(events[ev], opt);
   }
   return;
 }
@@ -371,8 +398,16 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
 {
   if (opt.Contains("find_vertex"))
   {
-    Info("FitTracks()", "Vertex will be computed and (re)assigned to tracks.");
-
+    if (opt.Contains("common_xyz"))
+    {
+      Info("FitTracks()",
+           "Vertex will be computed wrt east+west and (re)assigned to tracks.");
+    }
+    else
+    {
+      Info("FitTracks()",
+           "Vertex will be computed separately wrt east/west and (re)assigned to tracks.");
+    }
     // Prevent incompatible option. Vertex shouldn't exist yet.
     assert(!opt.Contains("fit_to_z_vertex"));
   }
@@ -445,8 +480,15 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
         TrackFitL(events[ev][t]);
     }
 
-    if (opt.Contains("find_vertex"))
-      FindVertexEastWest(events[ev], "xyz");
+    if (opt.Contains("find_vertex") && opt.Contains("common_xyz"))
+    {
+      FindVertex(events[ev], "xyz");
+    }
+    else if (opt.Contains("find_vertex"))
+    {
+      FindVertex(events[ev], "east, xyz");
+      FindVertex(events[ev], "west, xyz");
+    }
 
     if (opt.Contains("calc_dca"))
     {
@@ -516,7 +558,7 @@ XYCenter(geoTracks &tracks, TString arm, int ntrk, TString opt)
 
     SvxGeoTrack trk = tracks[i];
     double mp = tan(trk.phi0 - trk.phirot);
-    double yint = trk.yp0/(cos(trk.phirot) - mp*sin(trk.phirot));
+    double yint = trk.yp0 / (cos(trk.phirot) - mp * sin(trk.phirot));
     double phi = trk.phi0;
     bool east = East(phi);
 
@@ -563,13 +605,13 @@ ZVertexGLS(geoTracks &tracks, TString arm, int ntrk, TString opt)
   int n = ntrk > 0 ? ntrk : (int)tracks.size();
   TVectorD rz(2);
 
-  if ((arm=="east" || arm=="west") && ntrk <= 0)
+  if ((arm == "east" || arm == "west") && ntrk <= 0)
   {
     int nsub = 0;
-    for (int i=0; i<n; i++)
+    for (int i = 0; i < n; i++)
     {
       bool east = East(tracks[i].phi0);
-      if ((arm=="east" && east) || (arm=="west" && !east))
+      if ((arm == "east" && east) || (arm == "west" && !east))
         nsub++;
     }
     n = nsub;
@@ -582,34 +624,34 @@ ZVertexGLS(geoTracks &tracks, TString arm, int ntrk, TString opt)
     return rz;
   }
 
-  TMatrixD M(n,2);   // "Design matrix" containing track slopes
+  TMatrixD M(n, 2);  // "Design matrix" containing track slopes
   TVectorD z0(n);    // Vector of track y-intercept values
-  TMatrixD L(n,n);   // Error (co)variance for track fit parameters z0, m
+  TMatrixD L(n, n);  // Error (co)variance for track fit parameters z0, m
   L.UnitMatrix();
   L *= 0.01;         // TODO: Get mean dm, dz0 from track fits
-  TMatrixD cov(2,2); // Assigned in SolveGLS()
+  TMatrixD cov(2, 2); // Assigned in SolveGLS()
 
-  int row=0;
-  for (unsigned int i=0; i<tracks.size(); i++)
+  int row = 0;
+  for (unsigned int i = 0; i < tracks.size(); i++)
   {
-    if (row==n)
+    if (row == n)
       break;
 
     SvxGeoTrack trk = tracks[i];
-    double slope = 1./tan(trk.the0);
+    double slope = 1. / tan(trk.the0);
     bool east = East(trk.phi0);
 
     if (opt.Contains("hitw") && trk.nhits == 4)
-      L(row,row) *= 0.5;
+      L(row, row) *= 0.5;
 
-    if (arm=="")
+    if (arm == "")
     {
       M(row, 0) = -slope;
       M(row, 1) = 1;
       z0(row) = trk.z0;
       row++;
     }
-    else if ((arm=="east" && east) || (arm=="west" && !east))
+    else if ((arm == "east" && east) || (arm == "west" && !east))
     {
       M(row, 0) = -slope;
       M(row, 1) = 1;
@@ -623,8 +665,8 @@ ZVertexGLS(geoTracks &tracks, TString arm, int ntrk, TString opt)
   {
     Printf("%s x,y (%.3f +- %.3f, %.3f +- %.3f)",
            arm.Data(),
-           rz(0), sqrt(cov(0,0)),
-           rz(1), sqrt(cov(1,1)));
+           rz(0), sqrt(cov(0, 0)),
+           rz(1), sqrt(cov(1, 1)));
     cov.Print();
   }
 
