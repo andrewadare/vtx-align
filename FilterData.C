@@ -78,6 +78,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-0-1_
   //need to fit segments to get phi, theta
   //NOTE: For the purposes of rejecting outlider, the
   //      first fit should always find the primary vertex
+  //      separately for east & west arms
   //      and calculate dca with respect to that.
   std::cout << "\n-- Fitting tracks --" << std::endl;
   FitTracks(vtxevents, 0, "find_vertex, calc_dca");
@@ -125,10 +126,12 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-0-1_
     Info("", " E: (%.3f, %.3f)", gbc->GetX()[0], gbc->GetY()[0]);
     Info("", " W: (%.3f, %.3f)", gbc->GetX()[1], gbc->GetY()[1]);
 
-    // Use gbc in track fits. Find primary vertex.
-    FitTracks(accvtxevents, gbc, "fit_to_bc, find_vertex");
+    // Tracks are already fit w/o any vertex above
+    // simply recalculate & store a common east+west vertex
+    FindVertex(accvtxevents, "xyz");
 
-    // Refit using z vertex from previous fit.
+    // Refit (L) using east+west z-vertex from above
+    // Refit (T) using the beamcenter
     // Finally, compute DCA wrt gbc and z vertex.
     FitTracks(accvtxevents, gbc, "fit_to_bc, fit_to_z_vertex, calc_dca");
   }
