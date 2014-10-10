@@ -370,9 +370,9 @@ WriteHLConstraints(const char *filename,
   }
   if (zdof)
   {
-    // AddConstraint(hlz, geo, Ones, fs, "Total z translation");
+    AddConstraint(hlz, geo, Ones, fs, "Total z translation");
     // AddConstraints(wz, ez, geo, Ones,  fs, "z translation");
-    AddConstraints(wz, ez, geo, HLRadii, fs, "z r shear");
+    // AddConstraints(wz, ez, geo, HLRadii, fs, "z r shear");
   }
   if (sdof)
   {
