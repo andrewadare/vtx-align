@@ -16,6 +16,10 @@ void CheckParLabels()
   Printf("\n\n\n\n\n");
   Printf("Half-layer parameters:");
   CheckHalfLayerPars();
+
+  Printf("\n\n\n\n\n");
+  Printf("Arm parameters:");
+  CheckArmPars();
 }
 
 void
@@ -54,7 +58,7 @@ CheckHalfLayerPars()
   coords.push_back("x");
   coords.push_back("y");
   coords.push_back("z");
-  coords.push_back("phi");
+  coords.push_back("s");
 
   int lyr_back = -1, arm_back = -1;
   string coord_back = "";
@@ -69,6 +73,33 @@ CheckHalfLayerPars()
         Printf("%d | %d %d %5s <--> %d %d %5s",
                l, lyr, arm, coords[ic].c_str(),
                lyr_back, arm_back, coord_back.c_str());
+      }
+
+  return;
+}
+
+void
+CheckArmPars()
+{
+  vector<std::string> coords;
+  coords.push_back("x");
+  coords.push_back("y");
+  coords.push_back("z");
+  coords.push_back("pitch");
+  coords.push_back("yaw");
+  coords.push_back("roll");
+
+  int arm_back = -1;
+  string coord_back = "";
+
+    for (int arm=0; arm<2; arm++)
+      for (int ic=0; ic<6; ic++)
+      {
+        int l = ArmLabel(arm, coords[ic]);
+        ArmParInfo(l, arm_back, coord_back);
+
+        Printf("%d | %d %5s <--> %d %5s",
+               l, arm, coords[ic].c_str(), arm_back, coord_back.c_str());
       }
 
   return;
