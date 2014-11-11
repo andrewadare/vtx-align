@@ -5,8 +5,10 @@
 
 int Label(int layer, int ladder, string coord);
 int HalfLayerLabel(int layer, int arm, string coord);
+int ArmLabel(int arm, string coord);
 void ParInfo(int label, int &layer, int &ladder, string &coord);
 void HalfLayerParInfo(int label, int &layer, int &arm, string &coord);
+void ArmParInfo(int label, int &arm, string &coord);
 
 int
 Label(int layer, int ladder, string coord)
@@ -51,6 +53,31 @@ HalfLayerLabel(int layer, int arm, string coord)
   return 1000 + 100*layer + 10*arm + ic;
 }
 
+int
+ArmLabel(int arm, string coord)
+{
+  // Return a global parameter label for this arm and coordinate.
+  // Half-layer labels shouldn't conflict with ladder or HL labels, since those
+  // range into the 100's or 1000's and these have a +10000 offset.
+  // Expecting arm \in {0=E,1=W} and coord \in {x,y,z,roll,pitch,yaw}.
+  int ic = 99;
+
+  if (coord.compare("x") == 0)
+    ic = 0;
+  if (coord.compare("y") == 0)
+    ic = 1;
+  if (coord.compare("z") == 0)
+    ic = 2;
+  if (coord.compare("pitch") == 0) // x = pitch axis (theta rot. in y-z plane)
+    ic = 3;
+  if (coord.compare("yaw") == 0)   // y = yaw axis (theta rot. in x-z plane)
+    ic = 4;
+  if (coord.compare("roll") == 0)  // z = roll axis (phi rot.)
+    ic = 5;
+
+  return 10000 + 10*arm + ic;
+}
+
 void
 ParInfo(int label, int &layer, int &ladder, string &coord)
 {
@@ -87,6 +114,16 @@ HalfLayerParInfo(int label, int &layer, int &arm, string &coord)
   const char *coords[4] = {"x", "y", "z", "s"};
 
   layer = (label%1000 - label%100)/100;
+  arm   = (label%100 - label%10)/10;
+  coord = string(coords[label%10]);
+  return;
+}
+
+void
+ArmParInfo(int label, int &arm, string &coord)
+{
+  const char *coords[] = {"x", "y", "z", "pitch", "yaw", "roll"};
+
   arm   = (label%100 - label%10)/10;
   coord = string(coords[label%10]);
   return;
