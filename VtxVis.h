@@ -121,14 +121,14 @@ DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2, TString op
     if (opt.Contains("z") && TMath::Abs(dz) > 5e-4) // Only label changes > 5 um
     {
       mkr.SetMarkerStyle(kOpenCircle);
-      mkr.SetMarkerColor(dz>0 ? kRed-4 : kAzure-4); // Red/blue shift mnemonic
+      mkr.SetMarkerColor(dz<0 ? kRed-4 : kAzure-4); // Red/blue shift mnemonic
       mkr.SetMarkerSize(100*TMath::Abs(dz)); // 1 = 8px diam, 2 = 16px, ...
       mkr.DrawMarker(x,y);
 
       TLatex ltx;
       ltx.SetTextSize(0.018);
       ltx.SetTextAlign(22);
-      ltx.SetTextColor(dz>0 ? kRed+2 : kAzure+3);
+      ltx.SetTextColor(dz<0 ? kRed+2 : kAzure+3);
       ltx.DrawLatex(x, y, Form("%.0f", 1e4*dz));
     }
 
