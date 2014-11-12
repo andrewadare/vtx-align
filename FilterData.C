@@ -13,9 +13,9 @@
 //      "fixed-bc": use beamcenter from rootfiles/bc-411768.root when refitting
 //                  tracks after filtering
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-hubert_20segs.root",
-                const char *outfilename = "rootfiles/411768-0-0.root",
-                const char *configfilename = "production/config/config-411768-hubert.txt",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-3.root",
+                const char *outfilename = "rootfiles/411768-1-0.root",
+                const char *configfilename = "production/config/config-411768-1-0.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
