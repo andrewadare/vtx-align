@@ -25,6 +25,7 @@ TVectorD XYCenter(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 TVectorD ZVertexGLS(geoTracks &event, TString arm, int ntrk = -1, TString opt="");
 TVectorD IPVec(TVectorD &a, TVectorD &n, TVectorD &p);
 TVectorD IPVec(SvxGeoTrack &t, TVectorD &p);
+void FindVertex(geoTracks &event, TString opt = "xyz");
 void FindVertexEastWest(geoTracks &event, TString opt = "xyz");
 TVectorD RetrieveVertex(geoTracks &event, TString opt);
 
@@ -259,6 +260,33 @@ FitTracks(geoTracks &tracks, TGraphErrors *bc)
 }
 
 void
+FindVertex(geoTracks &event, TString opt)
+{
+  // Compute vertex position from both VTX arms.
+  // Requires that tracks have already been fit.
+
+  TVectorD xy = XYCenter(event, "");
+  TVectorD rz = ZVertexGLS(event, "");
+
+  for (unsigned int t = 0; t < event.size(); t++)
+  {
+    SvxGeoTrack &trk = event[t];
+
+    if (opt.Contains("xy"))
+    {
+      trk.vx = xy(0);
+      trk.vy = xy(1);
+    }
+
+    if (opt.Contains("z"))
+    {
+      trk.vz = rz(1);
+    }
+  }
+  return;
+}
+
+void
 FindVertexEastWest(geoTracks &event, TString opt)
 {
   // Compute vertex position from each VTX arm.
@@ -446,7 +474,12 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
     }
 
     if (opt.Contains("find_vertex"))
-      FindVertexEastWest(events[ev], "xyz");
+    {
+      FindVertex(events[ev], "xyz");
+    }
+
+    // TODO: provide another option like find_ew_vertex ?
+    // FindVertexEastWest(events[ev], "xyz");
 
     if (opt.Contains("calc_dca"))
     {
@@ -664,7 +697,7 @@ ZVertexResolution()
 {
   // Roughly based on std dev of z DCA distribution in data
   // TODO: Make this a settable value
-  return 600e-4;
+  return 200e-4;
 }
 
 TVectorD

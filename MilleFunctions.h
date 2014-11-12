@@ -80,7 +80,9 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     vector<float> zdergl;
     for (int k=0; k<nsgp; k++)
     {
-      if (opt.Contains("halflayer"))
+      if (opt.Contains("arm"))
+        slabels.push_back(ArmLabel(arm, sgpars[k]));
+      else if (opt.Contains("halflayer"))
         slabels.push_back(HalfLayerLabel(hit.layer, arm, sgpars[k]));
       else
         slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
@@ -88,7 +90,9 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     }
     for (int k=0; k<nzgp; k++)
     {
-      if (opt.Contains("halflayer"))
+      if (opt.Contains("arm"))
+        zlabels.push_back(ArmLabel(arm, zgpars[k]));
+      else if (opt.Contains("halflayer"))
         zlabels.push_back(HalfLayerLabel(hit.layer, arm, zgpars[k]));
       else
         zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
@@ -99,8 +103,8 @@ MilleVtx(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sSigFactor = (opt.Contains("sim")) ? 1.3 : 4.0;
-    float zSigFactor = (opt.Contains("sim")) ? 1.3 : 4.0;
+    float sSigFactor = (opt.Contains("sim")) ? 1.3 : 3.0;
+    float zSigFactor = (opt.Contains("sim")) ? 1.3 : 3.0;
     float sigs = sSigFactor * hit.xsigma * ClusterXResolution(hit.layer);
     float sigz = zSigFactor * hit.zsigma * ClusterZResolution(hit.layer);
 
@@ -216,26 +220,30 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
     if (par == "r")
       return hit.ds/r;
 
-    // d(Delta_s)/ds -- 0.974 accounts for 13 degree tilt in pixel layers
+    // d(Delta_s)/ds
     if (par == "s")
       return 1.0;
-    // return hit.layer < 2 ? 0.9741 : 1.0;
 
     // d(Delta_s)/dx
     if (par == "x")
       return -sin(trk.phirot);
-    // return -hit.y/r;
-    // return hit.layer < 2 ? -0.9741*hit.y/r : -hit.y/r;
 
     // d(Delta_s)/dy
     if (par == "y")
       return cos(trk.phirot);
-    // return hit.x/r;
-    // return hit.layer < 2 ? 0.9741*hit.x/r : hit.x/r;
 
     // d(Delta_s)/dz
     if (par == "z")
       return 0.0;
+
+    if (par == "pitch")
+      return hit.z;
+
+    if (par == "yaw")
+      return 0.0;
+
+    if (par == "roll")
+      return 1.0;
   }
 
   if (res == "z")
@@ -251,16 +259,23 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
     // d(Delta_z)/dx
     if (par == "x")
       return cos(trk.phirot)/tan(trk.the0);
-    // return hit.x/r/TMath::Tan(trk.the0);
 
     // d(Delta_z)/dy
     if (par == "y")
       return sin(trk.phirot)/tan(trk.the0);
-    // return hit.y/r/TMath::Tan(trk.the0);
 
     // d(Delta_z)/dz
     if (par == "z")
       return 1.0;
+
+    if (par == "pitch")
+      return 0;
+
+    if (par == "yaw")
+      return hit.x;  // Approximate at best. Needs longitudinal dependence.
+
+    if (par == "roll")
+      return 0.0;
   }
 
   Printf("WARNING from GlobalDerivative() in MilleFunctions.h: "

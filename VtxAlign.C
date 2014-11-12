@@ -34,8 +34,8 @@ void CorrectFromFile(const char *filename,
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
               int prod = 0,        // Production step. Starts at 0.
-              int subiter = 1,     // Geometry update step. Starts at 0.
-              TString alignMode = "ladder") // "ladder","halflayer" (+"sim")
+              int subiter = 2,     // Geometry update step. Starts at 0.
+              TString alignMode = "ladder") // "arm","ladder","halflayer" (+"sim")
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -56,25 +56,43 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   TString rootFileOut = Form("rootfiles/%d-%d-%d.root", run, prod, subiter + 1);
   TString pisaFileOut = Form("geom/%d-%d-%d.par", run, prod, subiter + 1);
 
-  // Assign free global parameter coords for ds=r*dphi residuals here
-  // Set includes "s", "x", "y", "r".
-  // Also assign presigma list for these coordinates (trumps defaultPreSigma).
-
-  // vecs sgpars {"s", "x", "y"};
-  // vecd sgpresigma {0,0,0};
-
-  vecs sgpars {"x", "y"};
-  vecd sgpresigma {0,0};
-
-  // vecs sgpars {"s"};
-  // vecd sgpresigma {0};
-
   // Assign free global parameter coords for dz residuals here
-  // Set includes "x", "y", "z", "r".
+  // Parameter set may include "x", "y", "z", "r".
+  // Also assign presigma list for these coordinates (trumps defaultPreSigma).
   vecs zgpars {"z"};
   vecd zgpresigma {0};
-  // vecs zgpars {"z", "r"};
-  // vecd zgpresigma {0, 1e-4};
+
+  // Assign free global parameter coords for ds=r*dphi residuals
+  // Set includes "s", "x", "y", "r".
+  vecs sgpars;
+  vecd sgpresigma;
+  if (alignMode.Contains("arm"))
+  {
+    // vecs s {"x", "y", "pitch", "yaw", "roll"};
+    // vecd p {0,0,0,0,0};
+    // sgpars.resize(5);
+    vecs s {"x", "y"};
+    vecd p {0,0};
+    sgpars.resize(2);
+    sgpars = s;
+    sgpresigma = p;
+  }
+  else if (alignMode.Contains("halflayer"))
+  {
+    vecs s {"s", "x", "y"};
+    vecd p {0,0,0};
+    sgpars.resize(3);
+    sgpars = s;
+    sgpresigma = p;
+  }
+  else if (alignMode.Contains("ladder"))
+  {
+    vecs s {"x", "y"};
+    vecd p {0,0};
+    sgpars.resize(2);
+    sgpars = s;
+    sgpresigma = p;
+  }
 
   TFile *inFile = new TFile(rootFileIn.Data(), "read");
   assert(inFile);
@@ -150,8 +168,12 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   //  - CNT track residuals are updated in CorrectFromFile().
   //  - VTX track residuals are updated by refitting.
   CorrectFromFile("millepede.res", tgeo, vtxevents, cntevents);
-  Printf("Refitting in post-alignment geometry to update residuals.");
-  FitTracks(vtxevents, gbc, "fit_to_bc, find_vertex, calc_dca");
+
+  Printf("Post-alignment refit 1: use beamcenter, find vertex");
+  FitTracks(vtxevents, gbc, "fit_to_bc, find_vertex");
+
+  Printf("Post-alignment refit 2: use beamcenter and z vertex, calc DCA");
+  FitTracks(vtxevents, gbc, "fit_to_bc, fit_to_z_vertex, calc_dca");
 
   cout << "Filling output tree(s)..." << flush;
   TFile *outFile = new TFile(rootFileOut.Data(), "recreate");
@@ -212,9 +234,11 @@ EventLoop(string binfile, geoEvents &events, vecs &sgpars, vecs &zgpars,
     cout << zgpars[ic] << " ";
   cout << ")" << endl;
   if (opt.Contains("ladder"))
-    Printf(" - ladder mode");
+    Printf(" - ladder alignment mode");
   if (opt.Contains("halflayer"))
-    Printf(" - halflayer mode");
+    Printf(" - halflayer alignment mode");
+  if (opt.Contains("arm"))
+    Printf(" - arm alignment mode");
   if (opt.Contains("sim"))
     Printf(" - chi^2 tuned for simulated data. No ladders masked.");
   else
@@ -301,6 +325,30 @@ CorrectFromFile(const char *filename,
       if (mpc.find(l) != mpc.end())
         tgeo->RotateHalfLayerRPhi(i, j, mpc[l]);
     }
+
+  for (int arm = 0; arm < 2; arm++) // Arm. 0 = E; 1 = W.
+  {
+    int l = -1;
+    // Arm translation/rotation corrections
+    l = ArmLabel(arm, "x");
+    if (mpc.find(l) != mpc.end())
+      tgeo->TranslateArm(arm, mpc[l], 0., 0.);
+    l = ArmLabel(arm, "y");
+    if (mpc.find(l) != mpc.end())
+      tgeo->TranslateArm(arm, 0., mpc[l], 0.);
+    l = ArmLabel(arm, "z");
+    if (mpc.find(l) != mpc.end())
+      tgeo->TranslateArm(arm, 0., 0., mpc[l]);
+    l = ArmLabel(arm, "pitch");
+    if (mpc.find(l) != mpc.end())
+      tgeo->RotateArm(arm, mpc[l], 0., 0.); // Convert to angles???????????????????????
+    l = ArmLabel(arm, "yaw");
+    if (mpc.find(l) != mpc.end())
+      tgeo->RotateArm(arm, 0., mpc[l], 0.);
+    l = ArmLabel(arm, "roll");
+    if (mpc.find(l) != mpc.end())
+      tgeo->RotateArm(arm, 0., 0., mpc[l]);
+  }
 
   for (unsigned int ev = 0; ev < vtxevents.size(); ev++)
     for (unsigned int t = 0; t < vtxevents[ev].size(); t++)
