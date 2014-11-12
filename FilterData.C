@@ -5,20 +5,17 @@
 
 // This "preprocessing" script does some initial outlier rejection.
 // It also renames the ntuple(s).
-// It is conventional for outfilename and pisafilename to have the same base.
-// For record-keeping transparency, symlink the needed geometry file to
-// run-prod-iter.par so the base matches the ROOT file.
-// The alignment script VtxAlign.C requires a .par file with such a name.
-// opt may contain:
+// This script uses the PISA geometry file listed in the provided config file. 
+// The opt string may contain:
 //      "": vtx only.
 //      "cnt": vtxtrks & cnttrks.
 //      "no-refit": don't refit the tracks after filtering
 //      "fixed-bc": use beamcenter from rootfiles/bc-411768.root when refitting
 //                  tracks after filtering
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-0-1_30segs.root",
-                const char *outfilename = "rootfiles/411768-1-0.root",
-                const char *configfilename = "production/config/config-411768-0-1.txt",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-411768-hubert_20segs.root",
+                const char *outfilename = "rootfiles/411768-0-0.root",
+                const char *configfilename = "production/config/config-411768-hubert.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
