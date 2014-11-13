@@ -29,6 +29,8 @@ TH1D *Hist(const char *prefix, int layer, int ladder_or_arm, int stage);
 TH1D *Hist(const char *prefix, int layer, int stage);
 TGraphErrors *DeadLadderGraph(int lyr);
 
+double bcx = 0.3532, bcy = 0.0528; // TODO: read from file. This is terrible.
+
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
 // 2. set prod2 = prod1, subit2 = subit1.
@@ -39,6 +41,7 @@ void DrawResults(int run = 411768,
                  int subit2 = -1,
                  const char *treename = "vtxtrks")
 {
+
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
 
@@ -133,6 +136,13 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                                ";#theta [rad];z DCA [cm]",
                                100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
                                100, -0.15, +0.15);
+  TH2D *dxvsz = new TH2D(Form("dxvsz_%d_%d",prod,subiter),
+                         ";z vertex [cm];x_{VTX} - x_{BC} [cm]",
+                         150, -10, 10, 100, -0.05, +0.05);
+  TH2D *dyvsz = new TH2D(Form("dyvsz_%d_%d",prod,subiter),
+                         ";z vertex [cm];y_{VTX} - y_{BC} [cm]",
+                         150, -10, 10, 100, -0.05, +0.05);
+
   SetAxisProps(xydcae);
   SetAxisProps(xydcaw);
   SetAxisProps(zdcae, 208, 208, 0.04, 0.04, 1.1, 1.7);
@@ -142,6 +152,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   SetAxisProps(xydcaphi);
   SetAxisProps(ezdcatheta);
   SetAxisProps(wzdcatheta);
+  SetAxisProps(dxvsz);
+  SetAxisProps(dyvsz);
 
   // x-y vertex distributions
   double x0 = -0.5, y0 = -0.5, x1 = +0.5, y1 = +0.5;
@@ -212,6 +224,9 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
           hdv[k]->Fill(vw(k) - ve(k));
       }
 
+      dxvsz->Fill(vertex[2], vertex[0] - bcx);
+      dyvsz->Fill(vertex[2], vertex[1] - bcy);
+
       // Reset for next event
       prevev = *event;
       ve *= 0;
@@ -219,6 +234,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
       ne = 0;
       nw = 0;
     }
+
 
     int arm = (gx[0] < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
@@ -406,18 +422,47 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   c->cd(1);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   ezdcatheta->Draw("col");
-  TProfile *zeprof = ezdcatheta->ProfileX(Form("zeprof%d_%d",prod,subiter), 
+  TProfile *zeprof = ezdcatheta->ProfileX(Form("zeprof%d_%d",prod,subiter),
                                           1, -1, "d,same");
   zeprof->SetMarkerStyle(kFullCircle);
   ltx.DrawLatex(0.25, 0.92, "East");
   c->cd(2);
   gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
   wzdcatheta->Draw("col");
-  TProfile *zwprof = wzdcatheta->ProfileX(Form("zwprof%d_%d",prod,subiter), 
+  TProfile *zwprof = wzdcatheta->ProfileX(Form("zwprof%d_%d",prod,subiter),
                                           1, -1, "d,same");
   zwprof->SetMarkerStyle(kFullCircle);
   ltx.DrawLatex(0.25, 0.92, "West");
   cList->Add(c);
+
+  // x and y vertex minus BC vs z vertex
+  ltx.SetTextColor(kRed);
+  ltx.SetTextSize(0.07);
+  c = new TCanvas(Form("xy_vertex_vs_zvertex_%d",stage),
+                  Form("xy_vertex_vs_zvertex_%d",stage), 1000, 500);
+  c->Divide(2,1);
+  c->cd(1);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  dxvsz->Draw("col");
+  TProfile *dxprof = dxvsz->ProfileX(Form("dxprof%d_%d",prod,subiter),
+                                     1, -1, "d,same");
+  dxprof->SetMarkerStyle(kFullCircle);
+  dxprof->Fit("pol1");
+  ltx.DrawLatex(0.25, 0.9, Form("slope: %.2e",
+                                 dxprof->GetFunction("pol1")->GetParameter(1)));
+  c->cd(2);
+  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
+  dyvsz->Draw("col");
+  TProfile *dyprof = dyvsz->ProfileX(Form("dyprof%d_%d",prod,subiter),
+                                     1, -1, "d,same");
+  dyprof->Fit("pol1");
+  ltx.DrawLatex(0.25, 0.9, Form("slope: %.2e",
+                                 dyprof->GetFunction("pol1")->GetParameter(1)));
+  dyprof->SetMarkerStyle(kFullCircle);
+  cList->Add(c);
+
+  ltx.SetTextColor(kBlack);
+  ltx.SetTextSize(0.06);
 
   return;
 }
