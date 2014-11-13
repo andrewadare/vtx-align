@@ -204,10 +204,11 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
                  TGraphErrors *bc)
 {
   // Return first derivative of residual with respect to global parameter.
+  
+  int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
   double bcx = 0., bcy = 0.;
   if (bc) // Include beam position in track fit. Rotate about (bcx,bcy).
   {
-    int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
     bcx = bc->GetX()[arm];
     bcy = bc->GetY()[arm];
   }
@@ -237,7 +238,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
       return 0.0;
 
     if (par == "pitch")
-      return hit.z;
+      return arm ? -hit.z : hit.z;
 
     if (par == "yaw")
       return 0.0;
@@ -272,7 +273,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
       return 0;
 
     if (par == "yaw")
-      return hit.x;  // Approximate at best. Needs longitudinal dependence.
+      return hit.x + hit.z / trk.the0;
 
     if (par == "roll")
       return 0.0;
