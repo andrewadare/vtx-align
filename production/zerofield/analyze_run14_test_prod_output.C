@@ -26,6 +26,7 @@ analyze_run14_test_prod_output(int nevents = 0,
     //gSystem->Load("libRun11AuAuSvxEventHists.so");
     //gSystem->Load("libRun11AuAuSvxEventTree.so");
     gSystem->Load("libTestVTXProduction.so");
+    gSystem->Load("libRun11VTXana.so");
 
     Fun4AllServer *se = Fun4AllServer::instance();
     se->Verbosity(0);
