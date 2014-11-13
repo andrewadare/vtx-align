@@ -33,9 +33,9 @@ void CorrectFromFile(const char *filename,
                      geoEvents &cntevents);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 0,        // Production step. Starts at 0.
-              int subiter = 2,     // Geometry update step. Starts at 0.
-              TString alignMode = "ladder") // "arm","ladder","halflayer" (+"sim")
+              int prod = 1,        // Production step. Starts at 0.
+              int subiter = 0,     // Geometry update step. Starts at 0.
+              TString alignMode = "arm") // "arm","ladder","halflayer" (+"sim")
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -59,8 +59,8 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Assign free global parameter coords for dz residuals here
   // Parameter set may include "x", "y", "z", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
-  vecs zgpars {"z"};
-  vecd zgpresigma {0};
+  vecs zgpars {"z", "yaw"};
+  vecd zgpresigma {0, 0};
 
   // Assign free global parameter coords for ds=r*dphi residuals
   // Set includes "s", "x", "y", "r".
@@ -68,12 +68,13 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   vecd sgpresigma;
   if (alignMode.Contains("arm"))
   {
-    // vecs s {"x", "y", "pitch", "yaw", "roll"};
-    // vecd p {0,0,0,0,0};
-    // sgpars.resize(5);
-    vecs s {"x", "y"};
-    vecd p {0,0};
-    sgpars.resize(2);
+    vecs s {"x", "y", "pitch"};
+    vecd p {0,0,0};
+    sgpars.resize(3);
+
+    // vecs s {"x", "y"};
+    // vecd p {0,0};
+    // sgpars.resize(2);
     sgpars = s;
     sgpresigma = p;
   }
@@ -344,10 +345,10 @@ CorrectFromFile(const char *filename,
       tgeo->RotateArm(arm, mpc[l], 0., 0.); // Convert to angles???????????????????????
     l = ArmLabel(arm, "yaw");
     if (mpc.find(l) != mpc.end())
-      tgeo->RotateArm(arm, 0., mpc[l], 0.);
+      tgeo->RotateArm(arm, 0., mpc[l], 0.); // Convert to angles???????????????????????
     l = ArmLabel(arm, "roll");
     if (mpc.find(l) != mpc.end())
-      tgeo->RotateArm(arm, 0., 0., mpc[l]);
+      tgeo->RotateArm(arm, 0., 0., mpc[l]); // Convert to angles???????????????????????
   }
 
   for (unsigned int ev = 0; ev < vtxevents.size(); ev++)
