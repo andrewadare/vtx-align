@@ -126,8 +126,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                         Form(";west arm z vertex [cm];tracks"), 200, -15, 15);
   TH2D *xydcaphi  = new TH2D(Form("xydcaphi_%d_%d",prod,subiter),
                              ";#phi [rad];x-y DCA [cm]",
-                             100, -TMath::PiOver2(), 3*TMath::PiOver2(),
-                             100, -0.11, +0.11);
+                             200, -TMath::PiOver2(), 3*TMath::PiOver2(),
+                             200, -0.11, +0.11);
   TH2D *ezdcatheta  = new TH2D(Form("ezdcatheta_%d_%d",prod,subiter),
                                ";#theta [rad];z DCA [cm]",
                                100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
@@ -136,12 +136,18 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
                                ";#theta [rad];z DCA [cm]",
                                100, 0.22*TMath::Pi(), 0.78*TMath::Pi(),
                                100, -0.15, +0.15);
-  TH2D *dxvsz = new TH2D(Form("dxvsz_%d_%d",prod,subiter),
-                         ";z vertex [cm];x_{VTX} - x_{BC} [cm]",
-                         150, -10, 10, 100, -0.05, +0.05);
-  TH2D *dyvsz = new TH2D(Form("dyvsz_%d_%d",prod,subiter),
-                         ";z vertex [cm];y_{VTX} - y_{BC} [cm]",
-                         150, -10, 10, 100, -0.05, +0.05);
+  TH2D *edxvsz = new TH2D(Form("edxvsz_%d_%d",prod,subiter),
+                          ";East z vertex [cm];East x_{VTX} - x_{BC} [cm]",
+                          150, -10, 10, 100, -0.05, +0.05);
+  TH2D *wdxvsz = new TH2D(Form("wdxvsz_%d_%d",prod,subiter),
+                          ";West z vertex [cm];West x_{VTX} - x_{BC} [cm]",
+                          150, -10, 10, 100, -0.05, +0.05);
+  TH2D *edyvsz = new TH2D(Form("edyvsz_%d_%d",prod,subiter),
+                          ";East z vertex [cm];East y_{VTX} - y_{BC} [cm]",
+                          150, -10, 10, 100, -0.05, +0.05);
+  TH2D *wdyvsz = new TH2D(Form("wdyvsz_%d_%d",prod,subiter),
+                          ";West z vertex [cm];West y_{VTX} - y_{BC} [cm]",
+                          150, -10, 10, 100, -0.05, +0.05);
 
   SetAxisProps(xydcae);
   SetAxisProps(xydcaw);
@@ -152,8 +158,10 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   SetAxisProps(xydcaphi);
   SetAxisProps(ezdcatheta);
   SetAxisProps(wzdcatheta);
-  SetAxisProps(dxvsz);
-  SetAxisProps(dyvsz);
+  SetAxisProps(edxvsz);
+  SetAxisProps(wdxvsz);
+  SetAxisProps(edyvsz);
+  SetAxisProps(wdyvsz);
 
   // x-y vertex distributions
   double x0 = -0.5, y0 = -0.5, x1 = +0.5, y1 = +0.5;
@@ -208,11 +216,6 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TVectorD vw(3);
   while (r.Next())
   {
-    // TEMP //////////////////////////////////////////////////
-    // if (fabs(*xydca) < 1e-12)
-    //   continue;
-    // TEMP //////////////////////////////////////////////////
-
     // Check for a new event
     if (*event != prevev)
     {
@@ -223,9 +226,6 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
         for (int k=0; k<3; k++)
           hdv[k]->Fill(vw(k) - ve(k));
       }
-
-      dxvsz->Fill(vertex[2], vertex[0] - bcx);
-      dyvsz->Fill(vertex[2], vertex[1] - bcy);
 
       // Reset for next event
       prevev = *event;
@@ -279,6 +279,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
       hve->Fill(vertex[0], vertex[1]);
       hvze->Fill(vertex[2]);
       ezdcatheta->Fill(*theta, *zdca);
+      edxvsz->Fill(vertex[2], vertex[0] - bcx);
+      edyvsz->Fill(vertex[2], vertex[1] - bcy);
     }
     if (arm == 1)
     {
@@ -294,6 +296,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
       hvw->Fill(vertex[0], vertex[1]);
       hvzw->Fill(vertex[2]);
       wzdcatheta->Fill(*theta, *zdca);
+      wdxvsz->Fill(vertex[2], vertex[0] - bcx);
+      wdyvsz->Fill(vertex[2], vertex[1] - bcy);
     }
 
     xydcaphi->Fill(phiwrap, *xydca);
@@ -392,6 +396,7 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   TProfile *dca2dprof = xydcaphi->ProfileX(Form("dca2dprof%d_%d",prod,subiter),
                         1, -1, "d,same");
   dca2dprof->SetMarkerStyle(kFullCircle);
+  dca2dprof->SetMarkerSize(0.5);
   ltx.DrawLatex(0.8, 0.92, Form("%d-%d",prod,subiter));
   ltx.DrawLatex(0.29, 0.03, Form("West"));
   ltx.DrawLatex(0.72, 0.03, Form("East"));
@@ -438,29 +443,24 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
   // x and y vertex minus BC vs z vertex
   ltx.SetTextColor(kRed);
   ltx.SetTextSize(0.07);
+  TH2D *zdep[4] = {edxvsz, edyvsz, wdxvsz, wdyvsz};
   c = new TCanvas(Form("xy_vertex_vs_zvertex_%d",stage),
-                  Form("xy_vertex_vs_zvertex_%d",stage), 1000, 500);
-  c->Divide(2,1);
-  c->cd(1);
-  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
-  dxvsz->Draw("col");
-  TProfile *dxprof = dxvsz->ProfileX(Form("dxprof%d_%d",prod,subiter),
-                                     1, -1, "d,same");
-  dxprof->SetMarkerStyle(kFullCircle);
-  dxprof->Fit("pol1");
-  ltx.DrawLatex(0.25, 0.9, Form("slope: %.2e",
-                                 dxprof->GetFunction("pol1")->GetParameter(1)));
-  c->cd(2);
-  gPad->SetMargin(0.12, 0.02, 0.12, 0.02); // L, R, B, T
-  dyvsz->Draw("col");
-  TProfile *dyprof = dyvsz->ProfileX(Form("dyprof%d_%d",prod,subiter),
-                                     1, -1, "d,same");
-  dyprof->Fit("pol1");
-  ltx.DrawLatex(0.25, 0.9, Form("slope: %.2e",
-                                 dyprof->GetFunction("pol1")->GetParameter(1)));
-  dyprof->SetMarkerStyle(kFullCircle);
+                  Form("xy_vertex_vs_zvertex_%d",stage), 1000, 1000);
+  c->Divide(2,2);
+  for (int i=0; i<4; ++i)
+  {
+    c->cd(i+1);
+    gPad->SetMargin(0.12, 0.02, 0.12, 0.06); // L, R, B, T
+    zdep[i]->Draw("col");
+    TProfile *prof = zdep[i]->ProfileX(Form("prof%d_%d_%d", prod,subiter,i),
+                                       1, -1, "d,same");
+    prof->SetMarkerStyle(kFullCircle);
+    prof->Fit("pol1");
+    TF1 *ff = prof->GetFunction("pol1");
+    if (ff)
+      ltx.DrawLatex(0.2, 0.95, Form("slope: %.2e", ff->GetParameter(1)));
+  }
   cList->Add(c);
-
   ltx.SetTextColor(kBlack);
   ltx.SetTextSize(0.06);
 
