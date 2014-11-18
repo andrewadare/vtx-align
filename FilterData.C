@@ -13,18 +13,18 @@
 //      "fixed-bc": use beamcenter from rootfiles/bc-411768.root when refitting
 //                  tracks after filtering
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster_411768-0-3.root",
-                const char *outfilename = "rootfiles/411768-1-0.root",
-                const char *configfilename = "production/config/config-411768-1-0.txt",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster-411768-1-3.root",
+                const char *outfilename = "rootfiles/411768-2-0.root",
+                const char *configfilename = "production/config/config-411768-2-0.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
                 int nhitsmin = 3,
-                int nevents = -1, // -1 = everything
+                int nevents = 2e5, // -1 = everything
                 float frac4hit = -1, // -1 = no filter
-                TString opt = "fixed-bc") // see above
+                TString opt = "fixed-bc,cnt") // see above
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");

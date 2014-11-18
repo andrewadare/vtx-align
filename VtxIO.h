@@ -25,7 +25,7 @@ void WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
                     double regFactor = 1.0, double preSigma = 0.01);
 vecs SplitLine(const string &line, const char *delim = " ");
 int GetParamFromConfig(const char *configFile, float bc[], float e2w[],
-                   float v2c[], string &geo);
+                       float v2c[], string &geo);
 
 void
 GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events,
@@ -112,6 +112,13 @@ GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events,
     hit.ds     = t->GetLeaf("res_s")->GetValue();
     hit.trkid  = t->GetLeaf("trkid")->GetValue();
     hit.node   = geo->SensorNode(hit.layer, hit.ladder, hit.sensor);
+
+    if (opt.Contains("cnt"))
+    {
+      // Conform residual definition to our convention
+      hit.ds *= -1;
+      hit.dz *= -1;
+    }
 
     // Overwrite x,y,z with local-->global transformation on xs,ys,zs
     hit.Update();
@@ -540,7 +547,7 @@ WriteSteerFile(const char *filename, vecs &binfiles, vecs &constfiles,
 
   return;
 }
-int 
+int
 GetParamFromConfig(const char *configFile, float bc[], float e2w[],
                    float v2c[], string &geo)
 {
@@ -601,7 +608,7 @@ GetParamFromConfig(const char *configFile, float bc[], float e2w[],
 
       //D. McGlinchey - May want to move this somewhere else,
       //but for now we know the directory path, so we should
-      //add it 
+      //add it
       geo = "geom/" + geo;
 
       Printf("Geometry file: %s", geo.c_str());
