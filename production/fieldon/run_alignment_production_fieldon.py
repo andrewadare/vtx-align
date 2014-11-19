@@ -120,7 +120,7 @@ print(command)
 os.system(command)
 
 # get the name of the dst
-filenum = "{:0>10}-{:0>4}.root".format(runNumber,segNumber)
+filenum = "DST_SVX_MB-{:0>10}-{:0>4}.root".format(runNumber,segNumber)
 outfiles = os.listdir("{}DST_SVX/".format(outDir))
 for file in outfiles:
 	if str(filenum) in file:
