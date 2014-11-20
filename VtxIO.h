@@ -116,8 +116,8 @@ GetEventsFromClusTree(TNtuple *t, SvxTGeo *geo, geoEvents &events,
     if (opt.Contains("cnt"))
     {
       // Conform residual definition to our convention
-      hit.ds *= -1;
-      hit.dz *= -1;
+      double r = sqrt(hit.x*hit.x + hit.y*hit.y);
+      hit.ds *= -1/r;
     }
 
     // Overwrite x,y,z with local-->global transformation on xs,ys,zs
