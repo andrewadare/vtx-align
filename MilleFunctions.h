@@ -146,9 +146,36 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
   int nzgp = zgpars.size();
   int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
 
-  // Local derivatives
-  float sderlc[1] = {1.0};
-  float zderlc[1] = {1.0};
+
+  // // Include the beam center as a point in the local fits, if provided.
+  // if (bc)
+  // {
+  //   // Reject tracks with outlying DCA values
+  //   if (fabs(trk.xydca) < 1e-15 || fabs(trk.xydca) > 1e-1)
+  //   {
+  //     // Info("", "Rejecting track with DCA = %.0f um", 1e4*trk.xydca);
+  //     return;
+  //   }
+
+  //   TVectorD bcvec(2);
+  //   bcvec(0) = bc->GetX()[arm];
+  //   bcvec(1) = bc->GetY()[arm];
+
+  //   float xp = bcvec(0)*cos(trk.phi0) + bcvec(1)*sin(trk.phi0);
+  //   float sderlc[4] = {1, xp, 0, 0}; // dy'(x')/dy0, dy'(x')/dslope
+  //   float zderlc[4] = {0, 0, 1, xp}; // dz(x')/dz0, dz(x')/dslope
+
+  //   float ld[1] = {1};
+  //   float gd[1] = {0}; // placeholder - not used
+  //   int nolabels[1] = {0}; // placeholder - not used
+
+  //   float sigbc   = (opt.Contains("sim")) ? 0.015 : 2*bc->GetEX()[arm];
+  //   float sigzdca = (opt.Contains("sim")) ? 0.05 : 0.1;
+
+  //   m.mille(4, sderlc, 0, gd, nolabels, trk.xydca, sigbc);
+  //   m.mille(4, zderlc, 0, gd, nolabels, trk.zdca, sigzdca);
+  // }
+
 
   for (int j=0; j<trk.nhits; j++)
   {
@@ -157,12 +184,16 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Fill vectors of labels and global derivatives for s and z residuals
     veci slabels;
     veci zlabels;
+    float sderlc[1] = {1.0};
+    float zderlc[1] = {1.0};
     vector<float> sdergl;
     vector<float> zdergl;
 
     for (int k=0; k<nsgp; k++)
     {
-      if (opt.Contains("halflayer"))
+      if (opt.Contains("arm"))
+        slabels.push_back(ArmLabel(arm, sgpars[k]));
+      else if (opt.Contains("halflayer"))
         slabels.push_back(HalfLayerLabel(hit.layer, arm, sgpars[k]));
       else
         slabels.push_back(Label(hit.layer, hit.ladder, sgpars[k]));
@@ -170,7 +201,9 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     }
     for (int k=0; k<nzgp; k++)
     {
-      if (opt.Contains("halflayer"))
+      if (opt.Contains("arm"))
+        zlabels.push_back(ArmLabel(arm, zgpars[k]));
+      else if (opt.Contains("halflayer"))
         zlabels.push_back(HalfLayerLabel(hit.layer, arm, zgpars[k]));
       else
         zlabels.push_back(Label(hit.layer, hit.ladder, zgpars[k]));
@@ -181,8 +214,8 @@ MilleCnt(Mille &m, SvxGeoTrack &trk, vecs &sgpars, vecs &zgpars,
     // Note: expecting that hit.{x,z}sigma = {x,z}_size: 1,2,3....
     // If millepede complains that chi^2/ndf is away from 1.0,
     // this is a good place to make adjustments.
-    float sigs = 50*hit.xsigma * ClusterXResolution(hit.layer);
-    float sigz = 50*hit.zsigma * ClusterZResolution(hit.layer);
+    float sigs = 5*(10*hit.layer + 1)*hit.xsigma * ClusterXResolution(hit.layer);
+    float sigz = 1*(10*hit.layer + 1)*hit.zsigma * ClusterZResolution(hit.layer);
 
     // Here, fit clusters individually. Each cluster is treated as
     // one "local fit object".
@@ -204,7 +237,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
                  TGraphErrors *bc)
 {
   // Return first derivative of residual with respect to global parameter.
-  
+
   int arm = (trk.hits[0].x < 0.) ? 0 : 1; // 0 = East, 1 = West.
   double bcx = 0., bcy = 0.;
   if (bc) // Include beam position in track fit. Rotate about (bcx,bcy).
@@ -251,7 +284,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
   {
     // d(Delta_z)/dr
     if (par == "r")
-      return 1./TMath::Tan(trk.the0);
+      return -1./TMath::Tan(trk.the0);
 
     // d(Delta_z)/ds
     if (par == "s")
@@ -273,7 +306,7 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
       return 0;
 
     if (par == "yaw")
-      return hit.x + hit.z / trk.the0;
+      return hit.x + hit.z / trk.the0; // This is not quite correct...need to account for beam offset somehow.
 
     if (par == "roll")
       return 0.0;
