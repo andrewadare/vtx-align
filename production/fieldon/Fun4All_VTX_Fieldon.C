@@ -303,6 +303,7 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     /// SvxCentralTrackReco should be called after PHCentralTrack is reconstructed.
     SvxCentralTrackReco *svxcentraltrack = new SvxCentralTrackReco();
     //svxcentraltrack->setSearchWindowFlag(2);
+    // svxcentraltrack->setShiftPHCentralTrack(true);
     se->registerSubsystem(svxcentraltrack);
 
 
