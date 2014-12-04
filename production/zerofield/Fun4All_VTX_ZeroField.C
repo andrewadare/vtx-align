@@ -311,6 +311,7 @@ void Fun4All_VTX_ZeroField(int nEvents = 0,
     SvxCentralTrackReco *svxcentraltrack = new SvxCentralTrackReco();
     svxcentraltrack->setZeroFieldFlag(true);
     //svxcentraltrack->setPrintLinkInfo(true);
+    svxcentraltrack->setShiftPHCentralTrack(false);
     se->registerSubsystem(svxcentraltrack);
 
 
