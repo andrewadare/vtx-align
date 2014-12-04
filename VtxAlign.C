@@ -10,8 +10,8 @@ using namespace std;
 // Globals
 const double BField = 0.0;
 const bool drawResults = true;
-const bool useVtxTracks = true;
-const bool useCntTracks = false;
+const bool useVtxTracks = false;
+const bool useCntTracks = true;
 const double regFactor = 1.0;
 
 // Global "presigma" for regularization. Smaller = stronger reg (but 0=none).
@@ -33,7 +33,7 @@ void CorrectFromFile(const char *filename,
                      geoEvents &cntevents);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 5,        // Production step. Starts at 0.
+              int prod = 100,        // Production step. Starts at 0.
               int subiter = 0,     // Geometry update step. Starts at 0.
               TString alignMode = "arm") // "arm","ladder","halflayer" (+"sim")
 {
@@ -61,7 +61,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
   // vecs zgpars {"z", "r"};
   // vecd zgpresigma {0, 0};
-  vecs zgpars {"pitch", "yaw"};
+  vecs zgpars {"z", "pitch", "yaw"};
   vecd zgpresigma {0, 0};
 
   // Assign free global parameter coords for ds=r*dphi residuals
@@ -70,7 +70,7 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   vecd sgpresigma;
   if (alignMode.Contains("arm"))
   {
-    vecs s {"pitch", "yaw"};
+    vecs s {"x", "y", "pitch", "yaw", "roll"};
     vecd p {0, 0};
     sgpars.resize(2);
 
