@@ -271,10 +271,10 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
       return 0.0;
 
     if (par == "pitch")
-      return arm ? -hit.z : hit.z;
+      return -hit.z * cos(trk.phirot);
 
     if (par == "yaw")
-      return 0.0;
+      return -hit.z * sin(trk.phirot);
 
     if (par == "roll")
       return 1.0;
@@ -303,10 +303,10 @@ GlobalDerivative(SvxGeoTrack &trk, int ihit, string res, string par,
       return 1.0;
 
     if (par == "pitch")
-      return 0;
+      return -hit.y + hit.z / tan(trk.the0) * sin(trk.phirot);
 
     if (par == "yaw")
-      return hit.x + hit.z / trk.the0; // This is not quite correct...need to account for beam offset somehow.
+      return hit.x - hit.z / tan(trk.the0) * cos(trk.phirot);
 
     if (par == "roll")
       return 0.0;
