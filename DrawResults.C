@@ -5,6 +5,7 @@
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
+#include <TFitResult.h>
 
 bool openPDF = true; // Mac only, but simple to adapt to other viewers with CLI
 
@@ -27,6 +28,7 @@ void PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord);
 bool CheckValue(ROOT::TTreeReaderValueBase *value);
 TH1D *Hist(const char *prefix, int layer, int ladder_or_arm, int stage);
 TH1D *Hist(const char *prefix, int layer, int stage);
+TH2D *Hist2D(const char *prefix, int layer, int ladder, int stage);
 TGraphErrors *DeadLadderGraph(int lyr);
 
 double bcx = 0.3532, bcy = 0.0528; // TODO: read from file. This is terrible.
@@ -34,12 +36,12 @@ double bcx = 0.3532, bcy = 0.0528; // TODO: read from file. This is terrible.
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
 // 2. set prod2 = prod1, subit2 = subit1.
-void DrawResults(int run = 411768,
-                 int prod1 = 1,
+void DrawResults(int run = 123456,
+                 int prod1 = 0,
                  int subit1 = 0,
                  int prod2 = -1,
                  int subit2 = -1,
-                 const char *treename = "vtxtrks")
+                 const char *treename = "cnttrks") // "vtxtrks" or "cnttrks"
 {
 
   gStyle->SetOptStat(0);
@@ -249,11 +251,13 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
 
       // Printf("%s %d %d %d %f %f", treename, lyr, ldr, stage, s, z);
 
-      if (s > -0.2 && s < 0.2 && z > -0.2 && z < 0.2)
+      // if (s > -0.2 && s < 0.2 && z > -0.2 && z < 0.2)
       {
         // Residuals by ladder
-        Hist("s",lyr,ldr,stage) ->Fill(s);
-        Hist("z",lyr,ldr,stage) ->Fill(z);
+        Hist("s",lyr,ldr,stage)->Fill(s);
+        Hist("z",lyr,ldr,stage)->Fill(z);
+        Hist2D("c",lyr,ldr,stage)->Fill(1./TMath::Tan(*theta), z);
+
         // Residuals by halflayer
         Hist("ls",lyr,arm,stage)->Fill(s);
         Hist("lz",lyr,arm,stage)->Fill(z);
@@ -482,6 +486,21 @@ Hist(const char *prefix, int layer, int ladder_or_arm, int stage)
   return h;
 }
 
+TH2D *
+Hist2D(const char *prefix, int layer, int ladder_or_arm, int stage)
+{
+  const char *name = Form("h%s%d%d%d", prefix, layer, ladder_or_arm, stage);
+  TH2D *h = (TH2D *)gDirectory->GetList()->FindObject(name);
+  if (!h)
+  {
+    Error("Hist2D() in DrawResults.C", "%s not found. "
+          "Available objects in current directory:", name);
+    gDirectory->ls();
+  }
+  assert(h);
+  return h;
+}
+
 TH1D *
 Hist(const char *prefix, int layer, int stage)
 {
@@ -508,20 +527,30 @@ InitResidHists(const char *treename, int ntrees)
   // Residuals for ladder units
   TH1D *hs[nlayers][nladders][ntrees];
   TH1D *hz[nlayers][nladders][ntrees];
+  TH2D *hc[nlayers][nladders][ntrees];
+
   for (int lyr = 0; lyr < nlayers; lyr++)
     for (int ldr = 0; ldr < nLaddersPerLayer[lyr]; ldr++)
       for (int stage = 0; stage < ntrees; stage++)
       {
         int nbins   = 100;
-        double xmax = 0.12;
+        double smax = 0.12, zmax = 0.12;
         if (string(treename).find("cnt") != string::npos)
-          xmax = 0.3;
+        {
+          smax = 0.5;
+          zmax = 0.5;
+        }
+
         hs[lyr][ldr][stage] = new TH1D(Form("hs%d%d%d", lyr, ldr, stage),
                                        Form("B%dL%d", lyr, ldr),
-                                       nbins, -xmax, xmax);
+                                       nbins, -smax, smax);
         hz[lyr][ldr][stage] = new TH1D(Form("hz%d%d%d", lyr, ldr, stage),
                                        Form("B%dL%d", lyr, ldr),
-                                       nbins, -xmax, xmax);
+                                       nbins, -zmax, zmax);
+        hc[lyr][ldr][stage] = new TH2D(Form("hc%d%d%d", lyr, ldr, stage),
+                                       Form("B%dL%d", lyr, ldr),
+                                       nbins, -0.4, 0.4,
+                                       nbins, -zmax, zmax);
       }
 
   // Residuals for half-layer units
@@ -533,15 +562,19 @@ InitResidHists(const char *treename, int ntrees)
       for (int stage = 0; stage < ntrees; stage++)
       {
         int nbins   = 200;
-        double xmax = 0.06;
+        double smax = 0.06, zmax = 0.06;
         if (string(treename).find("cnt") != string::npos)
-          xmax = 0.2;
+        {
+          smax = 0.5;
+          zmax = 0.5;
+        }
+
         hls[lyr][arm][stage] = new TH1D(Form("hls%d%d%d", lyr, arm, stage),
                                         Form("B%d%s", lyr, armlabel[arm]),
-                                        nbins, -xmax, xmax);
+                                        nbins, -smax, smax);
         hlz[lyr][arm][stage] = new TH1D(Form("hlz%d%d%d", lyr, arm, stage),
                                         Form("B%d%s", lyr, armlabel[arm]),
-                                        nbins, -xmax, xmax);
+                                        nbins, -zmax, zmax);
       }
 
   // Residual means and widths vs ladder
@@ -575,8 +608,19 @@ InitResidHists(const char *treename, int ntrees)
       hds[lyr][stage]->SetYTitle("#Deltas [cm]");
       hdz[lyr][stage]->SetYTitle("#Deltaz [cm]");
 
-      hds[lyr][stage]->GetYaxis()->SetRangeUser(-0.045, 0.045);
-      hdz[lyr][stage]->GetYaxis()->SetRangeUser(-0.045, 0.045);
+      // double xmax = 0.045;
+      // if (string(treename).find("cnt") != string::npos)
+      //   xmax = 3.0;
+
+      double smax = 0.045, zmax = 0.045;
+      if (string(treename).find("cnt") != string::npos)
+      {
+        smax = 0.25;
+        zmax = 0.25;
+      }
+
+      hds[lyr][stage]->GetYaxis()->SetRangeUser(-smax, smax);
+      hdz[lyr][stage]->GetYaxis()->SetRangeUser(-zmax, zmax);
     }
   }
 
@@ -651,12 +695,12 @@ PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord)
   ltx.DrawLatex(0.23, 0.92, h1->GetTitle());
   ltx.DrawLatex(0.23, 0.85, Form("%s [cm]", coord.Data()));
   ltx.SetTextSize(0.06);
-  ltx.DrawLatex(0.62, 0.93, Form("#color[%d]{%.0f (%.0f) #mum}",
+  ltx.DrawLatex(0.52, 0.93, Form("#color[%d]{%.0f (%.0f) #mum}",
                                  kBlack /*h1->GetLineColor()*/,
                                  1e4 * h1->GetMean(),
                                  1e4 * h1->GetRMS()));
   if (h2)
-    ltx.DrawLatex(0.62, 0.87, Form("#color[%d]{%.0f (%.0f) #mum}",
+    ltx.DrawLatex(0.52, 0.87, Form("#color[%d]{%.0f (%.0f) #mum}",
                                    h2->GetLineColor(),
                                    1e4 * h2->GetMean(),
                                    1e4 * h2->GetRMS()));
@@ -752,6 +796,8 @@ DrawHalfLayerResidPlots(int ntrees, TObjArray *cList)
 void
 DrawLadderResidPlots(int ntrees, TObjArray *cList)
 {
+  TF1 *ff = new TF1("ff", "[0]+[1]*x", -0.4, 0.4);
+
   // Draw individual s and z ladder residual distributions on sub-pads
   for (int lyr = 0; lyr < 4; lyr++)
   {
@@ -765,8 +811,11 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
                               pw * nx, ph * ny);
     TCanvas *cz = new TCanvas(Form("cz%d", lyr), Form("dz layer %d", lyr),
                               pw * nx, ph * ny);
+    TCanvas *cc = new TCanvas(Form("cc%d", lyr), Form("dz vs cot(theta), layer %d", lyr),
+                              pw * nx, ph * ny);
     cs->Divide(nx, ny, 0.001, 0.001);
     cz->Divide(nx, ny, 0.001, 0.001);
+    cc->Divide(nx, ny, 0.001, 0.001);
 
     for (int ldr = 0; ldr < nl; ldr++)
     {
@@ -787,6 +836,30 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
         SetupHist(h, stage);
         if (ntrees == 1)
           PrintMeanToPad(h, 0, "dz");
+
+        cc->cd(ldr + 1);
+        TH2D *hh = Hist2D("c",lyr,ldr,stage);
+        TProfile *p = hh->ProfileX(Form("zcot_%d_%d_%d",lyr,ldr,stage), 1, -1, "");
+        p->Fit(ff, "N");
+
+        if (stage==0)
+        {
+          TH1F *hf = gPad->DrawFrame(-0.4, -0.05, 0.4, 0.05);
+          hf->SetTitle(";cot(#theta);#Deltaz");
+          SetAxisProps(hf, 205, 205, 0.06, 0.0);
+        }
+        // TF1 *ff = p->GetFunction("pol1");
+        // ff->SetParameters(r->Parameter(0), r->Parameter(1));
+        ff->SetLineColor(stage? kAzure+2 : kGray+2);
+        ff->DrawCopy("same");
+        TLatex ltx;
+        ltx.SetNDC();
+        ltx.SetTextColor(stage? kAzure+2 : kGray+2);
+        ltx.DrawLatex(0.2, 0.95-0.05*stage,
+                      Form("slope: %.2e", ff->GetParameter(1)));
+
+        ModifyPad(gPad);
+
       }
 
       if (ntrees > 1)
@@ -817,6 +890,7 @@ DrawLadderResidPlots(int ntrees, TObjArray *cList)
     }
     cList->Add((TCanvas *)cs);
     cList->Add((TCanvas *)cz);
+    cList->Add((TCanvas *)cc);
   }
   return;
 }
