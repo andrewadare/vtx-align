@@ -10,8 +10,8 @@ using namespace std;
 // Globals
 const double BField = 0.0;
 const bool drawResults = true;
-const bool useVtxTracks = false;
-const bool useCntTracks = true;
+const bool useVtxTracks = true;
+const bool useCntTracks = false;
 const double regFactor = 1.0;
 
 // Global "presigma" for regularization. Smaller = stronger reg (but 0=none).
@@ -33,7 +33,7 @@ void CorrectFromFile(const char *filename,
                      geoEvents &cntevents);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 2,        // Production step. Starts at 0.
+              int prod = 5,        // Production step. Starts at 0.
               int subiter = 0,     // Geometry update step. Starts at 0.
               TString alignMode = "arm") // "arm","ladder","halflayer" (+"sim")
 {
@@ -59,10 +59,10 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Assign free global parameter coords for dz residuals here
   // Parameter set may include "x", "y", "z", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
-  vecs zgpars {"z"};
-  vecd zgpresigma {0};
-  // vecs zgpars {"yaw"};
-  // vecd zgpresigma {0};
+  // vecs zgpars {"z", "r"};
+  // vecd zgpresigma {0, 0};
+  vecs zgpars {"pitch", "yaw"};
+  vecd zgpresigma {0, 0};
 
   // Assign free global parameter coords for ds=r*dphi residuals
   // Set includes "s", "x", "y", "r".
@@ -70,9 +70,9 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   vecd sgpresigma;
   if (alignMode.Contains("arm"))
   {
-    // vecs s {"pitch"};
-    // vecd p {0};
-    // sgpars.resize(1);
+    vecs s {"pitch", "yaw"};
+    vecd p {0, 0};
+    sgpars.resize(2);
 
     // vecs s {"x", "y", "pitch", "roll"};
     // vecd p {0,0,0,0};
@@ -82,9 +82,9 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
     // vecd p {0,0};
     // sgpars.resize(2);
 
-    vecs s {"x", "y", "roll"};
-    vecd p {0,0,0};
-    sgpars.resize(3);
+    // vecs s {"x", "y", "roll"};
+    // vecd p {0,0,0};
+    // sgpars.resize(3);
 
     sgpars = s;
     sgpresigma = p;
@@ -99,9 +99,12 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   }
   else if (alignMode.Contains("ladder"))
   {
-    vecs s {"x", "y"};
-    vecd p {0,0};
-    sgpars.resize(2);
+    // vecs s {"x", "y"};
+    // vecd p {0,0};
+    // sgpars.resize(2);
+    vecs s {"s"};
+    vecd p {0};
+    sgpars.resize(1);
     sgpars = s;
     sgpresigma = p;
   }
