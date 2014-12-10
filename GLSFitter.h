@@ -399,7 +399,16 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
 {
   if (opt.Contains("find_vertex"))
   {
-    Info("FitTracks()", "Vertex will be computed and (re)assigned to tracks.");
+    Info("FitTracks()", "Vertex will be computed using both arms and (re)assigned to tracks.");
+
+    // Prevent incompatible option. Vertex shouldn't exist yet.
+    assert(!opt.Contains("fit_to_z_vertex"));
+  }
+
+  if (opt.Contains("find_ew_vertex"))
+  {
+    Info("FitTracks()", 
+         "Vertex will be computed separately for each arm and (re)assigned to tracks.");
 
     // Prevent incompatible option. Vertex shouldn't exist yet.
     assert(!opt.Contains("fit_to_z_vertex"));
@@ -427,7 +436,7 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
               "\n\nfit_to_z_vertex requested, but z vertex of all tracks in "
               "first event is ZERO!\n\n");
 
-    if (opt.Contains("find_vertex"))
+    if (opt.Contains("find_vertex") || opt.Contains("find_ew_vertex"))
       Warning("FitTracks()",
               "Both fit_to_z_vertex and find_vertex options are requested.\n"
               "Z-vertex used for track fits will be overwritten!\n"
@@ -478,8 +487,10 @@ FitTracks(geoEvents &events, TGraphErrors *bc, TString opt)
       FindVertex(events[ev], "xyz");
     }
 
-    // TODO: provide another option like find_ew_vertex ?
-    // FindVertexEastWest(events[ev], "xyz");
+    if (opt.Contains("find_ew_vertex"))
+    {
+      FindVertexEastWest(events[ev], "xyz");
+    }
 
     if (opt.Contains("calc_dca"))
     {
