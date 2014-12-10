@@ -459,6 +459,16 @@ WriteLadderConstraints(const char *filename,
   // ApplyPreSigma(fs, slabels_bad, 1e-4);
   // ApplyPreSigma(fs, zlabels_bad, 1e-4);
 
+  // TEMP: Fix pixel ladder radii
+  //-------------------------------------------------------------------
+  for (int arm=0; arm<1; ++arm)
+    for (int lyr=0; lyr<2; ++lyr)
+    {
+      veci labels = LadderLabels(geo, arm, lyr, "r");
+      ApplyPreSigma(fs, labels, -1);
+    }
+  //-------------------------------------------------------------------
+
   if (!opt.Contains("sim"))
   {
     // Regularize a hand picked set of poorly-constrained ladders.
@@ -531,7 +541,7 @@ WriteLadderConstraints(const char *filename,
   }
   if (rdof)
   {
-    AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
+    // AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
   }
 
   fs.close();

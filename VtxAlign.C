@@ -33,7 +33,7 @@ void CorrectFromFile(const char *filename,
                      geoEvents &cntevents);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 3,        // Production step. Starts at 0.
+              int prod = 20,        // Production step. Starts at 0.
               int subiter = 1,     // Geometry update step. Starts at 0.
               TString alignMode = "arm") // "arm","ladder","halflayer" (+"sim")
 {
