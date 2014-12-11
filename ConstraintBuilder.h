@@ -459,10 +459,20 @@ WriteLadderConstraints(const char *filename,
   // ApplyPreSigma(fs, slabels_bad, 1e-4);
   // ApplyPreSigma(fs, zlabels_bad, 1e-4);
 
-  // TEMP: Fix pixel ladder radii
+  // TEMP: Fix radii in west arm
+  //-------------------------------------------------------------------
+  for (int arm=1; arm<2; ++arm)
+    for (int lyr=0; lyr<4; ++lyr)
+    {
+      veci labels = LadderLabels(geo, arm, lyr, "r");
+      ApplyPreSigma(fs, labels, -1);
+    }
+  //-------------------------------------------------------------------
+
+  // TEMP: Fix radii in B3E
   //-------------------------------------------------------------------
   for (int arm=0; arm<1; ++arm)
-    for (int lyr=0; lyr<2; ++lyr)
+    for (int lyr=3; lyr<4; ++lyr)
     {
       veci labels = LadderLabels(geo, arm, lyr, "r");
       ApplyPreSigma(fs, labels, -1);

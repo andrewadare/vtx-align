@@ -33,9 +33,9 @@ void CorrectFromFile(const char *filename,
                      geoEvents &cntevents);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 20,        // Production step. Starts at 0.
-              int subiter = 1,     // Geometry update step. Starts at 0.
-              TString alignMode = "arm") // "arm","ladder","halflayer" (+"sim")
+              int prod = 4,        // Production step. Starts at 0.
+              int subiter = 0,     // Geometry update step. Starts at 0.
+              TString alignMode = "ladder") // "arm","ladder","halflayer" (+"sim")
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -59,15 +59,15 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Assign free global parameter coords for dz residuals here
   // Parameter set may include "x", "y", "z", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
-  // vecs zgpars {"z", "r"};
-  // vecd zgpresigma {0, 0};
+  vecs zgpars {"z", "r"};
+  vecd zgpresigma {0, 0};
 
   // vecs zgpars {"z"};
   // vecd zgpresigma {0};
 
   // For Arm alignment with SvxCntTracks
-  vecs zgpars {"pitch", "yaw"};
-  vecd zgpresigma {0, 0};
+  // vecs zgpars {"pitch", "yaw"};
+  // vecd zgpresigma {0, 0};
 
   // Assign free global parameter coords for ds=r*dphi residuals
   // Set includes "s", "x", "y", "r".
