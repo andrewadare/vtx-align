@@ -25,6 +25,7 @@
 #include <TProfile.h>
 #include <TMath.h>
 #include <TLine.h>
+#include <TEventList.h>
 
 #include <iostream>
 
@@ -42,41 +43,26 @@ void compare_fieldon_productions()
 
   bool print_plots = true;
 
-  const int NFILES = 3;
+  const int NFILES = 2;
   const char *fileName[] =
   {
 
-    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-p2-v8_newfixes/testvtxproduction_407951-taebong-p2-v8-newfixes.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-0-3/testvtxproduction_407951-0-3.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3/testvtxproduction_fieldon-407951-1-3.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-1/testvtxproduction_fieldon-407951-1-1.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-2-1/testvtxproduction_fieldon-407951-2-1.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_13/testvtxproduction_fieldon-407951-1-3_13.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_1/testvtxproduction_fieldon-407951-1-3_1.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_2/testvtxproduction_fieldon-407951-1-3_2.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_3/testvtxproduction_fieldon-407951-1-3_3.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_5/testvtxproduction_fieldon-407951-1-3_5.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_6/testvtxproduction_fieldon-407951-1-3_6.root",
-    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_7/testvtxproduction_fieldon-407951-1-3_7.root",
-    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-4-1/testvtxproduction_fieldon-407951-4-1.root",
+    "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-p2-v8/testvtxproduction_fieldon-407951-taebong-p2-v8.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2/testvtxproduction_fieldon-407951-3-2.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_1/testvtxproduction_fieldon-407951-3-2_1.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_2/testvtxproduction_fieldon-407951-3-2_2.root",
+    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_3/testvtxproduction_fieldon-407951-3-2_3.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-4-1/testvtxproduction_fieldon-407951-4-1.root",
   };
   const char *fileLabel[] =
   {
-    // "Taebong p2 v8",
-    // "411768-1-3.par",
-    // "411768-1-1.par",
-    // "411768-2-1.par",
-    // "411768-1-3_13.par",
-    // "411768-1-3_1.par",
-    // "411768-1-3_2.par",
-    // "411768-1-3_3.par",
-    // "411768-1-3_5.par",
-    // "411768-1-3_6.par",
-    // "411768-1-3_7.par",
-    // "411768-4-1.par",
     "Taebong",
-    "411768-1-3_7",
-    "411768-4-1",
+    // "411768-3-2",
+    // "411768-3-2_1",
+    // "411768-3-2_2",
+    "411768-3-2_3",
+    // "411768-4-1",
+
   };
   int color[] =
   {
@@ -135,6 +121,10 @@ void compare_fieldon_productions()
   float zvrtxl[NZVRTX] = { -10.0, -2.0, 2.0};
   float zvrtxh[NZVRTX] = { -2.0,  2.0, 10.};
 
+  const int NPHI = 4;
+  float phil[NPHI] = { -1.00, 0.25, 1.50, 3.25};
+  float phih[NPHI] = { 0.25, 1.50, 3.25, 4.00};
+
   //================================================//
   // DELCARE VARIABLES
   //================================================//
@@ -192,6 +182,9 @@ void compare_fieldon_productions()
   TGraphErrors *gdca_ptres_zvrtx_svxcnt[NARM][NFILES][NZVRTX];
   TGraphErrors *gdca_ptres_zvrtx_rat_svxcnt[NARM][NFILES][NZVRTX];
 
+  TH3F *hchisqndfPhiArm_svxcnt[NFILES];
+  TH1F *hchsiqndf_phi_svxcnt[NFILES][NPHI];
+
   TH1F *hchisqndf_svxcnt[NARM][NFILES];
   TH1F *hchisqndf_standalone[NARM][NFILES];
 
@@ -245,8 +238,16 @@ void compare_fieldon_productions()
       return;
     }
 
+    //-- First make an entry list to save time
+    ntp_SVXCNT->Draw(">>svxcntentries", Form("%s && %s", eventCuts, trackCuts));
+    TEventList *svxcntentries = (TEventList *) gDirectory->FindObject("svxcntentries");
+    ntp_SVXCNT->SetEventList(svxcntentries);
+
+
+    //-- Get histograms
     ntp_SVXCNT->Draw("vtx[2]:pT:dca2D*charge>>htmp(200,-0.1,0.1, 50,0,5, 200,-10,10)",
-                     Form("%s && %s && dcarm==0", eventCuts, trackCuts),
+                     // Form("%s && %s && dcarm==0", eventCuts, trackCuts),
+                     "dcarm==0",
                      "goff");
     hdcaptzvrtx_svxcnt[0][ifile] = (TH3F *) gDirectory->FindObject("htmp");
     hdcaptzvrtx_svxcnt[0][ifile]->SetDirectory(0);
@@ -254,7 +255,8 @@ void compare_fieldon_productions()
     hdcaptzvrtx_svxcnt[0][ifile]->SetTitle(";DCA 2D * chg [cm]; p_{T} [GeV/c]");
 
     ntp_SVXCNT->Draw("vtx[2]:pT:dca2D*charge>>htmp(200,-0.1,0.1, 50,0,5, 200,-10,10)",
-                     Form("%s && %s && dcarm==1", eventCuts, trackCuts),
+                     // Form("%s && %s && dcarm==1", eventCuts, trackCuts),
+                     "",
                      "goff");
     hdcaptzvrtx_svxcnt[1][ifile] = (TH3F *) gDirectory->FindObject("htmp");
     hdcaptzvrtx_svxcnt[1][ifile]->SetDirectory(0);
@@ -262,7 +264,8 @@ void compare_fieldon_productions()
     hdcaptzvrtx_svxcnt[1][ifile]->SetTitle(";DCA 2D * chg [cm]; p_{T} [GeV/c]");
 
     ntp_SVXCNT->Draw("dca2D*charge:phi0>>htmp(250,-1,4, 400,-0.06,0.06)",
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     hdcaphi_svxcnt[ifile] = (TH2F *) gDirectory->FindObject("htmp");
     hdcaphi_svxcnt[ifile]->SetDirectory(0);
@@ -273,7 +276,8 @@ void compare_fieldon_productions()
     pdcaphi_svxcnt[ifile] = new TProfile(Form("pdcaphi_svxcnt_%i", ifile), "", 125, -1, 4);
     pdcaphi_svxcnt[ifile]->SetLineColor(kRed);
     ntp_SVXCNT->Draw(Form("dca2D*charge:phi0>>pdcaphi_svxcnt_%i", ifile),
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     pdcaphi_svxcnt[ifile]->SetDirectory(0);
 
@@ -281,7 +285,8 @@ void compare_fieldon_productions()
 
 
     ntp_SVXCNT->Draw("pT:dcaz>>htmp(700,-0.7,0.7, 50,0,5)",
-                     Form("%s && %s && dcarm==0", eventCuts, trackCuts),
+                     // Form("%s && %s && dcarm==0", eventCuts, trackCuts),
+                     "dcarm==0",
                      "goff");
     hdcazpt_svxcnt[0][ifile] = (TH2F *) gDirectory->FindObject("htmp");
     hdcazpt_svxcnt[0][ifile]->SetDirectory(0);
@@ -289,7 +294,8 @@ void compare_fieldon_productions()
     hdcazpt_svxcnt[0][ifile]->SetTitle(";DCA Z [cm]; p_{T} [GeV/c]");
 
     ntp_SVXCNT->Draw("pT:dcaz>>htmp(700,-0.7,0.7, 50,0,5)",
-                     Form("%s && %s && dcarm==1", eventCuts, trackCuts),
+                     // Form("%s && %s && dcarm==1", eventCuts, trackCuts),
+                     "dcarm==1",
                      "goff");
     hdcazpt_svxcnt[1][ifile] = (TH2F *) gDirectory->FindObject("htmp");
     hdcazpt_svxcnt[1][ifile]->SetDirectory(0);
@@ -297,7 +303,8 @@ void compare_fieldon_productions()
     hdcazpt_svxcnt[1][ifile]->SetTitle(";DCA Z [cm]; p_{T} [GeV/c]");
 
     ntp_SVXCNT->Draw("dcaz:phi0>>htmp(250,-1,4, 200,-0.2,0.2)",
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     hdcazphi_svxcnt[ifile] = (TH2F *) gDirectory->FindObject("htmp");
     hdcazphi_svxcnt[ifile]->SetDirectory(0);
@@ -308,7 +315,8 @@ void compare_fieldon_productions()
     pdcazphi_svxcnt[ifile] = new TProfile(Form("pdcazphi_svxcnt_%i", ifile), "", 125, -1, 4);
     pdcazphi_svxcnt[ifile]->SetLineColor(kRed);
     ntp_SVXCNT->Draw(Form("dcaz:phi0>>pdcazphi_svxcnt_%i", ifile),
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     pdcazphi_svxcnt[ifile]->SetDirectory(0);
 
@@ -316,7 +324,8 @@ void compare_fieldon_productions()
 
 
     ntp_SVXCNT->Draw("phi0>>htmp(75,-1,4)",
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     hntracksphi_svxcnt[ifile] = (TH1F *) gDirectory->FindObject("htmp");
     hntracksphi_svxcnt[ifile]->SetDirectory(0);
@@ -328,7 +337,8 @@ void compare_fieldon_productions()
 
 
     ntp_SVXCNT->Draw("zed>>htmp(100,-100,100)",
-                     Form("%s && %s && dcarm==0", eventCuts, trackCuts),
+                     // Form("%s && %s && dcarm==0", eventCuts, trackCuts),
+                     "dcarm==0",
                      "goff");
     hntrackszed_svxcnt[ifile][0] = (TH1F *) gDirectory->FindObject("htmp");
     hntrackszed_svxcnt[ifile][0]->SetDirectory(0);
@@ -340,7 +350,8 @@ void compare_fieldon_productions()
 
 
     ntp_SVXCNT->Draw("zed>>htmp(100,-100,100)",
-                     Form("%s && %s && dcarm==1", eventCuts, trackCuts),
+                     // Form("%s && %s && dcarm==1", eventCuts, trackCuts),
+                     "dcarm==1",
                      "goff");
     hntrackszed_svxcnt[ifile][1] = (TH1F *) gDirectory->FindObject("htmp");
     hntrackszed_svxcnt[ifile][1]->SetDirectory(0);
@@ -351,40 +362,58 @@ void compare_fieldon_productions()
     hntrackszed_svxcnt[ifile][1]->Sumw2();
 
 
-    ntp_SVXCNT->Draw("chisq/ndf>>htmp(100,0,5)",
-                     Form("%s && %s && dcarm==0", eventCuts, trackCuts),
+
+
+    ntp_SVXCNT->Draw("dcarm:phi0:chisq/ndf>>htmp(100,0,5, 75,-1,4, 2,-0.5,1.5)",
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
-    hchisqndf_svxcnt[0][ifile] = (TH1F *) gDirectory->FindObject("htmp");
-    hchisqndf_svxcnt[0][ifile]->SetDirectory(0);
-    hchisqndf_svxcnt[0][ifile]->SetName(Form("hchisqndf_svxcnt_0_%i", ifile));
-    hchisqndf_svxcnt[0][ifile]->SetTitle(";#Chi^{2}/ndf");
-    hchisqndf_svxcnt[0][ifile]->GetYaxis()->SetTitleOffset(1.5);
-    hchisqndf_svxcnt[0][ifile]->SetLineColor(color[ifile]);
-    hchisqndf_svxcnt[0][ifile]->Scale(
-      1. / hchisqndf_svxcnt[0][ifile]->Integral(
-        1,
-        hchisqndf_svxcnt[0][ifile]->GetNbinsX()));
+    hchisqndfPhiArm_svxcnt[ifile] = (TH3F *) gDirectory->FindObject("htmp");
+    hchisqndfPhiArm_svxcnt[ifile]->SetDirectory(0);
+    hchisqndfPhiArm_svxcnt[ifile]->SetName(Form("hchisqndfPhiArm_svxcnt_%i", ifile));
+    hchisqndfPhiArm_svxcnt[ifile]->SetTitle(";#Chi^{2}/NDF;#phi;arm");
 
+    for (int iarm = 0; iarm < NARM; iarm++)
+    {
+      hchisqndfPhiArm_svxcnt[ifile]->GetZaxis()->SetRange(iarm + 1, iarm + 1);
+      hchisqndf_svxcnt[iarm][ifile] =
+        (TH1F *) hchisqndfPhiArm_svxcnt[ifile]->Project3D("x");
+      hchisqndf_svxcnt[iarm][ifile]->SetDirectory(0);
+      hchisqndf_svxcnt[iarm][ifile]->SetName(Form("hchisqndf_svxcnt_%i_%i", iarm, ifile));
+      hchisqndf_svxcnt[iarm][ifile]->SetTitle(";#Chi^{2}/ndf");
+      hchisqndf_svxcnt[iarm][ifile]->GetYaxis()->SetTitleOffset(1.5);
+      hchisqndf_svxcnt[iarm][ifile]->SetLineColor(color[ifile]);
+      hchisqndf_svxcnt[iarm][ifile]->Scale(
+        1. / hchisqndf_svxcnt[iarm][ifile]->Integral(
+          1,
+          hchisqndf_svxcnt[iarm][ifile]->GetNbinsX()));
 
+    }
 
-    ntp_SVXCNT->Draw("chisq/ndf>>htmp(100,0,5)",
-                     Form("%s && %s && dcarm==1", eventCuts, trackCuts),
-                     "goff");
-    hchisqndf_svxcnt[1][ifile] = (TH1F *) gDirectory->FindObject("htmp");
-    hchisqndf_svxcnt[1][ifile]->SetDirectory(0);
-    hchisqndf_svxcnt[1][ifile]->SetName(Form("hchisqndf_svxcnt_1_%i", ifile));
-    hchisqndf_svxcnt[1][ifile]->SetTitle(";#Chi^{2}/ndf");
-    hchisqndf_svxcnt[1][ifile]->GetYaxis()->SetTitleOffset(1.5);
-    hchisqndf_svxcnt[1][ifile]->SetLineColor(color[ifile]);
-    hchisqndf_svxcnt[1][ifile]->Scale(
-      1. / hchisqndf_svxcnt[1][ifile]->Integral(
-        1,
-        hchisqndf_svxcnt[1][ifile]->GetNbinsX()));
+    for (int iphi = 0; iphi < NPHI; iphi++)
+    {
+      hchisqndfPhiArm_svxcnt[ifile]->GetZaxis()->SetRange(1, NARM);
+      int bl = hchisqndfPhiArm_svxcnt[ifile]->GetYaxis()->FindBin(phil[iphi]);
+      int bh = hchisqndfPhiArm_svxcnt[ifile]->GetYaxis()->FindBin(phih[iphi]) - 1;
+      hchisqndfPhiArm_svxcnt[ifile]->GetYaxis()->SetRange(bl, bh);
 
+      hchsiqndf_phi_svxcnt[ifile][iphi] =
+        (TH1F *) hchisqndfPhiArm_svxcnt[ifile]->Project3D("x");
+      hchsiqndf_phi_svxcnt[ifile][iphi]->SetDirectory(0);
+      hchsiqndf_phi_svxcnt[ifile][iphi]->SetName(
+        Form("hchsiqndf_phi_svxcnt_%i_%i", ifile, iphi));
+      hchsiqndf_phi_svxcnt[ifile][iphi]->SetTitle(";#Chi^{2}/ndf");
+      hchsiqndf_phi_svxcnt[ifile][iphi]->GetYaxis()->SetTitleOffset(1.5);
+      hchsiqndf_phi_svxcnt[ifile][iphi]->SetLineColor(color[ifile]);
+      hchsiqndf_phi_svxcnt[ifile][iphi]->Scale(
+        1. / hchsiqndf_phi_svxcnt[ifile][iphi]->Integral(
+          1, hchsiqndf_phi_svxcnt[ifile][iphi]->GetNbinsX()));
+    }
 
 
     ntp_SVXCNT->Draw("layer:ladder:res_z>>htmp(500,-0.5,0.5,25,-0.5,24.5,4,-0.5,3.5)",
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     hres_z_laylad[ifile] = (TH3F *) gDirectory->FindObject("htmp");
     hres_z_laylad[ifile]->SetDirectory(0);
@@ -395,7 +424,8 @@ void compare_fieldon_productions()
 
 
     ntp_SVXCNT->Draw("layer:ladder:res_s>>htmp(500,-0.5,0.5,25,-0.5,24.5,4,-0.5,3.5)",
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     hres_s_laylad[ifile] = (TH3F *) gDirectory->FindObject("htmp");
     hres_s_laylad[ifile]->SetDirectory(0);
@@ -405,7 +435,8 @@ void compare_fieldon_productions()
     hres_s_laylad[ifile]->Sumw2();
 
     ntp_SVXCNT->Draw("layer*24+ladder:res_z:1./TMath::Tan(the0)>>htmp(100,-0.5,0.5, 500,-0.5,0.5, 100,-0.5,99.5)",
-                     Form("%s && %s", eventCuts, trackCuts),
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
                      "goff");
     hresz_cotthe0_laylad[ifile] = (TH3F *) gDirectory->FindObject("htmp");
     hresz_cotthe0_laylad[ifile]->SetDirectory(0);
@@ -435,7 +466,8 @@ void compare_fieldon_productions()
     for (int iarm = 0; iarm < NARM; iarm++)
     {
       ntp_SVXCNT->Draw("layer:res_z:1./TMath::Tan(the0)>>htmp(100,-0.5,0.5, 500,-0.5,0.5, 4,-0.5,3.5)",
-                       Form("%s && %s && dcarm==%i", eventCuts, trackCuts, iarm),
+                       // Form("%s && %s && dcarm==%i", eventCuts, trackCuts, iarm),
+                       Form("dcarm==%i", iarm),
                        "goff");
       hresz_cotthe0_layer[ifile][iarm] = (TH3F *) gDirectory->FindObject("htmp");
       hresz_cotthe0_layer[ifile][iarm]->SetDirectory(0);
@@ -461,7 +493,8 @@ void compare_fieldon_productions()
     for (int iarm = 0; iarm < 2; iarm++)
     {
       ntp_SVXCNT->Draw("Nclus>>htmp(8,-0.5,7.5)",
-                       Form("%s && %s && dcarm==%i", eventCuts, trackCuts, iarm),
+                       // Form("%s && %s && dcarm==%i", eventCuts, trackCuts, iarm),
+                       Form("dcarm==%i", iarm),
                        "goff");
       hNclus_svxcnt[iarm][ifile] = (TH1F *) gDirectory->FindObject("htmp");
       hNclus_svxcnt[iarm][ifile]->SetDirectory(0);
@@ -536,6 +569,20 @@ void compare_fieldon_productions()
     cout << " nsvxcnt = " << nsvxcnttmp << endl;
     cout << " cnt     = " << ncnttmp << endl;
     cout << " eff     = " << nsvxcnttmp / ncnttmp << endl;
+
+    for (int iphi = 0; iphi < NPHI; iphi++)
+    {
+      int bl = hntracksphi_svxcnt[ifile]->GetXaxis()->FindBin(phil[iphi]);
+      int bh = hntracksphi_svxcnt[ifile]->GetXaxis()->FindBin(phih[iphi]) - 1;
+
+      float nsvxcntphi = hntracksphi_svxcnt[ifile]->Integral(bl, bh);
+      float ncntphi = hntracksphi_cnt[ifile]->Integral(bl, bh);
+
+      cout << "  " << phil[iphi] << " < phi < " << phih[iphi]
+           << " eff = " << nsvxcntphi / ncntphi
+           << " (" << nsvxcntphi << " / " << ncntphi << ")"
+           << endl;
+    }
 
     ntp_CNT->Draw("zed>>htmp(100, -100,100)",
                   Form("%s && %s && dcarm==0", dcheventCuts, dchtrackCuts),
@@ -1050,12 +1097,14 @@ void compare_fieldon_productions()
     gres_z[ifile]->SetLineColor(color[ifile]);
     gres_z[ifile]->SetMarkerColor(color[ifile]);
     gres_z[ifile]->SetMarkerStyle(mstyle[ifile]);
+    gres_z[ifile]->SetTitle(";layer*24 + ladder;#Deltaz [cm]");
 
     gres_s[ifile] = new TGraphErrors();
     gres_s[ifile]->SetName(Form("gres_s_%i", ifile));
     gres_s[ifile]->SetLineColor(color[ifile]);
     gres_s[ifile]->SetMarkerColor(color[ifile]);
     gres_s[ifile]->SetMarkerStyle(mstyle[ifile]);
+    gres_s[ifile]->SetTitle(";layer*24 + ladder;#Deltas [cm]");
 
     int idx = 0;
     for (int ilayer = 0; ilayer < NLAYERS; ilayer++)
@@ -1470,6 +1519,34 @@ void compare_fieldon_productions()
     ltitle.DrawLatex(0.5, 0.95, Form("DC Arm=%i (%s)", iarm, armLabel[iarm]));
   }
 
+  TCanvas *cchisq_phi_svxcnt = new TCanvas(
+    "cchisq_phi_svxcnt",
+    "chisq vs phi svxcnt",
+    1200, 600);
+  cchisq_phi_svxcnt->Divide(2, 2);
+  for (int iphi = 0; iphi < NPHI; iphi++)
+  {
+    cchisq_phi_svxcnt->cd(iphi + 1);
+    hchsiqndf_phi_svxcnt[0][iphi]->Draw();
+    for (int ifile = 1; ifile < NFILES; ifile++)
+      hchsiqndf_phi_svxcnt[ifile][iphi]->Draw("same");
+
+    leg->Draw("same");
+    if (phih[iphi] < 2) // West
+    {
+      ltitle.DrawLatex(0.5, 0.95,
+                       Form("DC Arm=%i (%s) %.2f<#phi<%.2f",
+                            1, armLabel[1], phil[iphi], phih[iphi]));
+    }
+    else // East
+    {
+      ltitle.DrawLatex(0.5, 0.95,
+                       Form("DC Arm=%i (%s) %.2f<#phi<%.2f",
+                            0, armLabel[0], phil[iphi], phih[iphi]));
+    }
+
+  }
+
 
   TCanvas *cresz[NLAYERS];
   float rangez[4] = {0.2, 0.3, 0.4, 0.5};
@@ -1517,7 +1594,7 @@ void compare_fieldon_productions()
 
   TCanvas *creszsum = new TCanvas("creszsum", "z res summary", 1200, 600);
   creszsum->cd(1);
-  gres_z[0]->GetYaxis()->SetRangeUser(-0.5, 0.5);
+  gres_z[0]->GetYaxis()->SetRangeUser(-0.3, 0.3);
   gres_z[0]->Draw("AP");
   for (int ifile = 1; ifile < NFILES; ifile++)
     gres_z[ifile]->Draw("P");
@@ -1525,7 +1602,7 @@ void compare_fieldon_productions()
 
   TCanvas *cresssum = new TCanvas("cresssum", "s res summary", 1200, 600);
   cresssum->cd(1);
-  gres_s[0]->GetYaxis()->SetRangeUser(-0.5, 0.5);
+  gres_s[0]->GetYaxis()->SetRangeUser(-0.25, 0.25);
   gres_s[0]->Draw("AP");
   for (int ifile = 1; ifile < NFILES; ifile++)
     gres_s[ifile]->Draw("P");
@@ -1780,6 +1857,7 @@ void compare_fieldon_productions()
       cdcaz_pt_svxcnt[iarm]->Print(Form("pdfs/dcaz_vs_pt_dcarm%i.pdf", iarm));
 
     cchisq_svxcnt->Print("pdfs/chisqndf_svxcnt.pdf");
+    cchisq_phi_svxcnt->Print("pdfs/chisqndf_phi_svxcnt.pdf");
 
     for (int ilayer = 0; ilayer < NLAYERS; ilayer++)
     {
