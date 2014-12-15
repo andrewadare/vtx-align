@@ -1,0 +1,9 @@
+# Created by user adare
+# On Mon Dec 15 (by hand)
+# Run number: 411768
+# Notes: 20-1 = 2-1. Arm pitch, yaw alignment -> 20-2.
+
+beamcenter: 0.3532 0.0528
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: 411768-20-2.par
