@@ -456,28 +456,44 @@ WriteLadderConstraints(const char *filename,
   veci ebz = EdgeLadderLabels(geo, "e", "z", "bottom");
   veci ebs = EdgeLadderLabels(geo, "e", "s", "bottom");
 
+  veci wtx = EdgeLadderLabels(geo, "w", "x", "top");
+  veci wty = EdgeLadderLabels(geo, "w", "y", "top");
+  veci wbx = EdgeLadderLabels(geo, "w", "x", "bottom");
+  veci wby = EdgeLadderLabels(geo, "w", "y", "bottom");
+  veci etx = EdgeLadderLabels(geo, "e", "x", "top");
+  veci ety = EdgeLadderLabels(geo, "e", "y", "top");
+  veci ebx = EdgeLadderLabels(geo, "e", "x", "bottom");
+  veci eby = EdgeLadderLabels(geo, "e", "y", "bottom");
+
+  veci wtr = EdgeLadderLabels(geo, "w", "r", "top");
+  veci wbr = EdgeLadderLabels(geo, "w", "r", "bottom");
+  veci etr = EdgeLadderLabels(geo, "e", "r", "top");
+  veci ebr = EdgeLadderLabels(geo, "e", "r", "bottom");
+
   // ApplyPreSigma(fs, slabels_bad, 1e-4);
   // ApplyPreSigma(fs, zlabels_bad, 1e-4);
 
-  // TEMP: Fix radii in west arm
-  //-------------------------------------------------------------------
-  for (int arm=1; arm<2; ++arm)
-    for (int lyr=0; lyr<4; ++lyr)
-    {
-      veci labels = LadderLabels(geo, arm, lyr, "r");
-      ApplyPreSigma(fs, labels, -1);
-    }
-  //-------------------------------------------------------------------
 
-  // TEMP: Fix radii in B3E
-  //-------------------------------------------------------------------
-  for (int arm=0; arm<1; ++arm)
-    for (int lyr=3; lyr<4; ++lyr)
-    {
-      veci labels = LadderLabels(geo, arm, lyr, "r");
-      ApplyPreSigma(fs, labels, -1);
-    }
-  //-------------------------------------------------------------------
+  // // TEMP: Fix radii in B3E
+  // //-------------------------------------------------------------------
+  // for (int arm=0; arm<1; ++arm)
+  //   for (int lyr=3; lyr<4; ++lyr)
+  //   {
+  //     veci labels = LadderLabels(geo, arm, lyr, "r");
+  //     ApplyPreSigma(fs, labels, -1);
+  //   }
+  // //-------------------------------------------------------------------
+
+  // // TEMP: Fix radii in west arm
+  // //-------------------------------------------------------------------
+  // for (int arm=1; arm<2; ++arm)
+  //   for (int lyr=0; lyr<4; ++lyr)
+  //   {
+  //     veci labels = LadderLabels(geo, arm, lyr, "r");
+  //     ApplyPreSigma(fs, labels, -1);
+  //   }
+  // //-------------------------------------------------------------------
+
 
   if (!opt.Contains("sim"))
   {
@@ -516,8 +532,27 @@ WriteLadderConstraints(const char *filename,
   }
   if (xdof)
   {
-    AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
+
+    // AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
     AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
+
+    AddConstraints(wtx, etx, geo, Radii,   fs, "top x r shear");
+    AddConstraints(wbx, ebx, geo, Radii,   fs, "bottom x r shear");
+
+    // TEMP: Damp x in B2 and fix x in B3
+    for (int arm=0; arm<2; ++arm)
+      for (int lyr=2; lyr<3; ++lyr)
+      {
+        veci xlabels = LadderLabels(geo, arm, lyr, "x");
+        ApplyPreSigma(fs, xlabels, 1e-4);
+      }
+    for (int arm=0; arm<2; ++arm)
+      for (int lyr=3; lyr<4; ++lyr)
+      {
+        veci xlabels = LadderLabels(geo, arm, lyr, "x");
+        ApplyPreSigma(fs, xlabels, -1);
+      }
+
     // AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
     // AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
     // for (int lyr=0; lyr<4; lyr++)
@@ -529,8 +564,28 @@ WriteLadderConstraints(const char *filename,
   }
   if (ydof)
   {
-    AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
+
+    // AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
     AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
+
+    AddConstraints(wty, ety, geo, Radii,   fs, "top y r shear");
+    AddConstraints(wby, eby, geo, Radii,   fs, "bottom y r shear");
+
+    // TEMP: Damp y in B2 and fix y in B3
+    for (int arm=0; arm<2; ++arm)
+      for (int lyr=2; lyr<3; ++lyr)
+      {
+        veci ylabels = LadderLabels(geo, arm, lyr, "y");
+        ApplyPreSigma(fs, ylabels, 1e-4);
+      }
+    for (int arm=0; arm<2; ++arm)
+      for (int lyr=3; lyr<4; ++lyr)
+      {
+        veci ylabels = LadderLabels(geo, arm, lyr, "y");
+        ApplyPreSigma(fs, ylabels, -1);
+      }
+
+
     // AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
     // AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
     // for (int lyr=0; lyr<4; lyr++)
@@ -552,6 +607,25 @@ WriteLadderConstraints(const char *filename,
   if (rdof)
   {
     // AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
+    AddConstraints(wtr, etr, geo, Ones,   fs, "top r translation");
+    AddConstraints(wbr, ebr, geo, Ones,   fs, "bottom r translation");
+
+    // TEMP: Fix radii in B3E
+    for (int arm=0; arm<1; ++arm)
+      for (int lyr=3; lyr<4; ++lyr)
+      {
+        veci labels = LadderLabels(geo, arm, lyr, "r");
+        ApplyPreSigma(fs, labels, -1);
+      }
+
+    // TEMP: Fix all radii in W arm
+    for (int arm=1; arm<2; ++arm)
+      for (int lyr=0; lyr<4; ++lyr)
+      {
+        veci labels = LadderLabels(geo, arm, lyr, "r");
+        ApplyPreSigma(fs, labels, -1);
+      }
+
   }
 
   fs.close();
