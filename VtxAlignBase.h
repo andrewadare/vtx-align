@@ -36,9 +36,6 @@ typedef vector<string> vecs;
 typedef vector<SvxGeoTrack> geoTracks;
 typedef vector<geoTracks> geoEvents;
 
-const char *HITVARS = "layer:ladder:sensor:lx:ly:lz:gx:gy:gz:"
-                      "x_size:z_size:res_z:res_s:trkid:event";
-
 SvxTGeo *VTXModel(const char *pisafile);
 
 SvxTGeo *

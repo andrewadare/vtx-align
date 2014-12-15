@@ -137,7 +137,7 @@ DrawDiffs(vecd &x1, vecd &y1, vecd &z1, vecd &x2, vecd &y2, vecd &z2, TString op
     {
       TArrow a;
       a.SetLineWidth(2);
-      a.DrawArrow(x, y, x + f*dx, y + f*dy, 0.005);
+      a.DrawArrow(x, y, x + f*dx, y + f*dy, 0.0005);
 
       TLatex ltx;
       ltx.SetTextSize(0.015);
