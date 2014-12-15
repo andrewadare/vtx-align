@@ -69,5 +69,4 @@ AnaVTXCluster/missing
 
 #ignore locally linked util & svgeo files
 SvxTGeo.h
-UtilFns.h
 
