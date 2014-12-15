@@ -41,17 +41,22 @@ void calc_DC_rotations()
   //should really use zero field for this ...
   const char *fileName =
     "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2/testvtxproduction_fieldon-407951-3-2.root";
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_2/testvtxproduction_fieldon-407951-3-2_2.root";
-  bool print_plots = false;
-  const char *plot_tag = "fieldon-407951-3-2";
+  // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_2/testvtxproduction_fieldon-407951-3-2_2.root";
+  bool print_plots = true;
+  const char *plot_tag = "fieldon-407951-3-2_phi";
 
   const int NLAYER = 4;
   const int NARM = 2;
+  const int NPHI = 4;
+  float phil[NPHI] = { -1.00, 0.25, 1.50, 3.25};
+  float phih[NPHI] = { 0.25, 1.50, 3.25, 4.00};
 
-  int color[2] =
+  int color[4] =
   {
+    kBlack,
     kBlue,
     kRed,
+    kGreen + 2,
   };
 
   TCut trackCuts = "(dchquality == 31 || dchquality == 63) && "
@@ -76,32 +81,32 @@ void calc_DC_rotations()
   TTree *ntp_SVXCNT;
 
   //-- Histograms
-  TH3D *hdphiLayerArm;
-  TH3D *hdtheLayerArm;
+  TH3D *hdphiLayerPhi;
+  TH3D *hdtheLayerPhi;
 
-  TH3D *hsphiLayer[NARM];
-  TH3D *hzcotthetaLayer[NARM];
+  TH3D *hsphiLayer[NPHI];
+  TH3D *hzcotthetaLayer[NPHI];
 
-  TProfile *ps_phi[NARM][NLAYER];
-  TProfile *pz_cottheta[NARM][NLAYER];
+  TProfile *ps_phi[NPHI][NLAYER];
+  TProfile *pz_cottheta[NPHI][NLAYER];
 
-  TH2D *hsphi_layer[NARM][NLAYER];
-  TH2D *hzcottheta_layer[NARM][NLAYER];
+  TH2D *hsphi_layer[NPHI][NLAYER];
+  TH2D *hzcottheta_layer[NPHI][NLAYER];
 
-  TH1D *hdphi_arm_layer[NARM][NLAYER];
-  TH1D *hdthe_arm_layer[NARM][NLAYER];
+  TH1D *hdphi_arm_layer[NPHI][NLAYER];
+  TH1D *hdthe_arm_layer[NPHI][NLAYER];
 
-  TGraphErrors *gdphi_arm[NARM];
-  TGraphErrors *gdthe_arm[NARM];
+  TGraphErrors *gdphi_arm[NPHI];
+  TGraphErrors *gdthe_arm[NPHI];
 
   TF1 *fl = new TF1("fl", "pol0", 0, 4);
   fl->SetLineStyle(2);
 
-  double dphi[NARM] = {0};
-  double dthe[NARM] = {0};
+  double dphi[NPHI] = {0};
+  double dthe[NPHI] = {0};
 
-  double dphi_e[NARM] = {0};
-  double dthe_e[NARM] = {0};
+  double dphi_e[NPHI] = {0};
+  double dthe_e[NPHI] = {0};
 
   TF1 *fgaus = new TF1("fgaus", "gaus", -1, 1);
   fgaus->SetLineColor(kBlack);
@@ -130,28 +135,28 @@ void calc_DC_rotations()
   }
 
   //-- First make an entry list to save time
-  ntp_SVXCNT->Draw(">>cutentries",eventCuts && trackCuts);
-  TEventList *cutentries = (TEventList*) gDirectory->FindObject("cutentries");
+  ntp_SVXCNT->Draw(">>cutentries", eventCuts && trackCuts);
+  TEventList *cutentries = (TEventList *) gDirectory->FindObject("cutentries");
   ntp_SVXCNT->SetEventList(cutentries);
 
 
-  plot = "dcarm:layer:TMath::ASin(res_s/"
+  plot = "phi0:layer:TMath::ASin(res_s/"
          "TMath::Sqrt(TMath::Power(clus_global_x,2) + TMath::Power(clus_global_y,2)))"
-         " >> htmp(1000,-0.5,0.5, 4,-0.5,3.5, 2,-0.5,1.5)";
+         " >> htmp(1000,-0.5,0.5, 4,-0.5,3.5, 75,-1,4)";
   ntp_SVXCNT->Draw(plot, "", "goff");
-  hdphiLayerArm = (TH3D *) gDirectory->FindObject("htmp");
-  hdphiLayerArm->SetDirectory(0);
-  hdphiLayerArm->SetName("hdphiLayerArm");
-  hdphiLayerArm->SetTitle(";d#phi;Layer;Arm");
+  hdphiLayerPhi = (TH3D *) gDirectory->FindObject("htmp");
+  hdphiLayerPhi->SetDirectory(0);
+  hdphiLayerPhi->SetName("hdphiLayerPhi");
+  hdphiLayerPhi->SetTitle(";d#phi;Layer;#phi");
 
-  plot = "dcarm:layer:TMath::ASin(res_z/"
+  plot = "phi0:layer:TMath::ASin(res_z/"
          "TMath::Sqrt(TMath::Power(clus_global_x,2) + TMath::Power(clus_global_y,2)))"
-         " >> htmp(1000,-0.5,0.5, 4,-0.5,3.5, 2,-0.5,1.5)";
+         " >> htmp(1000,-0.5,0.5, 4,-0.5,3.5, 75,-1,4)";
   ntp_SVXCNT->Draw(plot, "", "goff");
-  hdtheLayerArm = (TH3D *) gDirectory->FindObject("htmp");
-  hdtheLayerArm->SetDirectory(0);
-  hdtheLayerArm->SetName("hdtheLayerArm");
-  hdtheLayerArm->SetTitle(";d#theta;Layer;Arm");
+  hdtheLayerPhi = (TH3D *) gDirectory->FindObject("htmp");
+  hdtheLayerPhi->SetDirectory(0);
+  hdtheLayerPhi->SetName("hdtheLayerPhi");
+  hdtheLayerPhi->SetTitle(";d#theta;Layer;Arm");
 
 
   //--residual vs phi/cottheta
@@ -203,7 +208,7 @@ void calc_DC_rotations()
       ps_phi[iarm][ilayer]->SetLineColor(kRed);
 
 
-      
+
       pz_cottheta[iarm][ilayer] = new TProfile(Form("pz_cottheta_%i_%i", iarm, ilayer),
                                           ";PHCNT cot(#theta^{0});#Deltaz;",
                                           500, -4, 7,
@@ -223,115 +228,119 @@ void calc_DC_rotations()
   cout << endl;
   cout << "--> Projecting and finding rotations" << endl;
 
-  for (int iarm = 0; iarm < NARM; iarm++)
+  for (int iphi = 0; iphi < NPHI; iphi++)
   {
-    gdphi_arm[iarm] = new TGraphErrors();
-    gdphi_arm[iarm]->SetLineColor(color[iarm]);
-    gdphi_arm[iarm]->SetMarkerColor(color[iarm]);
-    gdphi_arm[iarm]->SetMarkerStyle(20 + iarm);
-    gdphi_arm[iarm]->SetTitle(";Layer;d#phi");
+    gdphi_arm[iphi] = new TGraphErrors();
+    gdphi_arm[iphi]->SetLineColor(color[iphi]);
+    gdphi_arm[iphi]->SetMarkerColor(color[iphi]);
+    gdphi_arm[iphi]->SetMarkerStyle(20 + iphi);
+    gdphi_arm[iphi]->SetTitle(";Layer;d#phi");
 
-    gdthe_arm[iarm] = new TGraphErrors();
-    gdthe_arm[iarm]->SetLineColor(color[iarm]);
-    gdthe_arm[iarm]->SetMarkerColor(color[iarm]);
-    gdthe_arm[iarm]->SetMarkerStyle(20 + iarm);
-    gdthe_arm[iarm]->SetTitle(";Layer;d#theta");
+    gdthe_arm[iphi] = new TGraphErrors();
+    gdthe_arm[iphi]->SetLineColor(color[iphi]);
+    gdthe_arm[iphi]->SetMarkerColor(color[iphi]);
+    gdthe_arm[iphi]->SetMarkerStyle(20 + iphi);
+    gdthe_arm[iphi]->SetTitle(";Layer;d#theta");
 
 
 
     for (int ilayer = 0; ilayer < NLAYER; ilayer++)
     {
       //-- dphi
-      hdphi_arm_layer[iarm][ilayer] = (TH1D *)
-                                      hdphiLayerArm->ProjectionX(
-                                        Form("hdphi_%i_%i", iarm, ilayer),
+      int bl = hdphiLayerPhi->GetZaxis()->FindBin(phil[iphi]);
+      int bh = hdphiLayerPhi->GetZaxis()->FindBin(phih[iphi]) - 1;
+      hdphi_arm_layer[iphi][ilayer] = (TH1D *)
+                                      hdphiLayerPhi->ProjectionX(
+                                        Form("hdphi_%i_%i", iphi, ilayer),
                                         ilayer + 1, ilayer + 1,
-                                        iarm + 1, iarm + 1);
-      hdphi_arm_layer[iarm][ilayer]->SetLineColor(color[iarm]);
+                                        bl, bh);
+      hdphi_arm_layer[iphi][ilayer]->SetLineColor(color[iphi]);
 
-      float mean = hdphi_arm_layer[iarm][ilayer]->GetMean();
-      float rms = hdphi_arm_layer[iarm][ilayer]->GetRMS();
+      float mean = hdphi_arm_layer[iphi][ilayer]->GetMean();
+      float rms = hdphi_arm_layer[iphi][ilayer]->GetRMS();
 
       float ll = mean - 0.75 * rms;
       float hl = mean + 0.75 * rms;
 
       fgaus->SetRange(ll, hl);
-      fgaus->SetParameters(hdphi_arm_layer[iarm][ilayer]->GetMaximum(),
+      fgaus->SetParameters(hdphi_arm_layer[iphi][ilayer]->GetMaximum(),
                            mean,
                            rms);
 
-      hdphi_arm_layer[iarm][ilayer]->Fit(fgaus, "RQ0");
+      hdphi_arm_layer[iphi][ilayer]->Fit(fgaus, "RQ0");
 
-      cout << "   mdphi[" << iarm << "][" << ilayer << "] = "
+      cout << "   mdphi[" << iphi << "][" << ilayer << "] = "
            << fgaus->GetParameter(1)
            << " +/- " << fgaus->GetParError(1)
            << endl;
 
 
-      gdphi_arm[iarm]->SetPoint(ilayer,
+      gdphi_arm[iphi]->SetPoint(ilayer,
                                 ilayer,
                                 fgaus->GetParameter(1));
-      gdphi_arm[iarm]->SetPointError(ilayer,
+      gdphi_arm[iphi]->SetPointError(ilayer,
                                      0,
                                      fgaus->GetParError(1));
 
 
 
       //-- dtheta
-      hdthe_arm_layer[iarm][ilayer] = (TH1D *)
-                                      hdtheLayerArm->ProjectionX(
-                                        Form("hdthe_%i_%i", iarm, ilayer),
+      bl = hdtheLayerPhi->GetZaxis()->FindBin(phil[iphi]);
+      bh = hdtheLayerPhi->GetZaxis()->FindBin(phih[iphi]) - 1;
+      hdthe_arm_layer[iphi][ilayer] = (TH1D *)
+                                      hdtheLayerPhi->ProjectionX(
+                                        Form("hdthe_%i_%i", iphi, ilayer),
                                         ilayer + 1, ilayer + 1,
-                                        iarm + 1, iarm + 1);
-      hdthe_arm_layer[iarm][ilayer]->SetLineColor(color[iarm]);
+                                        bl, bh);
+      hdthe_arm_layer[iphi][ilayer]->SetLineColor(color[iphi]);
 
-      mean = hdthe_arm_layer[iarm][ilayer]->GetMean();
-      rms = hdthe_arm_layer[iarm][ilayer]->GetRMS();
+      mean = hdthe_arm_layer[iphi][ilayer]->GetMean();
+      rms = hdthe_arm_layer[iphi][ilayer]->GetRMS();
 
       ll = mean - 0.75 * rms;
       hl = mean + 0.75 * rms;
 
       fgaus->SetRange(ll, hl);
-      fgaus->SetParameters(hdthe_arm_layer[iarm][ilayer]->GetMaximum(),
+      fgaus->SetParameters(hdthe_arm_layer[iphi][ilayer]->GetMaximum(),
                            mean,
                            rms);
 
-      hdthe_arm_layer[iarm][ilayer]->Fit(fgaus, "RQ0");
+      hdthe_arm_layer[iphi][ilayer]->Fit(fgaus, "RQ0");
 
-      cout << "   mdthe[" << iarm << "][" << ilayer << "] = "
+      cout << "   mdthe[" << iphi << "][" << ilayer << "] = "
            << fgaus->GetParameter(1)
            << " +/- " << fgaus->GetParError(1)
            << endl;
 
 
-      gdthe_arm[iarm]->SetPoint(ilayer,
+      gdthe_arm[iphi]->SetPoint(ilayer,
                                 ilayer,
                                 fgaus->GetParameter(1));
-      gdthe_arm[iarm]->SetPointError(ilayer,
+      gdthe_arm[iphi]->SetPointError(ilayer,
                                      0,
                                      fgaus->GetParError(1));
     }
 
     //-- Fit phi
-    gdphi_arm[iarm]->Fit("fl", "RQN");
+    gdphi_arm[iphi]->Fit("fl", "RQN");
 
-    dphi[iarm] = fl->GetParameter(0);
-    dphi_e[iarm] = fl->GetParError(0);
+    dphi[iphi] = fl->GetParameter(0);
+    dphi_e[iphi] = fl->GetParError(0);
 
-    cout << " dphi[" << iarm << "] = "
-         << dphi[iarm]
-         << " +/- " << dphi_e[iarm]
+    cout << " " << phil[iphi] << " < phi < " << phih[iphi] << " dphi = "
+         << dphi[iphi]
+         << " +/- " << dphi_e[iphi]
          << endl;
 
     //-- Fit theta
-    gdthe_arm[iarm]->Fit("fl", "RQN");
+    gdthe_arm[iphi]->Fit("fl", "RQN");
 
-    dthe[iarm] = fl->GetParameter(0);
-    dthe_e[iarm] = fl->GetParError(0);
+    dthe[iphi] = fl->GetParameter(0);
+    dthe_e[iphi] = fl->GetParError(0);
 
-    cout << " dthe[" << iarm << "] = "
-         << dthe[iarm]
-         << " +/- " << dthe_e[iarm]
+    cout << " " << phil[iphi] << " < phi < " << phih[iphi] << " dthe = "
+         << dthe[iphi]
+         << " +/- " << dthe_e[iphi]
          << endl;
 
   }
@@ -396,7 +405,7 @@ void calc_DC_rotations()
       cdthe->cd(iarm * NLAYER + ilayer + 1);
       hdthe_arm_layer[iarm][ilayer]->GetXaxis()->SetRangeUser(-0.1, 0.1);
       hdthe_arm_layer[iarm][ilayer]->Draw();
- 
+
       ftmp = hdthe_arm_layer[iarm][ilayer]->GetFunction("fgaus");
       ftmp->DrawCopy("same");
 
@@ -420,7 +429,7 @@ void calc_DC_rotations()
   haxis->SetMinimum(-0.1);
   haxis->SetMaximum( 0.1);
   haxis->DrawCopy();
-  for (int i = 0; i < NARM; ++i)
+  for (int i = 0; i < NPHI; ++i)
   {
     gdphi_arm[i]->Draw("P");
 
@@ -429,7 +438,9 @@ void calc_DC_rotations()
     fl->DrawCopy("same");
 
     lmean.SetTextColor(color[i]);
-    lmean.DrawLatex(0.6, 0.85 - 0.1 * i, Form("d#phi=%.4f", dphi[i]));
+    lmean.DrawLatex(0.2, 0.85 - 0.08 * i,
+                    Form("%.2f<#phi<%.2f d#phi=%.4f",
+                         phil[i], phih[i], dphi[i]));
   }
 
   cres->cd(2);
@@ -437,7 +448,7 @@ void calc_DC_rotations()
   haxis->SetMinimum(-0.1);
   haxis->SetMaximum( 0.1);
   haxis->DrawCopy();
-  for (int i = 0; i < NARM; ++i)
+  for (int i = 0; i < NPHI; ++i)
   {
     gdthe_arm[i]->Draw("P");
 
@@ -446,46 +457,48 @@ void calc_DC_rotations()
     fl->DrawCopy("same");
 
     lmean.SetTextColor(color[i]);
-    lmean.DrawLatex(0.6, 0.85 - 0.1 * i, Form("d#theta=%.4f", dthe[i]));
+    lmean.DrawLatex(0.2, 0.85 - 0.08 * i,
+                    Form("%.2f<#phi<%.2f d#theta=%.4f",
+                         phil[i], phih[i], dthe[i]));
   }
 
 
   TCanvas *csphi[NARM];
-  for (int iarm =0; iarm < NARM; iarm++)
+  for (int iarm = 0; iarm < NARM; iarm++)
   {
-    csphi[iarm] = new TCanvas(Form("csphi_%i",iarm),
-                              Form("s vs phi Arm%i",iarm),
-                              1200,700);
-    csphi[iarm]->Divide(2,2);
+    csphi[iarm] = new TCanvas(Form("csphi_%i", iarm),
+                              Form("s vs phi Arm%i", iarm),
+                              1200, 700);
+    csphi[iarm]->Divide(2, 2);
     for (int ilayer = 0; ilayer < NLAYER; ilayer++)
     {
       csphi[iarm]->cd(ilayer + 1);
       if (iarm == 0)
-        hsphi_layer[iarm][ilayer]->GetXaxis()->SetRangeUser(2,4);
+        hsphi_layer[iarm][ilayer]->GetXaxis()->SetRangeUser(2, 4);
       else
-        hsphi_layer[iarm][ilayer]->GetXaxis()->SetRangeUser(-1,1.5);
+        hsphi_layer[iarm][ilayer]->GetXaxis()->SetRangeUser(-1, 1.5);
       hsphi_layer[iarm][ilayer]->Draw("colz");
       // ps_phi[iarm][ilayer]->Draw("same");
 
-      ltitle.DrawLatex(0.5,0.95,Form("Arm%i B%i",iarm,ilayer));
+      ltitle.DrawLatex(0.5, 0.95, Form("Arm%i B%i", iarm, ilayer));
     }
   }
 
 
   TCanvas *czthe[NARM];
-  for (int iarm =0; iarm < NARM; iarm++)
+  for (int iarm = 0; iarm < NARM; iarm++)
   {
-    czthe[iarm] = new TCanvas(Form("czthe_%i",iarm),
-                              Form("z vs cot(the0) Arm%i",iarm),
-                              1200,700);
-    czthe[iarm]->Divide(2,2);
+    czthe[iarm] = new TCanvas(Form("czthe_%i", iarm),
+                              Form("z vs cot(the0) Arm%i", iarm),
+                              1200, 700);
+    czthe[iarm]->Divide(2, 2);
     for (int ilayer = 0; ilayer < NLAYER; ilayer++)
     {
       czthe[iarm]->cd(ilayer + 1);
       hzcottheta_layer[iarm][ilayer]->Draw("colz");
       // pz_cottheta[iarm][ilayer]->Draw("same");
 
-      ltitle.DrawLatex(0.5,0.95,Form("Arm%i B%i",iarm,ilayer));
+      ltitle.DrawLatex(0.5, 0.95, Form("Arm%i B%i", iarm, ilayer));
     }
   }
 
