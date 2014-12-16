@@ -533,20 +533,20 @@ WriteLadderConstraints(const char *filename,
   if (xdof)
   {
 
-    // AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
+    AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
     AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
 
     AddConstraints(wtx, etx, geo, Radii,   fs, "top x r shear");
     AddConstraints(wbx, ebx, geo, Radii,   fs, "bottom x r shear");
 
-    // TEMP: Damp x in B0-B2 and fix x in B3
-    for (int arm=0; arm<2; ++arm)
-      for (int lyr=0; lyr<4; ++lyr)
-      {
-        double presig = lyr < 3 ? 1e-3 : -1;
-        veci xlabels = LadderLabels(geo, arm, lyr, "x");
-        ApplyPreSigma(fs, xlabels, presig);
-      }
+    // // TEMP: Damp x in B0-B2 and fix x in B3
+    // for (int arm=0; arm<2; ++arm)
+    //   for (int lyr=0; lyr<4; ++lyr)
+    //   {
+    //     double presig = lyr < 3 ? 1e-3 : -1;
+    //     veci xlabels = LadderLabels(geo, arm, lyr, "x");
+    //     ApplyPreSigma(fs, xlabels, presig);
+    //   }
 
     // AddConstraints(wx, ex, geo, RPhi,      fs, "x r-phi shear");
     // AddConstraints(wx, ex, geo, Radii,     fs, "x r shear");
@@ -560,20 +560,20 @@ WriteLadderConstraints(const char *filename,
   if (ydof)
   {
 
-    // AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
+    AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
     AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
 
     AddConstraints(wty, ety, geo, Radii,   fs, "top y r shear");
     AddConstraints(wby, eby, geo, Radii,   fs, "bottom y r shear");
 
-    // TEMP: Damp y in B0-B2 and fix y in B3
-    for (int arm=0; arm<2; ++arm)
-      for (int lyr=0; lyr<4; ++lyr)
-      {
-        double presig = lyr < 3 ? 1e-3 : -1;
-        veci ylabels = LadderLabels(geo, arm, lyr, "y");
-        ApplyPreSigma(fs, ylabels, presig);
-      }
+    // // TEMP: Damp y in B0-B2 and fix y in B3
+    // for (int arm=0; arm<2; ++arm)
+    //   for (int lyr=0; lyr<4; ++lyr)
+    //   {
+    //     double presig = lyr < 3 ? 1e-3 : -1;
+    //     veci ylabels = LadderLabels(geo, arm, lyr, "y");
+    //     ApplyPreSigma(fs, ylabels, presig);
+    //   }
 
     // AddConstraints(wy, ey, geo, RPhi,      fs, "y r-phi shear");
     // AddConstraints(wy, ey, geo, Radii,     fs, "y r shear");
