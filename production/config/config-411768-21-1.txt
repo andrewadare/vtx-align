@@ -1,0 +1,9 @@
+# Created by user adare
+# On Tue Dec 16 (by hand)
+# Run number: 411768
+# Notes: 21-0 = 20-2. Ladder s,r alignment -> 21-1. Constraints: all radii fixed in W arm and in B3E. Radial sums also fixed in topmost and bottom-most phi slices.
+
+beamcenter: 0.3532 0.0528
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: 411768-21-1.par

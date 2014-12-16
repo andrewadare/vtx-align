@@ -33,8 +33,8 @@ void CorrectFromFile(const char *filename,
                      geoEvents &cntevents);
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
-              int prod = 21,        // Production step. Starts at 0.
-              int subiter = 0,     // Geometry update step. Starts at 0.
+              int prod = 22,        // Production step. Starts at 0.
+              int subiter = 1,     // Geometry update step. Starts at 0.
               TString alignMode = "ladder") // "arm","ladder","halflayer" (+"sim")
 {
   // No point in continuing if Millepede II is not installed...
@@ -59,11 +59,14 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // Assign free global parameter coords for dz residuals here
   // Parameter set may include "x", "y", "z", "r".
   // Also assign presigma list for these coordinates (trumps defaultPreSigma).
-  vecs zgpars {"z", "r"};
-  vecd zgpresigma {0, 0};
+  // vecs zgpars {"z", "r"};
+  // vecd zgpresigma {0, 0};
 
   // vecs zgpars {"z"};
   // vecd zgpresigma {0};
+
+  vecs zgpars {"x","y","z"};
+  vecd zgpresigma {0,0,0};
 
   // For Arm alignment with SvxCntTracks
   // vecs zgpars {"pitch", "yaw"};
@@ -105,13 +108,17 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   }
   else if (alignMode.Contains("ladder"))
   {
-    // vecs s {"x", "y", "s"};
-    // vecd p {0,0,0};
-    // sgpars.resize(3);
+    vecs s {"x", "y", "s"};
+    vecd p {0,0,0};
+    sgpars.resize(3);
 
-    vecs s {"s", "r"};
-    vecd p {0, 0};
-    sgpars.resize(2);
+    // vecs s {"s", "r"};
+    // vecd p {0, 0};
+    // sgpars.resize(2);
+
+    // vecs s {"s"};
+    // vecd p {0};
+    // sgpars.resize(1);
 
     sgpars = s;
     sgpresigma = p;
