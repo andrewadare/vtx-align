@@ -34,8 +34,8 @@ void CorrectFromFile(const char *filename,
 
 void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
               int prod = 22,        // Production step. Starts at 0.
-              int subiter = 1,     // Geometry update step. Starts at 0.
-              TString alignMode = "ladder") // "arm","ladder","halflayer" (+"sim")
+              int subiter = 10,     // Geometry update step. Starts at 0.
+              TString alignMode = "arm") // "arm","ladder","halflayer" (+"sim")
 {
   // No point in continuing if Millepede II is not installed...
   if (TString(gSystem->GetFromPipe("which pede")).IsNull())
@@ -65,8 +65,8 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   // vecs zgpars {"z"};
   // vecd zgpresigma {0};
 
-  vecs zgpars {"x","y","z"};
-  vecd zgpresigma {0,0,0};
+  vecs zgpars {"x","y","z","pitch","yaw"};
+  vecd zgpresigma {0,0,0,0,0};
 
   // For Arm alignment with SvxCntTracks
   // vecs zgpars {"pitch", "yaw"};
@@ -78,10 +78,10 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
   vecd sgpresigma;
   if (alignMode.Contains("arm"))
   {
-    // For arm alignment with SvxCntTracks
-    // vecs s {"x", "y", "pitch", "yaw", "roll"};
-    // vecd p {0, 0, 0, 0, 0};
-    // sgpars.resize(5);
+
+    vecs s {"x", "y", "pitch", "yaw"};
+    vecd p {0, 0, 0, 0};
+    sgpars.resize(5);
 
     // vecs s {"pitch", "yaw", "roll"};
     // vecd p {0, 0, 0};
@@ -91,9 +91,9 @@ void VtxAlign(int run = 411768,    // Run number of PRDF segment(s)
     // vecd p {0,0,0,0};
     // sgpars.resize(4);
 
-    vecs s {"x", "y"};
-    vecd p {0,0};
-    sgpars.resize(2);
+    // vecs s {"x", "y"};
+    // vecd p {0,0};
+    // sgpars.resize(2);
 
     sgpars = s;
     sgpresigma = p;
