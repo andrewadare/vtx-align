@@ -43,25 +43,32 @@ void compare_fieldon_productions()
 
   bool print_plots = true;
 
-  const int NFILES = 2;
+  const int NFILES = 3;
   const char *fileName[] =
   {
 
     "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-p2-v8/testvtxproduction_fieldon-407951-taebong-p2-v8.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-0-0/testvtxproduction_fieldon-407951-0-0.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2/testvtxproduction_fieldon-407951-3-2.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_1/testvtxproduction_fieldon-407951-3-2_1.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_2/testvtxproduction_fieldon-407951-3-2_2.root",
     "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_3/testvtxproduction_fieldon-407951-3-2_3.root",
-    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-4-1/testvtxproduction_fieldon-407951-4-1.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_4/testvtxproduction_fieldon-407951-3-2_4.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_5/testvtxproduction_fieldon-407951-3-2_5.root",
+    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_1/testvtxproduction_fieldon-407951-22-11_1.root",
+
   };
   const char *fileLabel[] =
   {
     "Taebong",
+    // "411768-0-0",
     // "411768-3-2",
     // "411768-3-2_1",
     // "411768-3-2_2",
     "411768-3-2_3",
-    // "411768-4-1",
+    // "411768-3-2_4",
+    // "411768-3-2_5",
+    "411768-22-11_1",
 
   };
   int color[] =
@@ -786,13 +793,13 @@ void compare_fieldon_productions()
     nevents[ifile] = ((TH1F *) gDirectory->FindObject("htmp"))->GetEntries();
     cout << "  Found " << ntp_event->GetEntries() << " events in " << fileName[ifile] << endl;
     cout << "  Found " << nevents[ifile] << " events which pass cuts in " << fileName[ifile] << endl;
-
+    cout << "  Keeping " << nevents[ifile] / ntp_event->GetEntries() << " %% of events " << endl;
     if (nevents[ifile] > 0)
     {
       hntracksphi_svxcnt[ifile]->Scale(1. / nevents[ifile]);
     }
 
-    ntp_event->Draw("vtx[0]>>htmp(200,-0.2,0.0)", eventCuts, "goff");
+    ntp_event->Draw("vtx[0]>>htmp(800,-0.4,0.4)", eventCuts, "goff");
     hvtx[ifile][0] = (TH1F *) gDirectory->FindObject("htmp");
     hvtx[ifile][0]->SetDirectory(0);
     hvtx[ifile][0]->SetName(Form("vtx_%i_%i", ifile, 0));
@@ -816,7 +823,7 @@ void compare_fieldon_productions()
     hvtx[ifile][2]->SetLineColor(color[ifile]);
 
 
-    ntp_event->Draw("vtxE[0]>>htmp(200,-0.2,0.0)", eventCuts, "goff");
+    ntp_event->Draw("vtxE[0]>>htmp(800,-0.4,0.4)", eventCuts, "goff");
     hvtx_E[ifile][0] = (TH1F *) gDirectory->FindObject("htmp");
     hvtx_E[ifile][0]->SetDirectory(0);
     hvtx_E[ifile][0]->SetName(Form("vtx_%i_%i", ifile, 0));
@@ -840,7 +847,7 @@ void compare_fieldon_productions()
     hvtx_E[ifile][2]->SetLineColor(color[ifile]);
 
 
-    ntp_event->Draw("vtxW[0]>>htmp(200,-0.2,0.0)", eventCuts, "goff");
+    ntp_event->Draw("vtxW[0]>>htmp(800,-0.4,0.4)", eventCuts, "goff");
     hvtx_W[ifile][0] = (TH1F *) gDirectory->FindObject("htmp");
     hvtx_W[ifile][0]->SetDirectory(0);
     hvtx_W[ifile][0]->SetName(Form("vtx_%i_%i", ifile, 0));
@@ -1263,7 +1270,7 @@ void compare_fieldon_productions()
     }
   }
 
-  TLegend *legzvrtx = new TLegend(0.6, 0.7, 0.98, 0.85);
+  TLegend *legzvrtx = new TLegend(0.5, 0.7, 0.98, 0.85);
   legzvrtx->SetFillStyle(0);
   legzvrtx->SetBorderSize(0);
   for (int izvrtx = 0; izvrtx < NZVRTX; izvrtx++)
@@ -1272,6 +1279,28 @@ void compare_fieldon_productions()
       gdca_ptres_zvrtx_svxcnt[0][0][izvrtx],
       Form("%.0f < zvrtx [cm] < %.0f", zvrtxl[izvrtx], zvrtxh[izvrtx]),
       "LP");
+  }
+
+  TLegend *legchisqphi[NPHI];
+  for (int iphi = 0; iphi < NPHI; iphi++)
+  {
+    legchisqphi[iphi] = new TLegend(0.5, 0.3, 0.95, 0.9);
+    legchisqphi[iphi]->SetFillStyle(0);
+    legchisqphi[iphi]->SetBorderSize(0);
+    legchisqphi[iphi]->SetTextSize(0.03);
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      legchisqphi[iphi]->AddEntry(hchsiqndf_phi_svxcnt[ifile][iphi],
+                                  fileLabel[ifile], "LP");
+      legchisqphi[iphi]->AddEntry((TObject *)0,
+                                  Form("mean = %.2f",
+                                       hchsiqndf_phi_svxcnt[ifile][iphi]->GetMean()),
+                                  "");
+      legchisqphi[iphi]->AddEntry((TObject *)0,
+                                  Form("rms = %.2f",
+                                       hchsiqndf_phi_svxcnt[ifile][iphi]->GetRMS()),
+                                  "");
+    }
   }
 
 
@@ -1403,7 +1432,7 @@ void compare_fieldon_productions()
 
 
       cdcares_zvrtx_svxcnt[iarm]->cd(NFILES + ifile + 1);
-      gdca_ptres_zvrtx_rat_svxcnt[iarm][ifile][0]->GetYaxis()->SetRangeUser(0.51, 1.49);
+      gdca_ptres_zvrtx_rat_svxcnt[iarm][ifile][0]->GetYaxis()->SetRangeUser(0.76, 1.24);
       gdca_ptres_zvrtx_rat_svxcnt[iarm][ifile][0]->Draw("AP");
       for (int izvrtx = 1; izvrtx < NZVRTX; izvrtx++)
         gdca_ptres_zvrtx_rat_svxcnt[iarm][ifile][izvrtx]->Draw("P");
@@ -1531,7 +1560,7 @@ void compare_fieldon_productions()
     for (int ifile = 1; ifile < NFILES; ifile++)
       hchsiqndf_phi_svxcnt[ifile][iphi]->Draw("same");
 
-    leg->Draw("same");
+    legchisqphi[iphi]->Draw("same");
     if (phih[iphi] < 2) // West
     {
       ltitle.DrawLatex(0.5, 0.95,
@@ -1758,7 +1787,33 @@ void compare_fieldon_productions()
     cvtx->GetPad(ivtx + 1)->SetLeftMargin(0.12);
     cvtx->GetPad(ivtx + 1)->SetTicks(1, 1);
 
+    // get means
+    double mean[NFILES] = {0};
+    double rms[NFILES] = {0};
+    double max[NFILES] = {0};
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      mean[ifile] = hvtx[ifile][ivtx]->GetMean();
+      rms[ifile] = hvtx[ifile][ivtx]->GetRMS();
+      max[ifile] = hvtx[ifile][ivtx]->GetMaximum();
+    }
+    //set limits
+    float xl = 0;
+    float xh = 0;
+    float ymax = 0;
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      if (mean[ifile] - 4 * rms[ifile] < xl)
+        xl = mean[ifile] - 4 * rms[ifile];
+      if (mean[ifile] + 4 * rms[ifile] > xh)
+        xh = mean[ifile] + 4 * rms[ifile];
+      if (max[ifile] > ymax)
+        ymax = max[ifile];
+    }
+
     cvtx->cd(ivtx + 1);
+    hvtx[0][ivtx]->GetXaxis()->SetRangeUser(xl, xh);
+    hvtx[0][ivtx]->SetMaximum(1.01 * ymax);
     hvtx[0][ivtx]->Draw();
     for (int ifile = 0; ifile < NFILES; ifile++)
       hvtx[ifile][ivtx]->Draw("same");
@@ -1780,7 +1835,34 @@ void compare_fieldon_productions()
     cvtxewdiff->GetPad(ivtx + 1)->SetTopMargin(0.02);
     cvtxewdiff->GetPad(ivtx + 1)->SetTicks(1, 1);
 
+    // get means
+    double mean[NFILES] = {0};
+    double rms[NFILES] = {0};
+    double max[NFILES] = {0};
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      mean[ifile] = hvtx_EW[ifile][ivtx]->GetMean();
+      rms[ifile] = hvtx_EW[ifile][ivtx]->GetRMS();
+      max[ifile] = hvtx_EW[ifile][ivtx]->GetMaximum();
+    }
+    //set limits
+    float xl = 0;
+    float xh = 0;
+    float ymax = 0;
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      if (mean[ifile] - 5 * rms[ifile] < xl)
+        xl = mean[ifile] - 5 * rms[ifile];
+      if (mean[ifile] + 5 * rms[ifile] > xh)
+        xh = mean[ifile] + 5 * rms[ifile];
+      if (max[ifile] > ymax)
+        ymax = max[ifile];
+    }
+
+
     cvtxewdiff->cd(ivtx + 1);
+    hvtx_EW[0][ivtx]->GetXaxis()->SetRangeUser(xl, xh);
+    hvtx_EW[0][ivtx]->SetMaximum(1.01 * ymax);
     hvtx_EW[0][ivtx]->Draw();
     for (int ifile = 0; ifile < NFILES; ifile++)
       hvtx_EW[ifile][ivtx]->Draw("same");
