@@ -24,6 +24,7 @@
 #include <TStyle.h>
 #include <TProfile.h>
 #include <TEventList.h>
+#include <TMath.h>
 
 #include <iostream>
 
@@ -42,7 +43,8 @@ void calc_DC_rotations()
   const char *fileName =
     "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2/testvtxproduction_fieldon-407951-3-2.root";
   // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_2/testvtxproduction_fieldon-407951-3-2_2.root";
-  bool print_plots = true;
+  // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_4/testvtxproduction_fieldon-407951-3-2_4.root";
+  bool print_plots = false;
   const char *plot_tag = "fieldon-407951-3-2_phi";
 
   const int NLAYER = 4;
@@ -79,6 +81,23 @@ void calc_DC_rotations()
 
   //-- Tree & variables
   TTree *ntp_SVXCNT;
+  float dchquality;
+  int Nclus;
+  int Nclus_layer[4];
+  float chisq;
+  float ndf;
+  float pT;
+  bool tickCut;
+  float vtx[3];
+  int dcarm;
+  int layer[7];
+  float clus_global_x[7];
+  float clus_global_y[7];
+  float clus_global_z[7];
+  float res_s[7];
+  float res_z[7];
+  float phi0;
+  float the0;
 
   //-- Histograms
   TH3D *hdphiLayerPhi;
@@ -111,8 +130,63 @@ void calc_DC_rotations()
   TF1 *fgaus = new TF1("fgaus", "gaus", -1, 1);
   fgaus->SetLineColor(kBlack);
 
+  TF1 *fress = new TF1("fress",
+                       "[0] + [1]*TMath::Sin(x) + [2]*TMath::Cos(x)",
+                       -1, 4);
+  fress->SetLineColor(kBlack);
+  fress->SetLineStyle(2);
+  fress->SetParLimits(0, -0.02, 0.02);
+  fress->SetParLimits(1, -0.02, 0.02);
+  fress->SetParLimits(2, -0.02, 0.02);
 
-  const char *plot;
+  //==========================================================================//
+  // DEFINE HISTOGRAMS
+  //==========================================================================//
+  cout << endl;
+  cout << "--> Defining histograms" << endl;
+
+  hdphiLayerPhi = new TH3D("hdphiLayerPhi",
+                           ";d#phi;Layer;#phi",
+                           1000, -0.5, 0.5,
+                           4, -0.5, 3.5,
+                           75, -1, 4);
+  hdtheLayerPhi = new TH3D("hdtheLayerPhi",
+                           ";d#theta;Layer;#phi",
+                           1000, -0.5, 0.5,
+                           4, -0.5, 3.5,
+                           75, -1, 4);
+
+  for (int iarm = 0; iarm < NARM; iarm++)
+  {
+    hsphiLayer[iarm] = new TH3D(Form("hsphiLayer_%i", iarm),
+                                ";PHCNT #phi^{0};#Deltas/r;Layer",
+                                500, -1, 4,
+                                500, -0.2, 0.2,
+                                4, -0.5, 3.5);
+    hzcotthetaLayer[iarm] = new TH3D(Form("hzcotthetaLayer_%i", iarm),
+                                     ";PHCNT cot(#theta^{0});#Deltaz/r;Layer",
+                                     100, -0.5, 0.5,
+                                     500, -0.3, 0.3,
+                                     4, -0.5, 3.5);
+
+    for (int ilayer = 0; ilayer < NLAYER; ilayer++)
+    {
+      ps_phi[iarm][ilayer] =
+        new TProfile(Form("ps_phi_%i_%i", iarm, ilayer),
+                     ";PHCNT #phi^{0};#Deltas/r",
+                     500, -4, 7,
+                     -0.3, 0.3);
+      ps_phi[iarm][ilayer]->SetLineColor(kRed);
+
+      pz_cottheta[iarm][ilayer] =
+        new TProfile(Form("pz_cottheta_%i_%i", iarm, ilayer),
+                     ";PHCNT cot(#theta^{0});#Deltaz/r;",
+                     500, -4, 7,
+                     -0.3, 0.3);
+      pz_cottheta[iarm][ilayer]->SetLineColor(kRed);
+
+    }
+  }
 
   //==========================================================================//
   // GET DATA
@@ -127,6 +201,7 @@ void calc_DC_rotations()
     return;
   }
 
+  //-- Set up Tree
   ntp_SVXCNT = (TTree *) fin->Get("ntp_SVXCNT");
   if (!ntp_SVXCNT)
   {
@@ -134,52 +209,74 @@ void calc_DC_rotations()
     return;
   }
 
-  //-- First make an entry list to save time
-  ntp_SVXCNT->Draw(">>cutentries", eventCuts && trackCuts);
-  TEventList *cutentries = (TEventList *) gDirectory->FindObject("cutentries");
-  ntp_SVXCNT->SetEventList(cutentries);
+  ntp_SVXCNT->SetBranchAddress("dchquality", &dchquality);
+  ntp_SVXCNT->SetBranchAddress("Nclus", &Nclus);
+  ntp_SVXCNT->SetBranchAddress("Nclus_layer", &Nclus_layer);
+  ntp_SVXCNT->SetBranchAddress("chisq", &chisq);
+  ntp_SVXCNT->SetBranchAddress("ndf", &ndf);
+  ntp_SVXCNT->SetBranchAddress("pT", &pT);
+  ntp_SVXCNT->SetBranchAddress("tickCut", &tickCut);
+  ntp_SVXCNT->SetBranchAddress("vtx", &vtx);
+  ntp_SVXCNT->SetBranchAddress("dcarm", &dcarm);
+  ntp_SVXCNT->SetBranchAddress("layer", &layer);
+  ntp_SVXCNT->SetBranchAddress("clus_global_x", &clus_global_x);
+  ntp_SVXCNT->SetBranchAddress("clus_global_y", &clus_global_y);
+  ntp_SVXCNT->SetBranchAddress("clus_global_z", &clus_global_z);
+  ntp_SVXCNT->SetBranchAddress("res_s", &res_s);
+  ntp_SVXCNT->SetBranchAddress("res_z", &res_z);
+  ntp_SVXCNT->SetBranchAddress("phi0", &phi0);
+  ntp_SVXCNT->SetBranchAddress("the0", &the0);
 
 
-  plot = "phi0:layer:TMath::ASin(res_s/"
-         "TMath::Sqrt(TMath::Power(clus_global_x,2) + TMath::Power(clus_global_y,2)))"
-         " >> htmp(1000,-0.5,0.5, 4,-0.5,3.5, 75,-1,4)";
-  ntp_SVXCNT->Draw(plot, "", "goff");
-  hdphiLayerPhi = (TH3D *) gDirectory->FindObject("htmp");
-  hdphiLayerPhi->SetDirectory(0);
-  hdphiLayerPhi->SetName("hdphiLayerPhi");
-  hdphiLayerPhi->SetTitle(";d#phi;Layer;#phi");
+  //-- Loop over entries
+  unsigned int NENTRIES = ntp_SVXCNT->GetEntries();
+  cout << "--> Will loop over " << NENTRIES << " entries" << endl;
+  for (int ientry = 0; ientry < NENTRIES; ientry++)
+  {
+    ntp_SVXCNT->GetEntry(ientry);
+    if (ientry % 1000000 == 0) cout << "----> Entry " << ientry << endl;
 
-  plot = "phi0:layer:TMath::ASin(res_z/"
-         "TMath::Sqrt(TMath::Power(clus_global_x,2) + TMath::Power(clus_global_y,2)))"
-         " >> htmp(1000,-0.5,0.5, 4,-0.5,3.5, 75,-1,4)";
-  ntp_SVXCNT->Draw(plot, "", "goff");
-  hdtheLayerPhi = (TH3D *) gDirectory->FindObject("htmp");
-  hdtheLayerPhi->SetDirectory(0);
-  hdtheLayerPhi->SetName("hdtheLayerPhi");
-  hdtheLayerPhi->SetTitle(";d#theta;Layer;Arm");
+    if ((dchquality == 31 || dchquality == 63) &&
+        Nclus >= 3 &&
+        Nclus_layer[0] > 0 && Nclus_layer[1] > 0 &&
+        chisq / ndf < 3 &&
+        pT > 1 &&
+        !tickCut &&
+        TMath::Abs(vtx[2]) < 10)
+    {
 
+      for (int iclus = 0; iclus < Nclus; iclus++)
+      {
+        float r = TMath::Sqrt(TMath::Power(clus_global_x[iclus], 2) +
+                              TMath::Power(clus_global_y[iclus], 2));
+        hdphiLayerPhi->Fill(TMath::ASin(res_s[iclus] / r),
+                            layer[iclus],
+                            phi0);
+        hdtheLayerPhi->Fill(TMath::ASin(res_z[iclus] / r),
+                            layer[iclus],
+                            phi0);
 
-  //--residual vs phi/cottheta
+        hsphiLayer[dcarm]->Fill(phi0,
+                                res_s[iclus] / r,
+                                layer[iclus]);
+
+        ps_phi[dcarm][layer[iclus]]->Fill(phi0,
+                                          res_s[iclus] / r);
+
+        hzcotthetaLayer[dcarm]->Fill(1. / TMath::Tan(the0),
+                                     res_z[iclus] / r,
+                                     layer[iclus]);
+
+        pz_cottheta[dcarm][layer[iclus]]->Fill(1. / TMath::Tan(the0),
+                                               res_z[iclus] / r);
+
+      }
+    }
+  }
+
+  //-- Projections
   for (int iarm = 0; iarm < NARM; iarm++)
   {
-    cout << " s arm" << iarm << endl;
-    plot = "layer:res_s:phi0"
-           " >> htmp(500,-1,4, 500,-0.2,0.2, 4,-0.5,3.5)";
-    ntp_SVXCNT->Draw(plot, armCut[iarm], "goff");
-    hsphiLayer[iarm] = (TH3D *) gDirectory->FindObject("htmp");
-    hsphiLayer[iarm]->SetDirectory(0);
-    hsphiLayer[iarm]->SetName(Form("hsphiLayer_%i", iarm));
-    hsphiLayer[iarm]->SetTitle(";PHCNT #phi^{0};#Deltas;Layer");
-
-    cout << " z arm" << iarm << endl;
-    plot = "layer:res_z:1./TMath::Tan(the0)"
-           " >> htmp(100,-0.5,0.5, 500,-0.3,0.3, 4,-0.5,3.5)";
-    ntp_SVXCNT->Draw(plot, armCut[iarm], "goff");
-    hzcotthetaLayer[iarm] = (TH3D *) gDirectory->FindObject("htmp");
-    hzcotthetaLayer[iarm]->SetDirectory(0);
-    hzcotthetaLayer[iarm]->SetName(Form("hzcotthetaLayer_%i", iarm));
-    hzcotthetaLayer[iarm]->SetTitle(";PHCNT cot(#theta^{0});#Deltaz;Layer");
-
     for (int ilayer = 0; ilayer < NLAYER; ilayer++)
     {
       //-- project to 2D
@@ -192,34 +289,7 @@ void calc_DC_rotations()
       hzcottheta_layer[iarm][ilayer] = (TH2D *)
                                        hzcotthetaLayer[iarm]->Project3D("yx");
       hzcottheta_layer[iarm][ilayer]->SetName(Form("hzcottheta_%i_%i", iarm, ilayer));
-
-      //-- TProfile
-      /*
-      cout << "    TProfile s arm" << iarm << " B" << ilayer << endl;
-
-      ps_phi[iarm][ilayer] = new TProfile(Form("ps_phi_%i_%i", iarm, ilayer),
-                                          ";PHCNT #phi^{0};#Deltas",
-                                          500, -4, 7,
-                                          -0.3, 0.3);
-      ntp_SVXCNT->Draw(Form("res_s;phi0 >> ps_phi_%i_%i", iarm, ilayer),
-                       "",//eventCuts && trackCuts && armCut[iarm] && layerCut[ilayer],
-                       "goff");
-      cout << "   " << ps_phi[iarm][ilayer]->GetEntries() << endl;
-      ps_phi[iarm][ilayer]->SetLineColor(kRed);
-
-
-
-      pz_cottheta[iarm][ilayer] = new TProfile(Form("pz_cottheta_%i_%i", iarm, ilayer),
-                                          ";PHCNT cot(#theta^{0});#Deltaz;",
-                                          500, -4, 7,
-                                          -0.3, 0.3);
-      ntp_SVXCNT->Draw(Form("res_z:1./TMath::Tan(the0) >> pz_cottheta_%i_%i", iarm, ilayer),
-                       eventCuts && trackCuts && armCut[iarm] && layerCut[ilayer],
-                       "goff");
-      pz_cottheta[iarm][ilayer]->SetLineColor(kRed);
-      */
     }
-
   }
 
   //==========================================================================//
@@ -345,6 +415,32 @@ void calc_DC_rotations()
 
   }
 
+
+  //==========================================================================//
+  // FIT S/R VS PHI PLOTS
+  //==========================================================================//
+  cout << endl;
+  cout << "--> Fitting s/r vs phi plots" << endl;
+
+  for (int iarm = 0; iarm < NARM; iarm++)
+  {
+    cout << endl;
+    cout << "----------- Arm=" << iarm << " -----------" << endl;
+    if (iarm == 0)
+      fress->SetRange(2.5, 3.25);
+      // fress->SetRange(2, 4);
+    else
+      fress->SetRange(-1, 1.5);
+
+    for (int ilayer = 0; ilayer < NLAYER; ilayer++)
+    {
+      fress->SetParameters(dphi[NPHI - 2 * iarm - 1],
+                           0.0,
+                           0.0);
+      ps_phi[iarm][ilayer]->Fit(fress, "R0");
+
+    }
+  }
 
   //==========================================================================//
   // PLOT OBJECTS
@@ -477,8 +573,12 @@ void calc_DC_rotations()
         hsphi_layer[iarm][ilayer]->GetXaxis()->SetRangeUser(2, 4);
       else
         hsphi_layer[iarm][ilayer]->GetXaxis()->SetRangeUser(-1, 1.5);
+      hsphi_layer[iarm][ilayer]->GetYaxis()->SetRangeUser(-0.05, 0.05);
       hsphi_layer[iarm][ilayer]->Draw("colz");
-      // ps_phi[iarm][ilayer]->Draw("same");
+      ps_phi[iarm][ilayer]->Draw("same");
+
+      ftmp = (TF1 *) ps_phi[iarm][ilayer]->GetFunction("fress");
+      ftmp->DrawCopy("same");
 
       ltitle.DrawLatex(0.5, 0.95, Form("Arm%i B%i", iarm, ilayer));
     }
@@ -495,8 +595,9 @@ void calc_DC_rotations()
     for (int ilayer = 0; ilayer < NLAYER; ilayer++)
     {
       czthe[iarm]->cd(ilayer + 1);
+      hzcottheta_layer[iarm][ilayer]->GetYaxis()->SetRangeUser(-0.05, 0.05);
       hzcottheta_layer[iarm][ilayer]->Draw("colz");
-      // pz_cottheta[iarm][ilayer]->Draw("same");
+      pz_cottheta[iarm][ilayer]->Draw("same");
 
       ltitle.DrawLatex(0.5, 0.95, Form("Arm%i B%i", iarm, ilayer));
     }
