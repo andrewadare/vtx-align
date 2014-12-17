@@ -35,16 +35,26 @@ void look_xyvrtx_zdep()
 
   const char *inFile =
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-1/testvtxproduction_fieldon-407951-1-1.root";
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3/testvtxproduction_fieldon-407951-1-3.root";
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-p2-v8_newfixes/testvtxproduction_407951-taebong-p2-v8-newfixes.root";
-    "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-0-3/testvtxproduction_407951-0-3.root";
+    // "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-0-3/testvtxproduction_407951-0-3.root";
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-2-1/testvtxproduction_fieldon-407951-2-1.root";
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_13/testvtxproduction_fieldon-407951-1-3_13.root";
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-1-3_7/testvtxproduction_fieldon-407951-1-3_7.root";
+    // "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-12-4-2014/testvtxproduction_fieldon-407951-taebong-12-4-2014.root";
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-5-1/testvtxproduction_fieldon-407951-5-1.root";
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-4-1/testvtxproduction_fieldon-407951-4-1.root";
+    "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-p2-v8/testvtxproduction_fieldon-407951-taebong-p2-v8.root";
   const bool print_plots = true;
 
   // beamcenter from config-fieldon-407951-1-1.txt
-  // const float bc[2] = { -0.120756, 0.0741091};
   // beamcenter from config-taebong-p2-v8.txt
-  // const float bc[2] = { -0.120756, 0.0741091};
-  // beamcenter from config-zf-411768-0-3.txt
-  const float bc[2] = {0.3532, 0.0528};
+  // beamcenter from config-fieldon-411768-0-3.txt
+  const float bc[2] = { -0.120756, 0.0741091};
+  // beamcenter from config-fieldon-407951-2-1.txt
+  // const float bc[2] = {0.3532, 0.0528};
+  // const float bc[2] = {0.3341, 0.0337};
+  // const float bc[2] = {-0.1061, 0.0686};
 
   //=============================================================//
   // DECLARE VARIABLES
@@ -58,7 +68,7 @@ void look_xyvrtx_zdep()
   char draw[500];
 
 
-  TF1 *fline = new TF1("fline", "pol1", -8, 8);
+  TF1 *fline = new TF1("fline", "[0] + [1]*x", -8, 8);
   fline->SetLineColor(kOrange + 2);
   float slope[2][2] = {{0}, {0}};
   float slope_e[2][2] = {{0}, {0}};
@@ -89,13 +99,13 @@ void look_xyvrtx_zdep()
   cout << endl;
   cout << "--> Extract histograms" << endl;
 
-  const char *armLabel[2] = {"W", "E"};
+  const char *armLabel[2] = {"E", "W"};
   const char *vrtxLabel[2] = {"X", "Y"};
   for (int iarm = 0; iarm < 2; iarm++)
   {
     for (int ivrtx = 0; ivrtx < 2; ivrtx++)
     {
-      sprintf(draw, "vtx%s[%i]%+f:vtx[2]>>htmp(500,-10,10,1000,-0.05,0.05)",
+      sprintf(draw, "vtx%s[%i]%+f:vtx[2]>>htmp(500,-10,10,200,-0.05,0.05)",
               armLabel[iarm], ivrtx, -1 * bc[ivrtx]);
       cout << " " << draw << endl;
 
