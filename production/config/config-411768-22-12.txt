@@ -1,0 +1,9 @@
+# Created by user adare
+# On Tue Dec 18 (by hand)
+# Run number: 411768
+# Notes: Geometry modified by hand from 22-11. See recent commit of ModifyParFile.C
+
+beamcenter: 0.3532 0.0528
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: 411768-22-12.par
