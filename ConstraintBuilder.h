@@ -529,10 +529,18 @@ WriteLadderConstraints(const char *filename,
     // AddConstraints(ws, es, geo, Radii,     fs, "s r shear");
     AddConstraints(wts, ets, geo, Radii,   fs, "top s r shear");
     AddConstraints(wbs, ebs, geo, Radii,   fs, "bottom s r shear");
+
+    // // TEMP: Fix all s positions in W arm
+    // for (int arm=1; arm<2; ++arm)
+    //   for (int lyr=0; lyr<4; ++lyr)
+    //   {
+    //     veci labels = LadderLabels(geo, arm, lyr, "s");
+    //     ApplyPreSigma(fs, labels, -1);
+    //   }
+
   }
   if (xdof)
   {
-
     AddConstraints(wx, ex, geo, Ones,      fs, "x translation");
     AddConstraints(wx, ex, geo, PhiAngles, fs, "x phi shear");
 
@@ -559,7 +567,6 @@ WriteLadderConstraints(const char *filename,
   }
   if (ydof)
   {
-
     AddConstraints(wy, ey, geo, Ones,      fs, "y translation");
     AddConstraints(wy, ey, geo, PhiAngles, fs, "y phi shear");
 
@@ -595,7 +602,7 @@ WriteLadderConstraints(const char *filename,
   }
   if (rdof)
   {
-    // AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
+    AddConstraints(wr, er, geo, Ones,      fs, "r expansion/contraction");
     AddConstraints(wtr, etr, geo, Ones,   fs, "top r translation");
     AddConstraints(wbr, ebr, geo, Ones,   fs, "bottom r translation");
 
