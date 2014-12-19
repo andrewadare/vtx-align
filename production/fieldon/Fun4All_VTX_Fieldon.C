@@ -21,7 +21,11 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
                          const char *pixel_diffmap = "",
                          const char *pixel_chipmap = "",
                          const char *strip_deadchannel = "",
-                         const char *strip_deadRCC = ""
+                         const char *strip_deadRCC = "",
+                         float rotphcntphi_east = 0,
+                         float rotphcntphi_west = 0,
+                         float rotphcntthe_east = 0,
+                         float rotphcntthe_west = 0
                         )
 {
     //Tell root to really crash when something goes wrong not start it's
@@ -303,7 +307,9 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     /// SvxCentralTrackReco should be called after PHCentralTrack is reconstructed.
     SvxCentralTrackReco *svxcentraltrack = new SvxCentralTrackReco();
     //svxcentraltrack->setSearchWindowFlag(2);
-    // svxcentraltrack->setShiftPHCentralTrack(true);
+    svxcentraltrack->setShiftPHCentralTrack(true);
+    svxcentraltrack->setPHCentralTrackPhiThetaShift(0, rotphcntphi_east, rotphcntthe_east);
+    svxcentraltrack->setPHCentralTrackPhiThetaShift(1, rotphcntphi_west, rotphcntthe_west);
     se->registerSubsystem(svxcentraltrack);
 
 
