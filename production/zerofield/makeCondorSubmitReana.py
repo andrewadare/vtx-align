@@ -24,7 +24,6 @@ parser.add_argument("-v", "--verbose",
                   help="print status messages to stdout")
 
 parser.set_defaults(filename="condor.job",
-					config="/direct/phenix+u/dcm07e/work/vtx-align/production/config/config-ideal.txt",
 					run='406541',
 					nsegments='24',
 					outdir="/direct/phenix+prod01/phnxreco/millepede/test/")
@@ -36,10 +35,6 @@ args = parser.parse_args()
 #Check the input arguments for compatabiity and fix if necessary
 if not args.outdir.endswith('/'):
 	args.outdir += '/'
-
-if not os.path.isfile(args.config):
-	print("\nERROR!! Can't find config file - {}\n".format(args.config))
-	sys.exit(1)
 
 
 #Print out arguments
