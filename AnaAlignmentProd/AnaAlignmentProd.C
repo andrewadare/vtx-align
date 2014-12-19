@@ -382,26 +382,6 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
   m_nEvent++;
 
 
-  //---------------------- PHCentralTrack ----------------------------//
-  d_phcnttrk = NULL;
-  d_phcnttrk = findNode::getClass<PHCentralTrack>(topNode, "PHCentralTrack");
-  if (!d_phcnttrk)
-  {
-    std::cout << "ERROR!! Can't find PHCentralTrack." << std::endl;
-    return -1;
-  }
-  //------------------------------------------------------------------//
-
-  //---------------------- SvxCentralTrackList -----------------------//
-  d_svxcnttrklist = NULL;
-  d_svxcnttrklist = findNode::getClass<SvxCentralTrackList>(topNode, "SvxCentralTrackList");
-  if (!d_svxcnttrklist)
-  {
-    std::cout << "ERROR!! Can't find SvxCentralTrackList." << std::endl;
-    return -1;
-  }
-  //------------------------------------------------------------------//
-
   //----------------------- VtxOut -----------------------------------//
   d_vtxout = NULL;
   d_vtxout = findNode::getClass<VtxOut>(topNode, "VtxOut");
@@ -452,6 +432,26 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
     m_print_pevent = false;
     //return -1;
   }
+  //------------------------------------------------------------------//
+
+  //---------------------- PHCentralTrack ----------------------------//
+  d_phcnttrk = NULL;
+  d_phcnttrk = findNode::getClass<PHCentralTrack>(topNode, "PHCentralTrack");
+  // if (!d_phcnttrk)
+  // {
+  //   std::cout << "ERROR!! Can't find PHCentralTrack." << std::endl;
+  //   return -1;
+  // }
+  //------------------------------------------------------------------//
+
+  //---------------------- SvxCentralTrackList -----------------------//
+  d_svxcnttrklist = NULL;
+  d_svxcnttrklist = findNode::getClass<SvxCentralTrackList>(topNode, "SvxCentralTrackList");
+  // if (!d_svxcnttrklist)
+  // {
+  //   std::cout << "ERROR!! Can't find SvxCentralTrackList." << std::endl;
+  //   return -1;
+  // }
   //------------------------------------------------------------------//
 
 
@@ -532,27 +532,29 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
   //---------------------------------------------//
   // FILL ALPHA V PHI TPROFILES
   //---------------------------------------------//
-  for (unsigned int ipart = 0; ipart < d_phcnttrk->get_npart(); ipart++)
+  if (d_phcnttrk)
   {
-    float dchquality = d_phcnttrk->get_quality(ipart);
-    float zed        = d_phcnttrk->get_zed(ipart);
-    float n0         = d_phcnttrk->get_n0(ipart);
-
-    float alpha = d_phcnttrk->get_alpha(ipart);
-    float phi0  = d_phcnttrk->get_phi0(ipart);
-    int dcarm   = d_phcnttrk->get_dcarm(ipart);
-
-    if (dcarm >= 0 && dcarm < 2 &&
-        (dchquality == 31 || dchquality == 63) &&
-        n0 < 1 &&
-        fabs(zed) < 75)
+    for (unsigned int ipart = 0; ipart < d_phcnttrk->get_npart(); ipart++)
     {
-      pDC_alpha_phi[dcarm]->Fill(phi0, alpha);
-      hDC_alpha_phi[dcarm]->Fill(phi0, alpha);
+      float dchquality = d_phcnttrk->get_quality(ipart);
+      float zed        = d_phcnttrk->get_zed(ipart);
+      float n0         = d_phcnttrk->get_n0(ipart);
+
+      float alpha = d_phcnttrk->get_alpha(ipart);
+      float phi0  = d_phcnttrk->get_phi0(ipart);
+      int dcarm   = d_phcnttrk->get_dcarm(ipart);
+
+      if (dcarm >= 0 && dcarm < 2 &&
+          (dchquality == 31 || dchquality == 63) &&
+          n0 < 1 &&
+          fabs(zed) < 75)
+      {
+        pDC_alpha_phi[dcarm]->Fill(phi0, alpha);
+        hDC_alpha_phi[dcarm]->Fill(phi0, alpha);
+      }
+
     }
-
   }
-
 
   //---------------------------------------------//
   // CUT ON THE PRECISE VERTEX FOR REMAINING
@@ -617,9 +619,15 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
   bbcq[0] = bbc_qn;
   bbcq[1] = bbc_qs;
   bbcz    = bbc_z;
-  nsvxcnt = d_svxcnttrklist->get_nCentralTracks();
+  if (d_svxcnttrklist)
+    nsvxcnt = d_svxcnttrklist->get_nCentralTracks();
+  else
+    nsvxcnt = -1;
   nseg    = d_svxseglist->get_nSegments();
-  ncnt    = d_phcnttrk->get_npart();
+  if (d_phcnttrk)
+    ncnt    = d_phcnttrk->get_npart();
+  else
+    ncnt = -1;
   nclus   = d_svxcluslist->get_nClusters();
   for (int i = 0; i < 4; i++)
     Nclus_layer[i] = nclusB[i];
@@ -635,242 +643,246 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
   // Fill SVXCNT tree
   //---------------------------------------------//
   //std::cout << "--> Filling SvxCentralTrack details for " << svxcnttrklist->get_nCentralTracks() << " tracks." << std::endl;
-  for (int itrk = 0; itrk < d_svxcnttrklist->get_nCentralTracks(); itrk++)
+  if (d_svxcnttrklist)
   {
-    reset_variables();
-
-    SvxCentralTrack *svxtrk = d_svxcnttrklist->getCentralTrack(itrk);
-    if (!svxtrk) continue;
-
-    //this index links the svx data to cnt traks
-    unsigned int cntindex = svxtrk->getDchIndex();
-
-    //double check that this central track exists
-    if (cntindex >= d_phcnttrk->get_npart())
+    for (int itrk = 0; itrk < d_svxcnttrklist->get_nCentralTracks(); itrk++)
     {
-      std:: cout << "WARNING!! Can not find cnt track for index=" << itrk << " (cntindex=" << cntindex << ")" << std::endl;
-      continue;
-    }
+      reset_variables();
 
-    //fill the ntuple
-    run        = m_runNumber;
-    event      = m_nEvent;
-    svxindex   = itrk;
-    dchindex   = cntindex;
-    dchquality = d_phcnttrk->get_quality(cntindex);
-    mom        = d_phcnttrk->get_mom(cntindex);
-    E          = d_phcnttrk->get_ecore(cntindex);
+      SvxCentralTrack *svxtrk = d_svxcnttrklist->getCentralTrack(itrk);
+      if (!svxtrk) continue;
 
-    float px                            = d_phcnttrk->get_mom(cntindex) * sin(d_phcnttrk->get_the0(cntindex)) * cos(d_phcnttrk->get_phi0(cntindex));
-    float py                            = d_phcnttrk->get_mom(cntindex) * cos(d_phcnttrk->get_the0(cntindex)) * sin(d_phcnttrk->get_phi0(cntindex));
-    pT                                  = sqrt(px * px + py * py);
-    charge                              = d_phcnttrk->get_charge(cntindex);
-    the0                                = d_phcnttrk->get_the0(cntindex);
-    phi0                                = d_phcnttrk->get_phi0(cntindex);
-    dcarm                               = d_phcnttrk->get_dcarm(cntindex);
-    emcsect                             = d_phcnttrk->get_sect(cntindex);
-    sector                              = dcarm * 4 + emcsect;
-    centrality                          = gcent;
-    zed                                 = d_phcnttrk->get_zed(cntindex);
-    phi                                 = d_phcnttrk->get_phi(cntindex);
-    n0                                  = d_phcnttrk->get_n0(cntindex);
-    sn0                                 = d_phcnttrk->get_sn0(cntindex);
-    if (d_phcnttrk->get_chi2(cntindex) >= 0 && d_phcnttrk->get_npe0(cntindex) >= 0)
-      chi2npe0 = d_phcnttrk->get_chi2(cntindex) / d_phcnttrk->get_npe0(cntindex);
-    if (d_phcnttrk->get_schi2(cntindex) >= 0 && d_phcnttrk->get_snpe0(cntindex) >= 0)
-      schi2snpe0 = d_phcnttrk->get_schi2(cntindex) / d_phcnttrk->get_snpe0(cntindex);
-    disp       = d_phcnttrk->get_disp(cntindex);
-    sdisp      = d_phcnttrk->get_sdisp(cntindex);
-    prob       = d_phcnttrk->get_prob(cntindex);
-    dep        = d_phcnttrk->get_dep(cntindex);
-    emcdphi    = d_phcnttrk->get_emcdphi(cntindex);
-    emcdz      = d_phcnttrk->get_emcdz(cntindex);
-    emcsdphi   = d_phcnttrk->get_emcsdphi(cntindex);
-    emcsdz     = d_phcnttrk->get_emcsdz(cntindex);
-    emcsdphi_e = d_phcnttrk->get_emcsdphi_e(cntindex);
-    emcsdz_e   = d_phcnttrk->get_emcsdz_e(cntindex);
-    chisq      = svxtrk->getChiSquare();
-    ndf        = svxtrk->getNDF();
-    quality    = svxtrk->getLinkQuality();
-    score      = svxtrk->getLinkScore();
-    dca2D      = svxtrk->getDCA2D();
-    dcaz       = svxtrk->getDCAZ();
-    vtx[0]     = vtxpos.getX();
-    vtx[1]     = vtxpos.getY();
-    vtx[2]     = vtxpos.getZ();
-    which_vtx  = s_vtx;
-    bbcq[0]    = bbc_qn;
-    bbcq[1]    = bbc_qs;
-    bbcz       = bbc_z;
+      //this index links the svx data to cnt traks
+      unsigned int cntindex = svxtrk->getDchIndex();
 
-    //conversion veto
-    //false - not a conversion (passes pass_conversionVeto())
-    //true  - conversion (fails pass_converstionVeto())
-    //convVeto = !(pass_conversionVeto(svxtrk, charge));
-    convVeto = !m_convveto->calculate(m_fieldPolarity,
-                                      pT,
-                                      charge,
-                                      svxtrk,
-                                      d_svxcluslist);
-
-    //tick cut
-    //false - passes the tick cut
-    //true  - falis the tick cut
-    tickCut = !pass_tick;
-
-
-    //get cluster information
-    Nclus = svxtrk->getNhits();
-    Nclus_layer[0] = svxtrk->getNhits(0); //B0
-    Nclus_layer[1] = svxtrk->getNhits(1); //B1
-
-    //B2
-    Nclus_layer[2] = 0;
-    for (int i = 2; i < 5; i++)
-      Nclus_layer[2] += svxtrk->getNhits(i);
-
-    //B3
-    Nclus_layer[3] = 0;
-    for (int i = 5; i < 8; i++)
-      Nclus_layer[3] += svxtrk->getNhits(i);
-
-    hitPattern = svxtrk->getHitPattern();
-
-    for (int ihit = 0; ihit < Nclus; ihit++)
-    {
-      SvxClusterInfo *svxclusinfo = svxtrk->getClusterInfo(ihit);
-
-      if (!svxclusinfo)
+      //double check that this central track exists
+      if (cntindex >= d_phcnttrk->get_npart())
       {
-        std::cout << "ERROR: No ClusInfo Central Track" << std::endl;
+        std:: cout << "WARNING!! Can not find cnt track for index=" << itrk << " (cntindex=" << cntindex << ")" << std::endl;
         continue;
       }
-      layer[ihit]  = svxclusinfo->getLayer();
-      ladder[ihit] = svxclusinfo->getLadder();
-      res_z[ihit]  = svxclusinfo->getdz();
-      res_s[ihit]  = svxclusinfo->getdphi();
-      clus_global_x[ihit] = svxclusinfo->getPosition(0);
-      clus_global_y[ihit] = svxclusinfo->getPosition(1);
-      clus_global_z[ihit] = svxclusinfo->getPosition(2);
-    }
+
+      //fill the ntuple
+      run        = m_runNumber;
+      event      = m_nEvent;
+      svxindex   = itrk;
+      dchindex   = cntindex;
+      dchquality = d_phcnttrk->get_quality(cntindex);
+      mom        = d_phcnttrk->get_mom(cntindex);
+      E          = d_phcnttrk->get_ecore(cntindex);
+
+      float px                            = d_phcnttrk->get_mom(cntindex) * sin(d_phcnttrk->get_the0(cntindex)) * cos(d_phcnttrk->get_phi0(cntindex));
+      float py                            = d_phcnttrk->get_mom(cntindex) * cos(d_phcnttrk->get_the0(cntindex)) * sin(d_phcnttrk->get_phi0(cntindex));
+      pT                                  = sqrt(px * px + py * py);
+      charge                              = d_phcnttrk->get_charge(cntindex);
+      the0                                = d_phcnttrk->get_the0(cntindex);
+      phi0                                = d_phcnttrk->get_phi0(cntindex);
+      dcarm                               = d_phcnttrk->get_dcarm(cntindex);
+      emcsect                             = d_phcnttrk->get_sect(cntindex);
+      sector                              = dcarm * 4 + emcsect;
+      centrality                          = gcent;
+      zed                                 = d_phcnttrk->get_zed(cntindex);
+      phi                                 = d_phcnttrk->get_phi(cntindex);
+      n0                                  = d_phcnttrk->get_n0(cntindex);
+      sn0                                 = d_phcnttrk->get_sn0(cntindex);
+      if (d_phcnttrk->get_chi2(cntindex) >= 0 && d_phcnttrk->get_npe0(cntindex) >= 0)
+        chi2npe0 = d_phcnttrk->get_chi2(cntindex) / d_phcnttrk->get_npe0(cntindex);
+      if (d_phcnttrk->get_schi2(cntindex) >= 0 && d_phcnttrk->get_snpe0(cntindex) >= 0)
+        schi2snpe0 = d_phcnttrk->get_schi2(cntindex) / d_phcnttrk->get_snpe0(cntindex);
+      disp       = d_phcnttrk->get_disp(cntindex);
+      sdisp      = d_phcnttrk->get_sdisp(cntindex);
+      prob       = d_phcnttrk->get_prob(cntindex);
+      dep        = d_phcnttrk->get_dep(cntindex);
+      emcdphi    = d_phcnttrk->get_emcdphi(cntindex);
+      emcdz      = d_phcnttrk->get_emcdz(cntindex);
+      emcsdphi   = d_phcnttrk->get_emcsdphi(cntindex);
+      emcsdz     = d_phcnttrk->get_emcsdz(cntindex);
+      emcsdphi_e = d_phcnttrk->get_emcsdphi_e(cntindex);
+      emcsdz_e   = d_phcnttrk->get_emcsdz_e(cntindex);
+      chisq      = svxtrk->getChiSquare();
+      ndf        = svxtrk->getNDF();
+      quality    = svxtrk->getLinkQuality();
+      score      = svxtrk->getLinkScore();
+      dca2D      = svxtrk->getDCA2D();
+      dcaz       = svxtrk->getDCAZ();
+      vtx[0]     = vtxpos.getX();
+      vtx[1]     = vtxpos.getY();
+      vtx[2]     = vtxpos.getZ();
+      which_vtx  = s_vtx;
+      bbcq[0]    = bbc_qn;
+      bbcq[1]    = bbc_qs;
+      bbcz       = bbc_z;
+
+      //conversion veto
+      //false - not a conversion (passes pass_conversionVeto())
+      //true  - conversion (fails pass_converstionVeto())
+      //convVeto = !(pass_conversionVeto(svxtrk, charge));
+      convVeto = !m_convveto->calculate(m_fieldPolarity,
+                                        pT,
+                                        charge,
+                                        svxtrk,
+                                        d_svxcluslist);
+
+      //tick cut
+      //false - passes the tick cut
+      //true  - falis the tick cut
+      tickCut = !pass_tick;
 
 
-    //print_variables();
-    //cuts regardless of field settings
-    if ( ( (dchquality == 31 || dchquality == 63) &&
-           chisq / ndf > 0 && chisq / ndf < 3 &&
-           Nclus >= 3 &&
-           Nclus_layer[0] > 0 && Nclus_layer[1] > 0 &&
-           zed > -75 && zed < 75
-         )
-         //|| //swapped
-         //( (dchquality == 31 || dchquality == 63) &&
-         //  score > 60 &&
-         //  chisq / ndf > 0 && chisq / ndf < 6 &&
-         //  pT >= 1.0 &&
-         //  dep>-2.5 &&
-         //  sn0 >= 2 &&
-         //  schi2snpe0 < 7 &&
-         //  sdisp < 5)
-       )
-    {
-      //if not zerofield, cut on pT
-      if (!m_zerofield && pT >= 0.75)
+      //get cluster information
+      Nclus = svxtrk->getNhits();
+      Nclus_layer[0] = svxtrk->getNhits(0); //B0
+      Nclus_layer[1] = svxtrk->getNhits(1); //B1
+
+      //B2
+      Nclus_layer[2] = 0;
+      for (int i = 2; i < 5; i++)
+        Nclus_layer[2] += svxtrk->getNhits(i);
+
+      //B3
+      Nclus_layer[3] = 0;
+      for (int i = 5; i < 8; i++)
+        Nclus_layer[3] += svxtrk->getNhits(i);
+
+      hitPattern = svxtrk->getHitPattern();
+
+      for (int ihit = 0; ihit < Nclus; ihit++)
       {
-        ntp_SVXCNT->Fill();
-        m_nWrite++;
-        htrack_phized->Fill(zed, phi);
+        SvxClusterInfo *svxclusinfo = svxtrk->getClusterInfo(ihit);
+
+        if (!svxclusinfo)
+        {
+          std::cout << "ERROR: No ClusInfo Central Track" << std::endl;
+          continue;
+        }
+        layer[ihit]  = svxclusinfo->getLayer();
+        ladder[ihit] = svxclusinfo->getLadder();
+        res_z[ihit]  = svxclusinfo->getdz();
+        res_s[ihit]  = svxclusinfo->getdphi();
+        clus_global_x[ihit] = svxclusinfo->getPosition(0);
+        clus_global_y[ihit] = svxclusinfo->getPosition(1);
+        clus_global_z[ihit] = svxclusinfo->getPosition(2);
       }
-      else if (m_zerofield)
+
+
+      //print_variables();
+      //cuts regardless of field settings
+      if ( ( (dchquality == 31 || dchquality == 63) &&
+             chisq / ndf > 0 && chisq / ndf < 3 &&
+             Nclus >= 3 &&
+             Nclus_layer[0] > 0 && Nclus_layer[1] > 0 &&
+             zed > -75 && zed < 75
+           )
+           //|| //swapped
+           //( (dchquality == 31 || dchquality == 63) &&
+           //  score > 60 &&
+           //  chisq / ndf > 0 && chisq / ndf < 6 &&
+           //  pT >= 1.0 &&
+           //  dep>-2.5 &&
+           //  sn0 >= 2 &&
+           //  schi2snpe0 < 7 &&
+           //  sdisp < 5)
+         )
       {
-        ntp_SVXCNT->Fill();
-        m_nWrite++;
-        htrack_phized->Fill(zed, phi);
+        //if not zerofield, cut on pT
+        if (!m_zerofield && pT >= 0.75)
+        {
+          ntp_SVXCNT->Fill();
+          m_nWrite++;
+          htrack_phized->Fill(zed, phi);
+        }
+        else if (m_zerofield)
+        {
+          ntp_SVXCNT->Fill();
+          m_nWrite++;
+          htrack_phized->Fill(zed, phi);
+        }
       }
     }
   }
-
 
   //---------------------------------------------//
   // Fill PHCNT tree
   //---------------------------------------------//
-  for (unsigned int itrk = 0; itrk < d_phcnttrk->get_npart(); itrk++)
+  if (d_phcnttrk)
   {
-    reset_variables();
-
-    //fill the ntuple
-    run                             = m_runNumber;
-    event                           = m_nEvent;
-    vtx[0]                          = vtxpos.getX();
-    vtx[1]                          = vtxpos.getY();
-    vtx[2]                          = vtxpos.getZ();
-    which_vtx                       = s_vtx;
-    bbcq[0]                         = bbc_qn;
-    bbcq[1]                         = bbc_qs;
-    bbcz                            = bbc_z;
-    centrality                      = gcent;
-    dchindex                        = itrk;
-    dchquality                      = d_phcnttrk->get_quality(itrk);
-    mom                             = d_phcnttrk->get_mom(itrk);
-    E                               = d_phcnttrk->get_ecore(itrk);
-    float px                        = d_phcnttrk->get_mom(itrk) * sin(d_phcnttrk->get_the0(itrk)) * cos(d_phcnttrk->get_phi0(itrk));
-    float py                        = d_phcnttrk->get_mom(itrk) * cos(d_phcnttrk->get_the0(itrk)) * sin(d_phcnttrk->get_phi0(itrk));
-    pT                              = sqrt(px * px + py * py);
-    charge                          = d_phcnttrk->get_charge(itrk);
-    the0                            = d_phcnttrk->get_the0(itrk);
-    phi0                            = d_phcnttrk->get_phi0(itrk);
-    dcarm                           = d_phcnttrk->get_dcarm(itrk);
-    emcsect                         = d_phcnttrk->get_sect(itrk);
-    sector                          = dcarm * 4 + emcsect;
-    zed                             = d_phcnttrk->get_zed(itrk);
-    phi                             = d_phcnttrk->get_phi(itrk);
-    n0                              = d_phcnttrk->get_n0(itrk);
-    sn0                             = d_phcnttrk->get_sn0(itrk);
-    if (d_phcnttrk->get_chi2(itrk) >= 0 && d_phcnttrk->get_npe0(itrk) >= 0)
-      chi2npe0 = d_phcnttrk->get_chi2(itrk) / d_phcnttrk->get_npe0(itrk);
-    if (d_phcnttrk->get_schi2(itrk) >= 0 && d_phcnttrk->get_snpe0(itrk) >= 0)
-      schi2snpe0 = d_phcnttrk->get_schi2(itrk) / d_phcnttrk->get_snpe0(itrk);
-    disp       = d_phcnttrk->get_disp(itrk);
-    sdisp      = d_phcnttrk->get_sdisp(itrk);
-    prob       = d_phcnttrk->get_prob(itrk);
-    dep        = d_phcnttrk->get_dep(itrk);
-    emcdphi    = d_phcnttrk->get_emcdphi(itrk);
-    emcdz      = d_phcnttrk->get_emcdz(itrk);
-    emcsdphi   = d_phcnttrk->get_emcsdphi(itrk);
-    emcsdz     = d_phcnttrk->get_emcsdz(itrk);
-    emcsdphi_e = d_phcnttrk->get_emcsdphi_e(itrk);
-    emcsdz_e   = d_phcnttrk->get_emcsdz_e(itrk);
-    alpha      = d_phcnttrk->get_alpha(itrk);
-    ppc1[0]    = d_phcnttrk->get_ppc1x(itrk);
-    ppc1[1]    = d_phcnttrk->get_ppc1y(itrk);
-    ppc1[2]    = d_phcnttrk->get_ppc1z(itrk);
-    ppc2[0]    = d_phcnttrk->get_ppc2x(itrk);
-    ppc2[1]    = d_phcnttrk->get_ppc2y(itrk);
-    ppc2[2]    = d_phcnttrk->get_ppc2z(itrk);
-    ppc3[0]    = d_phcnttrk->get_ppc3x(itrk);
-    ppc3[1]    = d_phcnttrk->get_ppc3y(itrk);
-    ppc3[2]    = d_phcnttrk->get_ppc3z(itrk);
-    pc2dphi    = d_phcnttrk->get_pc2dphi(itrk);
-    pc2dz      = d_phcnttrk->get_pc2dz(itrk);
-    pc3dphi    = d_phcnttrk->get_pc3dphi(itrk);
-    pc3dz      = d_phcnttrk->get_pc3dz(itrk);
-
-    //cuts regardless of field
-    if ( (dchquality == 31 || dchquality == 63) &&
-         zed > -75 && zed < 75 )
+    for (unsigned int itrk = 0; itrk < d_phcnttrk->get_npart(); itrk++)
     {
-      //cuts dependent on field
-      if (!m_zerofield && pT >= 0.75)
+      reset_variables();
+
+      //fill the ntuple
+      run                             = m_runNumber;
+      event                           = m_nEvent;
+      vtx[0]                          = vtxpos.getX();
+      vtx[1]                          = vtxpos.getY();
+      vtx[2]                          = vtxpos.getZ();
+      which_vtx                       = s_vtx;
+      bbcq[0]                         = bbc_qn;
+      bbcq[1]                         = bbc_qs;
+      bbcz                            = bbc_z;
+      centrality                      = gcent;
+      dchindex                        = itrk;
+      dchquality                      = d_phcnttrk->get_quality(itrk);
+      mom                             = d_phcnttrk->get_mom(itrk);
+      E                               = d_phcnttrk->get_ecore(itrk);
+      float px                        = d_phcnttrk->get_mom(itrk) * sin(d_phcnttrk->get_the0(itrk)) * cos(d_phcnttrk->get_phi0(itrk));
+      float py                        = d_phcnttrk->get_mom(itrk) * cos(d_phcnttrk->get_the0(itrk)) * sin(d_phcnttrk->get_phi0(itrk));
+      pT                              = sqrt(px * px + py * py);
+      charge                          = d_phcnttrk->get_charge(itrk);
+      the0                            = d_phcnttrk->get_the0(itrk);
+      phi0                            = d_phcnttrk->get_phi0(itrk);
+      dcarm                           = d_phcnttrk->get_dcarm(itrk);
+      emcsect                         = d_phcnttrk->get_sect(itrk);
+      sector                          = dcarm * 4 + emcsect;
+      zed                             = d_phcnttrk->get_zed(itrk);
+      phi                             = d_phcnttrk->get_phi(itrk);
+      n0                              = d_phcnttrk->get_n0(itrk);
+      sn0                             = d_phcnttrk->get_sn0(itrk);
+      if (d_phcnttrk->get_chi2(itrk) >= 0 && d_phcnttrk->get_npe0(itrk) >= 0)
+        chi2npe0 = d_phcnttrk->get_chi2(itrk) / d_phcnttrk->get_npe0(itrk);
+      if (d_phcnttrk->get_schi2(itrk) >= 0 && d_phcnttrk->get_snpe0(itrk) >= 0)
+        schi2snpe0 = d_phcnttrk->get_schi2(itrk) / d_phcnttrk->get_snpe0(itrk);
+      disp       = d_phcnttrk->get_disp(itrk);
+      sdisp      = d_phcnttrk->get_sdisp(itrk);
+      prob       = d_phcnttrk->get_prob(itrk);
+      dep        = d_phcnttrk->get_dep(itrk);
+      emcdphi    = d_phcnttrk->get_emcdphi(itrk);
+      emcdz      = d_phcnttrk->get_emcdz(itrk);
+      emcsdphi   = d_phcnttrk->get_emcsdphi(itrk);
+      emcsdz     = d_phcnttrk->get_emcsdz(itrk);
+      emcsdphi_e = d_phcnttrk->get_emcsdphi_e(itrk);
+      emcsdz_e   = d_phcnttrk->get_emcsdz_e(itrk);
+      alpha      = d_phcnttrk->get_alpha(itrk);
+      ppc1[0]    = d_phcnttrk->get_ppc1x(itrk);
+      ppc1[1]    = d_phcnttrk->get_ppc1y(itrk);
+      ppc1[2]    = d_phcnttrk->get_ppc1z(itrk);
+      ppc2[0]    = d_phcnttrk->get_ppc2x(itrk);
+      ppc2[1]    = d_phcnttrk->get_ppc2y(itrk);
+      ppc2[2]    = d_phcnttrk->get_ppc2z(itrk);
+      ppc3[0]    = d_phcnttrk->get_ppc3x(itrk);
+      ppc3[1]    = d_phcnttrk->get_ppc3y(itrk);
+      ppc3[2]    = d_phcnttrk->get_ppc3z(itrk);
+      pc2dphi    = d_phcnttrk->get_pc2dphi(itrk);
+      pc2dz      = d_phcnttrk->get_pc2dz(itrk);
+      pc3dphi    = d_phcnttrk->get_pc3dphi(itrk);
+      pc3dz      = d_phcnttrk->get_pc3dz(itrk);
+
+      //cuts regardless of field
+      if ( (dchquality == 31 || dchquality == 63) &&
+           zed > -75 && zed < 75 )
       {
-        ntp_CNT->Fill();
-      }
-      else if (m_zerofield)
-      {
-        ntp_CNT->Fill();
+        //cuts dependent on field
+        if (!m_zerofield && pT >= 0.75)
+        {
+          ntp_CNT->Fill();
+        }
+        else if (m_zerofield)
+        {
+          ntp_CNT->Fill();
+        }
       }
     }
   }
-
 
   //---------------------------------------------//
   // Fill SEG tree
