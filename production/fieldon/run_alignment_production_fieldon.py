@@ -31,6 +31,11 @@ productionDir = vtxalignDir + "production/fieldon/"
 # Get the configuration parameters from file
 ##############################################
 print("\n--> Reading in parameters from {}".format(configFileName))
+
+#for backward compatability define rotations as 0's first
+rotPhcntPhi = [0, 0]
+rotPhcntTheta = [0, 0]
+
 with open(configFileName,'r') as file:
 	for line in file:
 		if line[0] == '#':
@@ -47,6 +52,13 @@ with open(configFileName,'r') as file:
 		if "geomfile" in line:
 			parfile = line.rstrip().split(' ')[1]
 			print("parfile: {}".format(parfile))
+		if "rot-phcnt-phi" in line:
+			rotPhcntPhi = line.rstrip().split(' ')[1:]
+		if "rot-phcnt-theta" in line:
+			rotPhcntTheta = line.rstrip().split(' ')[1:]
+
+print("rot-phcnt-phi: {}, {}".format(rotPhcntPhi[0], rotPhcntPhi[1]))
+print("rot-phcnt-theta: {}, {}".format(rotPhcntTheta[0], rotPhcntTheta[1]))
 
 
 
@@ -94,9 +106,13 @@ os.system("ln -sf {}OutputManager.C .".format(productionDir))
 os.system("ln -sf {}rawdatacheck.C .".format(productionDir))
 
 # set up the parameters to be passed to the macro
-pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
-pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/pixel_deadmap_run14auau200_run{}.dat".format(runNumber)
-pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/chip_deadmap_run14auau200_run{}.dat".format(runNumber)
+# pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
+# pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/pixel_deadmap_run14auau200_run{}.dat".format(runNumber)
+# pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/chip_deadmap_run14auau200_run{}.dat".format(runNumber)
+
+pixel_refmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/pixel_reference_deadmap_run14auau200.dat"
+pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/pixel_deadmap_diffs_run14auau_run{}.dat".format(runNumber)
+pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/chip_deadmap_run14auau_run{}.dat".format(runNumber)
 strip_deadchannel = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadChannels.txt".format(runNumber)
 strip_deadRCC = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadReadouts.txt".format(runNumber)
 
@@ -112,7 +128,11 @@ command += "\"" + pixel_refmap + "\","
 command += "\"" + pixel_diffmap + "\","
 command += "\"" + pixel_chipmap + "\","
 command += "\"" + strip_deadchannel + "\","
-command += "\"" + strip_deadRCC
+command += "\"" + strip_deadRCC + "\","
+command += str(rotPhcntPhi[0]) + ","
+command += str(rotPhcntPhi[1]) + ","
+command += str(rotPhcntTheta[0]) + ","
+command += str(rotPhcntTheta[1])
 command += ")\'"
 
 print(command)
