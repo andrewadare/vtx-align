@@ -43,33 +43,39 @@ void compare_fieldon_productions()
 
   bool print_plots = true;
 
-  const int NFILES = 3;
+  const int NFILES = 2;
   const char *fileName[] =
   {
 
-    "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-p2-v8/testvtxproduction_fieldon-407951-taebong-p2-v8.root",
+    // "/direct/phenix+prod01/phnxreco/millepede/fieldon/fieldon-407951-taebong-p2-v8/testvtxproduction_fieldon-407951-taebong-p2-v8.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-0-0/testvtxproduction_fieldon-407951-0-0.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2/testvtxproduction_fieldon-407951-3-2.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_1/testvtxproduction_fieldon-407951-3-2_1.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_2/testvtxproduction_fieldon-407951-3-2_2.root",
-    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_3/testvtxproduction_fieldon-407951-3-2_3.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_3/testvtxproduction_fieldon-407951-3-2_3.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_4/testvtxproduction_fieldon-407951-3-2_4.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_5/testvtxproduction_fieldon-407951-3-2_5.root",
     "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_1/testvtxproduction_fieldon-407951-22-11_1.root",
-
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-12_1/testvtxproduction_fieldon-407951-22-12_1.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-13_1/testvtxproduction_fieldon-407951-22-13_1.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-23-1_1/testvtxproduction_fieldon-407951-23-1_1.root",
+    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-405869-22-11/testvtxproduction_fieldon-405869-22-11.root",
   };
   const char *fileLabel[] =
   {
-    "Taebong",
+    // "Taebong",
     // "411768-0-0",
     // "411768-3-2",
     // "411768-3-2_1",
     // "411768-3-2_2",
-    "411768-3-2_3",
+    // "411768-3-2_3",
     // "411768-3-2_4",
     // "411768-3-2_5",
     "411768-22-11_1",
-
+    // "411768-22-12_1",
+    // "411768-22-13_1",
+    // "411768-23-1_1",
+    "405869-22-11",
   };
   int color[] =
   {
@@ -201,6 +207,9 @@ void compare_fieldon_productions()
   TH3F *hresz_cotthe0_laylad[NFILES];
   TH2F *hresz_cotthe0_ladder[NFILES][NLAYERS][24];
 
+  TH3F *hress_z_laylad[NFILES];
+  TH2F *hress_z_ladder[NFILES][NLAYERS][24];
+
   TH3F *hres_z_laylad[NFILES];
   TH3F *hres_s_laylad[NFILES];
 
@@ -217,6 +226,7 @@ void compare_fieldon_productions()
   fgaus->SetLineColor(kRed);
 
   float vtx_EW_mean[NFILES][3];
+  float vtx_EW_sig[NFILES][3];
 
   TH3D *h3tmp;
   TH2D *h2tmp;
@@ -451,6 +461,16 @@ void compare_fieldon_productions()
     hresz_cotthe0_laylad[ifile]->SetTitle(";cot(the0);z residual [cm];layer*24+ladder");
     hresz_cotthe0_laylad[ifile]->Sumw2();
 
+    ntp_SVXCNT->Draw("layer*24+ladder:res_s:clus_global_z>>htmp(300,-15,15, 500,-0.5,0.5, 100,-0.5,99.5)",
+                     // Form("%s && %s", eventCuts, trackCuts),
+                     "",
+                     "goff");
+    hress_z_laylad[ifile] = (TH3F *) gDirectory->FindObject("htmp");
+    hress_z_laylad[ifile]->SetDirectory(0);
+    hress_z_laylad[ifile]->SetName(Form("hress_z_laylad_%i", ifile));
+    hress_z_laylad[ifile]->SetTitle(";z (cluster);s residual [cm];layer*24+ladder");
+    hress_z_laylad[ifile]->Sumw2();
+
     for (int ilayer = 0; ilayer < NLAYERS; ilayer++)
     {
       for (int iladder = 0; iladder < NLADDERS[ilayer]; iladder++)
@@ -467,6 +487,19 @@ void compare_fieldon_productions()
         hresz_cotthe0_ladder[ifile][ilayer][iladder]->SetTitle(
           ";cot(the0);z residual [cm]");
         hresz_cotthe0_ladder[ifile][ilayer][iladder]->SetDirectory(0);
+
+        //-- s residual vs z
+        hress_z_laylad[ifile]->GetZaxis()->SetRange(bl, bh);
+
+        hress_z_ladder[ifile][ilayer][iladder] =
+          (TH2F *) hress_z_laylad[ifile]->Project3D("yx");
+        hress_z_ladder[ifile][ilayer][iladder]->SetName(
+          Form("hress_z_ladder_%i_%i_%i",
+               ifile, ilayer, iladder));
+        hress_z_ladder[ifile][ilayer][iladder]->SetTitle(
+          ";z (cluster) [cm];s residual [cm]");
+        hress_z_ladder[ifile][ilayer][iladder]->SetDirectory(0);
+
       }
     }
 
@@ -895,10 +928,20 @@ void compare_fieldon_productions()
     hvtx_EW[ifile][2]->SetLineColor(color[ifile]);
 
 
-    vtx_EW_mean[ifile][0] = hvtx_EW[ifile][0]->GetMean();
-    vtx_EW_mean[ifile][1] = hvtx_EW[ifile][1]->GetMean();
-    vtx_EW_mean[ifile][2] = hvtx_EW[ifile][2]->GetMean();
+    for (int i = 0; i < 3; i++)
+    {
+      double m = hvtx_EW[ifile][i]->GetMean();
+      double rms = hvtx_EW[ifile][i]->GetRMS();
 
+      hvtx_EW[ifile][i]->Fit("gaus", "RQ0", "", m - 1.5 * rms, m + 1.5 * rms);
+
+      vtx_EW_mean[ifile][i] = hvtx_EW[ifile][i]->GetFunction("gaus")->GetParameter(1);
+      vtx_EW_sig[ifile][i] = hvtx_EW[ifile][i]->GetFunction("gaus")->GetParameter(2);
+
+    }
+    // vtx_EW_mean[ifile][0] = hvtx_EW[ifile][0]->GetMean();
+    // vtx_EW_mean[ifile][1] = hvtx_EW[ifile][1]->GetMean();
+    // vtx_EW_mean[ifile][2] = hvtx_EW[ifile][2]->GetMean();
 
     ntp_event->Draw("vtx[2]-bbcz>>htmp(200,-10,10)", eventCuts, "goff");
     hvtxzbbcz[ifile] = (TH1F *) gDirectory->FindObject("htmp");
@@ -1195,6 +1238,12 @@ void compare_fieldon_productions()
             idx,
             0,
             fgaus->GetParameter(2));
+
+          cout << "  " << fileLabel[ifile]
+               << " B" << ilayer << "L" << iladder
+               << " ds=" << fgaus->GetParameter(1)
+               << endl;
+
         }
         else
         {
@@ -1241,7 +1290,7 @@ void compare_fieldon_productions()
   TLegend *legvtxEW[3];
   for (int ivtx = 0; ivtx < 3; ivtx++)
   {
-    legvtxEW[ivtx] = new TLegend(0.5, 0.75, 1., 0.9);
+    legvtxEW[ivtx] = new TLegend(0.5, 0.4, 1., 0.9);
     legvtxEW[ivtx]->SetFillStyle(0);
     legvtxEW[ivtx]->SetBorderSize(0);
     legvtxEW[ivtx]->SetTextSize(0.03);
@@ -1249,6 +1298,7 @@ void compare_fieldon_productions()
     {
       legvtxEW[ivtx]->AddEntry(hvtx_EW[ifile][ivtx], fileLabel[ifile], "L");
       legvtxEW[ivtx]->AddEntry((TObject *)0, Form("    mean=%.4f cm", vtx_EW_mean[ifile][ivtx]), "");
+      legvtxEW[ivtx]->AddEntry((TObject *)0, Form("    #sigma=%.4f cm", vtx_EW_sig[ifile][ivtx]), "");
     }
   }
 
@@ -1683,6 +1733,31 @@ void compare_fieldon_productions()
   }
 
 
+  TCanvas *cressz_ladder[NLAYERS][NFILES];
+  for (int ilayer = 0; ilayer < NLAYERS; ilayer++)
+  {
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      cressz_ladder[ilayer][ifile] =
+        new TCanvas(Form("cressz_ladder_%i_%i", ilayer, ifile),
+                    Form("File%i B%i resz vs cot(the0)", ilayer, ifile),
+                    cx[ilayer] * 200,
+                    cy[ilayer] * 150);
+      cressz_ladder[ilayer][ifile]->Divide(cx[ilayer], cy[ilayer]);
+
+      for (int iladder = 0; iladder < NLADDERS[ilayer]; iladder++)
+      {
+        cressz_ladder[ilayer][ifile]->cd(iladder + 1);
+        if (hress_z_ladder[ifile][ilayer][iladder]->GetEntries() > 100)
+          hress_z_ladder[ifile][ilayer][iladder]->GetYaxis()->SetRangeUser(-0.25, 0.25);
+        hress_z_ladder[ifile][ilayer][iladder]->Draw("colz");
+        ltitle.DrawLatex(0.5, 0.95,
+                         Form("%s B%iL%02i", fileLabel[ifile], ilayer, iladder));
+      }
+    }
+  }
+
+
   TCanvas *cnclus_svxcnt = new TCanvas("cnclus_svxcnt", "nclus svxcnt", 1200, 600);
   cnclus_svxcnt->Divide(NARM, 1);
   for (int iarm = 0; iarm < NARM; iarm++)
@@ -1959,6 +2034,10 @@ void compare_fieldon_productions()
       {
         creszthe0_ladder[ilayer][ifile]->Print(
           Form("pdfs/svxcnt_resz_the0_%s_B%i.pdf",
+               fileLabel[ifile], ilayer));
+
+        cressz_ladder[ilayer][ifile]->Print(
+          Form("pdfs/svxcnt_ress_z_%s_B%i.pdf",
                fileLabel[ifile], ilayer));
       }
     }
