@@ -37,6 +37,7 @@
 #include <PHPoint.h>
 #include "RunHeader.h"
 #include "PreviousEvent.h"
+#include "EventHeader.h"
 
 #include "PHGlobal.h"
 #include "PHCentralTrack.h"
@@ -146,6 +147,12 @@ int AnaAlignmentProd::Init(PHCompositeNode *topNode)
                                      Form("B%i; z [cm]; phi", ilayer),
                                      400, -20, 20,
                                      800, -4, 4);
+
+    hcluster_phiz_svxcnt[ilayer] =
+      new TH2F(Form("hcluster_phized_svxcnt_B%i", ilayer),
+               Form("B%i; z [cm]; phi", ilayer),
+               400, -20, 20,
+               800, -4, 4);
   }
 
   htrack_phized = new TH2F("htrack_phized",
@@ -169,6 +176,7 @@ int AnaAlignmentProd::Init(PHCompositeNode *topNode)
   ntp_SVXCNT = new TTree("ntp_SVXCNT", "Tree containing SvxCentralTrack information");
   ntp_SVXCNT->Branch("run", &run, "run/I");
   ntp_SVXCNT->Branch("event", &event, "event/I");
+  ntp_SVXCNT->Branch("eventseq", &eventseq, "eventseq/I");
   ntp_SVXCNT->Branch("svxindex", &svxindex, "svxindex/I");
   ntp_SVXCNT->Branch("dchindex", &dchindex, "dchindex/I");
   ntp_SVXCNT->Branch("dchquality", &dchquality, "dchquality/F");
@@ -227,6 +235,7 @@ int AnaAlignmentProd::Init(PHCompositeNode *topNode)
   ntp_CNT = new TTree("ntp_CNT", "Tree containing PHCentralTrack information");
   ntp_CNT->Branch("run", &run, "run/I");
   ntp_CNT->Branch("event", &event, "event/I");
+  ntp_CNT->Branch("eventseq", &eventseq, "eventseq/I");
   ntp_CNT->Branch("centrality", &centrality, "centrality/F");
   ntp_CNT->Branch("vtx", &vtx, "vtx[3]/F");
   ntp_CNT->Branch("which_vtx", &which_vtx);
@@ -274,6 +283,7 @@ int AnaAlignmentProd::Init(PHCompositeNode *topNode)
   ntp_SEG = new TTree("ntp_SEG", "Tree containing SvxCentralTrack information");
   ntp_SEG->Branch("run", &run, "run/I");
   ntp_SEG->Branch("event", &event, "event/I");
+  ntp_SEG->Branch("eventseq", &eventseq, "eventseq/I");
   ntp_SEG->Branch("svxindex", &svxindex, "svxindex/I");
   ntp_SEG->Branch("mom", &mom, "mom/F");
   ntp_SEG->Branch("pT", &pT, "pT/F");
@@ -299,6 +309,7 @@ int AnaAlignmentProd::Init(PHCompositeNode *topNode)
   ntp_event = new TTree("ntp_event", "Tree containing event information");
   ntp_event->Branch("run", &run, "run/I");
   ntp_event->Branch("event", &event, "event/I");
+  ntp_event->Branch("eventseq", &eventseq, "eventseq/I");
   ntp_event->Branch("vtx", &vtx, "vtx[3]/F");
   ntp_event->Branch("vtxE", &vtxE, "vtxE[3]/F");
   ntp_event->Branch("vtxW", &vtxW, "vtxW[3]/F");
@@ -381,6 +392,15 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
 {
   m_nEvent++;
 
+  //-------------------EventHeader----------------------------------
+  d_eventhead = NULL;
+  d_eventhead = findNode::getClass<EventHeader>(topNode, "EventHeader");
+  if (!d_eventhead)
+  {
+      std::cout<< "ERROR!! EventHeader node not found." << std::endl;
+      return -1;
+  }
+  //------------------------------------------------------------------
 
   //----------------------- VtxOut -----------------------------------//
   d_vtxout = NULL;
@@ -462,6 +482,7 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
     //std::cout << PHWHERE << "        NSvxCentralTracks = " << d_svxcnttrklist->get_nCentralTracks() << std::endl;
   }
 
+  m_EventSeqNumber = d_eventhead->get_EvtSequence();
 
   //---------------------------------------------//
   // CHECK TICK CUT
@@ -601,6 +622,7 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
   reset_variables();
   run        = m_runNumber;
   event      = m_nEvent;
+  eventseq   = m_EventSeqNumber;
   vtx[0]     = vtxpos.getX();
   vtx[1]     = vtxpos.getY();
   vtx[2]     = vtxpos.getZ();
@@ -665,6 +687,7 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
       //fill the ntuple
       run        = m_runNumber;
       event      = m_nEvent;
+      eventseq   = m_EventSeqNumber;
       svxindex   = itrk;
       dchindex   = cntindex;
       dchquality = d_phcnttrk->get_quality(cntindex);
@@ -762,6 +785,23 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
         clus_global_x[ihit] = svxclusinfo->getPosition(0);
         clus_global_y[ihit] = svxclusinfo->getPosition(1);
         clus_global_z[ihit] = svxclusinfo->getPosition(2);
+
+        //fill cluster phi vs z histograms for SvxCentralTracks
+
+        if ( ( (dchquality == 31 || dchquality == 63) &&
+               chisq / ndf > 0 && chisq / ndf < 3 &&
+               Nclus >= 3 &&
+               Nclus_layer[0] > 0 && Nclus_layer[1] > 0 &&
+               zed > -75 && zed < 75 &&
+               (!m_zerofield && pT >= 1.0)
+             ) )
+        {
+          float phi =
+            TMath::ATan2(clus_global_y[ihit], clus_global_x[ihit]);
+          hcluster_phiz_svxcnt[layer[ihit]]->Fill(clus_global_z[ihit], phi);
+
+        }
+
       }
 
 
@@ -813,6 +853,7 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
       //fill the ntuple
       run                             = m_runNumber;
       event                           = m_nEvent;
+      eventseq                        = m_EventSeqNumber;
       vtx[0]                          = vtxpos.getX();
       vtx[1]                          = vtxpos.getY();
       vtx[2]                          = vtxpos.getZ();
@@ -897,6 +938,7 @@ int AnaAlignmentProd::process_event(PHCompositeNode *topNode)
 
     run        = m_runNumber;
     event      = m_nEvent;
+    eventseq   = m_EventSeqNumber;
     svxindex   = itrk;
     centrality = gcent;
     vtx[0]     = vtxpos.getX();
@@ -984,6 +1026,7 @@ void AnaAlignmentProd::reset_variables()
 {
   run        = -9999;
   event      = -9999;
+  eventseq   = -9999;
   svxindex   = -9999;
   dchindex   = -9999;
   dchquality = -9999;

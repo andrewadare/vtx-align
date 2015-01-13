@@ -21,6 +21,7 @@ class TH2F;
 class SvxSegmentList;
 class TProfile;
 class ConversionVeto;
+class EventHeader;
 
 #include <string>
 #include <map>
@@ -51,6 +52,8 @@ protected:
     PreviousEvent *d_pevent;
     SvxClusterList *d_svxcluslist;
     SvxSegmentList *d_svxseglist;
+    EventHeader *d_eventhead;
+
 
     //--functions
     void reset_variables();
@@ -61,12 +64,14 @@ protected:
     int m_fieldPolarity;
     int m_runNumber;
     int m_nEvent;
+    int m_EventSeqNumber;
     int m_nWrite;
     bool m_zerofield;
     ConversionVeto *m_convveto;
 
     //--histograms
     TH2F *hcluster_phiz[4];
+    TH2F *hcluster_phiz_svxcnt[4];
     TH2F *htrack_phized;
     TH1F *hevent;
     TProfile *pDC_alpha_phi[2];
@@ -81,6 +86,7 @@ protected:
     TTree *ntp_SVXCNT;
     int run;
     int event;
+    int eventseq;
     int svxindex;
     int dchindex;
     float dchquality;
