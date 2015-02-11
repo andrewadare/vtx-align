@@ -16,7 +16,7 @@ runNumber = int(sys.argv[2])
 segNumber = int(sys.argv[3])
 outDir = sys.argv[4]
 vtxalignDir = sys.argv[5]
-standalone = False
+standalone = True
 
 ##############################################
 # Set some parameters for running
@@ -59,7 +59,7 @@ print("\n--> Setting environment variables")
 #os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
 os.environ["DCACHE_DOOR"] = "phnxdoor1.rcf.bnl.gov:22133"
 
-print("ODBCINI: {}".format(os.environ["ODBCINI"]))
+# print("ODBCINI: {}".format(os.environ["ODBCINI"]))
 print("DCACHE_DORR: {}".format(os.environ["DCACHE_DOOR"]))
 
 ##############################################
@@ -78,6 +78,8 @@ print(prdfDir+prdfFile)
 print("size: {}".format(os.stat(prdfDir+prdfFile).st_size))
 os.system("dccp {} .".format(prdfDir+prdfFile))
 os.system("ls -lh {}".format(prdfFile))
+# os.system("copy_prdf.pl {} .".format(prdfDir+prdfFile))
+# os.system("ls -lh {}".format(prdfFile))
 
 ##############################################
 # Run the production
@@ -102,6 +104,11 @@ else:
 pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
 pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/pixel_deadmap_run14auau200_run{}.dat".format(runNumber)
 pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/chip_deadmap_run14auau200_run{}.dat".format(runNumber)
+
+# pixel_refmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/pixel_reference_deadmap_run14auau200.dat"
+# pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/pixel_deadmap_diffs_run14auau_run{}.dat".format(runNumber)
+# pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/chip_deadmap_run14auau_run{}.dat".format(runNumber)
+
 strip_deadchannel = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadChannels.txt".format(runNumber)
 strip_deadRCC = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadReadouts.txt".format(runNumber)
 
@@ -111,7 +118,7 @@ else:
 	command = "root -b -q \'Fun4All_VTX_ZeroField.C("
 
 command += str(nevents) +","
-command += "\"" + prdfFile + "\","
+command += "\"" + condorDir + "/" + prdfFile + "\","
 command += "\"" + outDir + "DST_SVX/" + "\","
 command += "\"" + vtxalignDir + "geom/" + parfile + "\","
 command += str(beamcenter[0]) + "," + str(beamcenter[1]) + ","
