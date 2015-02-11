@@ -67,6 +67,24 @@ AnaVTXCluster/ltmain.sh
 AnaVTXCluster/m4/*
 AnaVTXCluster/missing
 
+#ignore build files in AnaAlignmentProd
+AnaAlignmentProd/Makefile.in
+AnaAlignmentProd/aclocal.m4
+AnaAlignmentProd/autom4te.cache/*
+AnaAlignmentProd/build/*
+AnaAlignmentProd/config.guess
+AnaAlignmentProd/config.sub
+AnaAlignmentProd/configure
+AnaAlignmentProd/depcomp
+AnaAlignmentProd/install-sh
+AnaAlignmentProd/ltmain.sh
+AnaAlignmentProd/m4/*
+AnaAlignmentProd/missing
+
+#miscellaneous par files
+production/config/run14auau200/config-*.txt
+
+
 #ignore locally linked util & svgeo files
 SvxTGeo.h
 
