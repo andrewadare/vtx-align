@@ -55,11 +55,22 @@ void compare_fieldon_productions()
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_3/testvtxproduction_fieldon-407951-3-2_3.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_4/testvtxproduction_fieldon-407951-3-2_4.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-3-2_5/testvtxproduction_fieldon-407951-3-2_5.root",
-    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_1/testvtxproduction_fieldon-407951-22-11_1.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_1/testvtxproduction_fieldon-407951-22-11_1.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-12_1/testvtxproduction_fieldon-407951-22-12_1.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-13_1/testvtxproduction_fieldon-407951-22-13_1.root",
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-23-1_1/testvtxproduction_fieldon-407951-23-1_1.root",
-    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-405869-22-11/testvtxproduction_fieldon-405869-22-11.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-405869-22-11/testvtxproduction_fieldon-405869-22-11.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_1/testvtxproduction_fieldon-407951-22-11_1.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-414431-22-11_3/testvtxproduction_fieldon-414431-22-11_3.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_3/testvtxproduction_fieldon-407951-22-11_3.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-413721-taebong/testvtxproduction_fieldon-413721-taebong.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_5/testvtxproduction_fieldon-407951-22-11_5.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-405869-22-11_5/testvtxproduction_fieldon-405869-22-11_5.root",
+    // "/direct/phenix+hhj2/dcm07e/run14MiniProd/run14auau200_pro104/test/testprod_405869_500k.root",
+    "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-407951-22-11_10/testvtxproduction_fieldon-407951-22-11_10.root",
+    "/direct/phenix+hhj2/dcm07e/run14MiniProd/run14auau200_pro104/test/testprod_407951_500k.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-414511_0/testvtxproduction_fieldon-414511_0.root",
+    // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-414511_1/testvtxproduction_fieldon-414511_1.root",
   };
   const char *fileLabel[] =
   {
@@ -71,11 +82,20 @@ void compare_fieldon_productions()
     // "411768-3-2_3",
     // "411768-3-2_4",
     // "411768-3-2_5",
-    "411768-22-11_1",
+    // "411768-22-11_1",
     // "411768-22-12_1",
     // "411768-22-13_1",
     // "411768-23-1_1",
-    "405869-22-11",
+    // "414431",
+    // "414431",
+    // "407951-taebong",
+    // "407951-22-11_5",
+    // "405869-22-11_5",
+    // "405869-testprod",
+    "407951-22-11_10",
+    "407951-testprod",
+    // "414511_0",
+    // "414511_1",
   };
   int color[] =
   {
@@ -118,7 +138,8 @@ void compare_fieldon_productions()
                           //"(bbcq[0]+bbcq[1])>400 && " //central
                           // "(bbcq[0]+bbcq[1])<181 && " //peripheral
                           "which_vtx==\"SVX_PRECISE\"";
-  const char *standaloneCuts = "Nclus_layer[0]>0 && Nclus_layer[1]>0 && pT>0.5";
+  // const char *standaloneCuts = "Nclus_layer[0]>0 && Nclus_layer[1]>0 && pT>0.5";
+  const char *standaloneCuts = "Nclus>=3 && pT>0.5";
 
   cout << " eventCuts      = " << eventCuts << endl;
   cout << " trackCuts      = " << trackCuts << endl;
@@ -128,7 +149,10 @@ void compare_fieldon_productions()
   const char *dchtrackCuts = "(dchquality == 31 || dchquality == 63) && "
                              // "!(the0>1.5 && the0<1.65) &&"
                              "pT>1";
-  const char *dcheventCuts = "TMath::Abs(vtx[2])<10";
+
+  const char *dcheventCuts =
+    // "(bbcq[0]+bbcq[1])<181 && " //peripheral
+    "TMath::Abs(vtx[2])<10";
 
   const int NZVRTX = 3;
   float zvrtxl[NZVRTX] = { -10.0, -2.0, 2.0};
@@ -475,7 +499,7 @@ void compare_fieldon_productions()
     {
       for (int iladder = 0; iladder < NLADDERS[ilayer]; iladder++)
       {
-        int bl = ilayer * 24 + iladder;
+        int bl = ilayer * 24 + iladder + 1;
         int bh = bl;
         hresz_cotthe0_laylad[ifile]->GetZaxis()->SetRange(bl, bh);
 
@@ -930,14 +954,17 @@ void compare_fieldon_productions()
 
     for (int i = 0; i < 3; i++)
     {
-      double m = hvtx_EW[ifile][i]->GetMean();
-      double rms = hvtx_EW[ifile][i]->GetRMS();
+      //check the integral
+      if (hvtx_EW[ifile][i]->Integral(1, hvtx_EW[ifile][i]->GetNbinsX()) > 10)
+      {
+        double m = hvtx_EW[ifile][i]->GetMean();
+        double rms = hvtx_EW[ifile][i]->GetRMS();
 
-      hvtx_EW[ifile][i]->Fit("gaus", "RQ0", "", m - 1.5 * rms, m + 1.5 * rms);
+        hvtx_EW[ifile][i]->Fit("gaus", "RQ0", "", m - 1.5 * rms, m + 1.5 * rms);
 
-      vtx_EW_mean[ifile][i] = hvtx_EW[ifile][i]->GetFunction("gaus")->GetParameter(1);
-      vtx_EW_sig[ifile][i] = hvtx_EW[ifile][i]->GetFunction("gaus")->GetParameter(2);
-
+        vtx_EW_mean[ifile][i] = hvtx_EW[ifile][i]->GetFunction("gaus")->GetParameter(1);
+        vtx_EW_sig[ifile][i] = hvtx_EW[ifile][i]->GetFunction("gaus")->GetParameter(2);
+      }
     }
     // vtx_EW_mean[ifile][0] = hvtx_EW[ifile][0]->GetMean();
     // vtx_EW_mean[ifile][1] = hvtx_EW[ifile][1]->GetMean();
@@ -1589,7 +1616,17 @@ void compare_fieldon_productions()
   cchisq_svxcnt->Divide(NARM, 1);
   for (int iarm = 0; iarm < NARM; iarm++)
   {
+    //find maximum
+    float max = 0;
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      if (hchisqndf_svxcnt[iarm][ifile]->GetMaximum() > max)
+      {
+        max = hchisqndf_svxcnt[iarm][ifile]->GetMaximum();
+      }
+    }
     cchisq_svxcnt->cd(iarm + 1);
+    hchisqndf_svxcnt[iarm][0]->SetMaximum(1.2 * max);
     hchisqndf_svxcnt[iarm][0]->Draw();
     for (int ifile = 1; ifile < NFILES; ifile++)
       hchisqndf_svxcnt[iarm][ifile]->Draw("same");
@@ -1605,7 +1642,17 @@ void compare_fieldon_productions()
   cchisq_phi_svxcnt->Divide(2, 2);
   for (int iphi = 0; iphi < NPHI; iphi++)
   {
+    //find maximum
+    float max = 0;
+    for (int ifile = 0; ifile < NFILES; ifile++)
+    {
+      if (hchsiqndf_phi_svxcnt[ifile][iphi]->GetMaximum() > max)
+      {
+        max = hchsiqndf_phi_svxcnt[ifile][iphi]->GetMaximum();
+      }
+    }
     cchisq_phi_svxcnt->cd(iphi + 1);
+    hchsiqndf_phi_svxcnt[0][iphi]->SetMaximum(1.2 * max);
     hchsiqndf_phi_svxcnt[0][iphi]->Draw();
     for (int ifile = 1; ifile < NFILES; ifile++)
       hchsiqndf_phi_svxcnt[ifile][iphi]->Draw("same");
