@@ -21,6 +21,7 @@ vtxalignDir = sys.argv[5]
 # Set some parameters for running
 ##############################################
 nevents = 10000
+# nevents = 1000
 condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
 #condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
 #vtxalignDir = "/direct/phenix+u/dcm07e/work/vtx-align/"
@@ -68,6 +69,7 @@ print("rot-phcnt-theta: {}, {}".format(rotPhcntTheta[0], rotPhcntTheta[1]))
 print("\n--> Setting environment variables")
 
 #os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
+# os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.test"
 os.environ["DCACHE_DOOR"] = "phnxdoor1.rcf.bnl.gov:22133"
 
 print("ODBCINI: {}".format(os.environ["ODBCINI"]))
@@ -110,11 +112,19 @@ os.system("ln -sf {}rawdatacheck.C .".format(productionDir))
 # pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/pixel_deadmap_run14auau200_run{}.dat".format(runNumber)
 # pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/chip_deadmap_run14auau200_run{}.dat".format(runNumber)
 
+# Standard deadmaps
 pixel_refmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/pixel_reference_deadmap_run14auau200.dat"
 pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/pixel_deadmap_diffs_run14auau_run{}.dat".format(runNumber)
 pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/chip_deadmap_run14auau_run{}.dat".format(runNumber)
-strip_deadchannel = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadChannels.txt".format(runNumber)
-strip_deadRCC = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadReadouts.txt".format(runNumber)
+strip_deadchannel = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/new/run{}_strip_hotdeadChannels.txt".format(runNumber)
+strip_deadRCC = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/new/run{}_strip_hotdeadReadouts.txt".format(runNumber)
+
+# New strip deadmaps w/o raw data check
+# pixel_refmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/pixel_reference_deadmap_run14auau200.dat"
+# pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/pixel_deadmap_diffs_run14auau_run{}.dat".format(runNumber)
+# pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/chip_deadmap_run14auau_run{}.dat".format(runNumber)
+# strip_deadchannel = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/rawdatacheck/run{}_strip_hotdeadChannels.txt".format(runNumber)
+# strip_deadRCC = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/rawdatacheck/run{}_strip_hotdeadReadouts.txt".format(runNumber)
 
 command = "root -b -q \'Fun4All_VTX_Fieldon.C("
 command += str(nevents) +","
