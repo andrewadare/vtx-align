@@ -10,8 +10,8 @@
 
 RawDataCheck *rawdatacheck()
 {
-// just in case this lib gets disentangled
-  gSystem->Load("libRawDataCheck.so"); 
+  // just in case this lib gets disentangled
+  gSystem->Load("libRawDataCheck.so");
   Fun4AllServer *se = Fun4AllServer::instance();
   RawDataCheck *chk = RawDataCheck::instance();
 
@@ -69,8 +69,8 @@ RawDataCheck *rawdatacheck()
 
   // register everything with Fun4All
   se->registerSubsystem(chk);
-  //  chk->UpdateDB(0); // prevent db updates in test mode, 
-  chk->UpdateDB(1); // prevent db updates in test mode, 1 to write bad events into database
+  chk->UpdateDB(0); // prevent db updates in test mode,
+  // chk->UpdateDB(1); // prevent db updates in test mode, 1 to write bad events into database
   return chk;
 }
 
@@ -90,7 +90,7 @@ void SetCvsTag()
 {
   char filename[200];
   char *offline = getenv("OFFLINE_MAIN");
-  sprintf(filename,"%s/rebuild.info",offline);
+  sprintf(filename, "%s/rebuild.info", offline);
   SetCvsTagFromFile(filename);
   return ;
 }
@@ -101,39 +101,39 @@ void SetCvsTagFromFile(const char *filename)
   recoConsts *rc = recoConsts::instance();
   FILE *rebuildinfo = fopen(filename, "r");
   if (! rebuildinfo)
-    {
-      rc->set_CharFlag("CVSTAG", "newbuild");
-    }
+  {
+    rc->set_CharFlag("CVSTAG", "newbuild");
+  }
   else
+  {
+    rc->set_CharFlag("CVSTAG", "none");
+    char line[101];
+    int foundtag = 0;
+    int foundr = 0;
+    recoConsts *rc = recoConsts::instance();
+    while (fscanf(rebuildinfo, "%100s", line) != EOF)
     {
-      rc->set_CharFlag("CVSTAG", "none");
-      char line[101];
-      int foundtag = 0;
-      int foundr = 0;
-      recoConsts *rc = recoConsts::instance();
-      while (fscanf(rebuildinfo, "%100s", line) != EOF)
+      if (foundr)
+      {
+        string cvstag = line;
+        rc->set_CharFlag("CVSTAG", cvstag.c_str());
+        break;
+      }
+      if (foundtag)
+      {
+        if (strcmp(line, "-r") == 0)
         {
-          if (foundr)
-            {
-              string cvstag = line;
-              rc->set_CharFlag("CVSTAG", cvstag.c_str());
-              break;
-            }
-          if (foundtag)
-            {
-              if (strcmp(line, "-r") == 0)
-                {
-                  foundr = 1;
-                  foundtag = 0;
-                }
-            }
-          if (strcmp(line, "tag:") == 0)
-            {
-              foundtag = 1;
-            }
+          foundr = 1;
+          foundtag = 0;
         }
-      fclose(rebuildinfo);
+      }
+      if (strcmp(line, "tag:") == 0)
+      {
+        foundtag = 1;
+      }
     }
+    fclose(rebuildinfo);
+  }
   cout << "Setting CVSTAG to " << rc->get_CharFlag("CVSTAG") << endl;
   return ;
 }
