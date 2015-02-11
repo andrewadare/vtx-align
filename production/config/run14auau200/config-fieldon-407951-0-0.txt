@@ -8,13 +8,13 @@
 # Using the ideal geometry as geomfile
 # Using DCH West offsets from Taebong -
 #   CNTBEAM_WEST: -0.120756  0.0741091
-# Using the VTX West beamcenter from config-406541-1-0.txt
+# Using the VTX West beamcenter from output of config-406541-1-1.txt
 # Calculating vtx-to-cnt -
-#   vtx-to-cnt X: -0.120756 - 0.319291 = -0.440047
-#   vtx-to-cnt Y: 0.0741091 - 0.0447938 = 0.0293153
+#   vtx-to-cnt X: -0.120756 - 0.3141 = -0.4348
+#   vtx-to-cnt Y: 0.0741091 - 0.0381 =  0.0360
 # Using DCH beam center as beamcenter
 
-beamcenter: -0.120756 0.0741091
+beamcenter: 0 0
 east-to-west: 0 0 0
-vtx-to-cnt: -0.440047 0.0293153 0
+vtx-to-cnt: 0 0 0
 geomfile: svxPISA-ideal.par
