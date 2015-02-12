@@ -29,6 +29,7 @@ protected:
     int m_pass;
     bool m_central;
     float m_bbcq;
+    int m_runnumber;
 
 };
 

@@ -23,21 +23,23 @@
 
 //===========================================================================
 ProdEventCutter::ProdEventCutter() :
-    m_pass(0),
-    m_central(false),
-    m_bbcq(200)
+  m_pass(0),
+  m_central(false),
+  m_bbcq(200),
+  m_runnumber(0)
 {
-    ThisName = "ProdEventCutter";
+  ThisName = "ProdEventCutter";
 
 }
 
 //===========================================================================
 ProdEventCutter::ProdEventCutter(std::string filename) :
-    m_pass(0),
-    m_central(false),
-    m_bbcq(200)
+  m_pass(0),
+  m_central(false),
+  m_bbcq(200),
+  m_runnumber(0)
 {
-    ThisName = "ProdEventCutter";
+  ThisName = "ProdEventCutter";
 
 }
 
@@ -45,29 +47,38 @@ ProdEventCutter::ProdEventCutter(std::string filename) :
 //===========================================================================
 int ProdEventCutter::Init(PHCompositeNode *topNode)
 {
-    std::cout << PHWHERE << std::endl;
-    if (!m_central)
-        std::cout << PHWHERE << " - cutting on events bbcq < " << m_bbcq << std::endl;
-    else if (m_central)
-        std::cout << PHWHERE << " - cutting on events bbcq > " << m_bbcq << std::endl;
+  std::cout << PHWHERE << std::endl;
+  if (!m_central)
+    std::cout << PHWHERE << " - cutting on events bbcq < " << m_bbcq << std::endl;
+  else if (m_central)
+    std::cout << PHWHERE << " - cutting on events bbcq > " << m_bbcq << std::endl;
 
-    return 0;
+  return 0;
 }
 
 //===========================================================================
 int ProdEventCutter::End(PHCompositeNode *topNode)
 {
 
-    std::cout << PHWHERE << " - Passed " << m_pass << " events." << std::endl;
+  std::cout << PHWHERE << " - Passed " << m_pass << " events." << std::endl;
 
-    return 0;
+  return 0;
 }
 
 //===========================================================================
 int ProdEventCutter::InitRun(PHCompositeNode *topNode)
 {
+  RunHeader *runhdr = findNode::getClass<RunHeader>(topNode, "RunHeader");
+  if (!runhdr)
+  {
+    std::cout << "AnaSvxCentralTracksTree::InitRun() : No RunHeader, do nothing and return!" << std::endl;
+    return 1;
+  }
 
-    return 0;
+
+  m_runnumber = runhdr->get_RunNumber();
+
+  return 0;
 
 }
 
@@ -75,84 +86,95 @@ int ProdEventCutter::InitRun(PHCompositeNode *topNode)
 int ProdEventCutter::process_event(PHCompositeNode *topNode)
 {
 
-    //---------------------------------------------//
-    // GET REQUIRED NODES
-    //---------------------------------------------//
+  //---------------------------------------------//
+  // GET REQUIRED NODES
+  //---------------------------------------------//
 
 
-    //---------------------- PHGlobal ----------------------------------//
-    PHGlobal *d_global = findNode::getClass<PHGlobal>(topNode, "PHGlobal");
-    if (!d_global)
-    {
-        std::cout << "ERROR!! Can't find PHGlobal" << std::endl;
-        return -1;
-    }
-    //------------------------------------------------------------------//
+  //---------------------- PHGlobal ----------------------------------//
+  PHGlobal *d_global = findNode::getClass<PHGlobal>(topNode, "PHGlobal");
+  if (!d_global)
+  {
+    std::cout << "ERROR!! Can't find PHGlobal" << std::endl;
+    return -1;
+  }
+  //------------------------------------------------------------------//
 
-    //------------------ PreviousEvent ---------------------------------//
-    PreviousEvent *pevent    = findNode::getClass<PreviousEvent>(topNode, "PreviousEvent");
-    if (!pevent)
-    {
-        std::cout << "ERROR!! Can't find PreviousEvent! (suppressing further warnings)" << std::endl;
-        return -1;
-    }
-    //------------------------------------------------------------------//
-
-
+  //------------------ PreviousEvent ---------------------------------//
+  PreviousEvent *pevent    = findNode::getClass<PreviousEvent>(topNode, "PreviousEvent");
+  if (!pevent)
+  {
+    std::cout << "ERROR!! Can't find PreviousEvent! (suppressing further warnings)" << std::endl;
+    return -1;
+  }
+  //------------------------------------------------------------------//
 
 
 
-    //---------------------------------------------//
-    // MAKE CENTRALITY CUT
-    //---------------------------------------------//
-
-    float bbc_qn      = d_global->getBbcChargeN();
-    float bbc_qs      = d_global->getBbcChargeS();
-    float bbcq = bbc_qn + bbc_qs;
-
-    if (verbosity > 0)
-        std::cout << PHWHERE << " - bbcq=" << bbcq << std::endl;
-
-    if (!m_central && (bbc_qn + bbc_qs) > m_bbcq)
-        return ABORTEVENT;
-    else if (m_central && (bbc_qn + bbc_qs) < m_bbcq)
-        return ABORTEVENT;
 
 
-    //---------------------------------------------//
-    // MAKE TICK CUT
-    //---------------------------------------------//
-    int pticks[3] = {0};
-    for ( int i = 0; i < 3; i++ )
-        pticks[i] = pevent->get_clockticks(i);
+  //---------------------------------------------//
+  // MAKE CENTRALITY CUT
+  //---------------------------------------------//
 
-    bool pass_tick =  !( ( 50 < pticks[0] && pticks[0] < 120) ||
-                         (700 < pticks[1] && pticks[1] < 780) );
+  float bbc_qn      = d_global->getBbcChargeN();
+  float bbc_qs      = d_global->getBbcChargeS();
+  float bbcq = bbc_qn + bbc_qs;
 
-    if (!pass_tick)
-        return ABORTEVENT;
+  if (verbosity > 0)
+    std::cout << PHWHERE << " - bbcq=" << bbcq << std::endl;
 
-
-    //---------------------------------------------//
-    // CHECK TRIGGERS
-    // ABORT IF NOT FOUND
-    //---------------------------------------------//
-    TriggerHelper d_trghelp(topNode);
-
-    //set up for Run 14 AuAu 200
-    bool isnarrow = d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx") ||
-                    d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx CopyA") ||
-                    d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx Copy B");
-
-    if (!isnarrow) return 0;
+  if (!m_central && (bbc_qn + bbc_qs) > m_bbcq)
+    return ABORTEVENT;
+  else if (m_central && (bbc_qn + bbc_qs) < m_bbcq)
+    return ABORTEVENT;
 
 
-    //---------------------------------------------//
-    // EVENT IS OK
-    //---------------------------------------------//
-    if (verbosity > 0) std::cout << PHWHERE << " Passed Event selection" << std::endl;
-    m_pass++;
+  //---------------------------------------------//
+  // MAKE TICK CUT
+  //---------------------------------------------//
+  int pticks[3] = {0};
+  for ( int i = 0; i < 3; i++ )
+    pticks[i] = pevent->get_clockticks(i);
 
-    return EVENT_OK;
+  bool pass_tick =  !( ( 50 < pticks[0] && pticks[0] < 120) ||
+                       (700 < pticks[1] && pticks[1] < 780) );
+
+  if (!pass_tick)
+    return ABORTEVENT;
+
+
+  //---------------------------------------------//
+  // CHECK TRIGGERS
+  // ABORT IF NOT FOUND
+  //---------------------------------------------//
+  TriggerHelper d_trghelp(topNode);
+
+  bool isnarrow = true;
+
+  //set up for Run 14 AuAu 200
+  if (m_runnumber >= 405839 && m_runnumber <= 414988)
+  {
+    isnarrow = d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx") ||
+               d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx CopyA") ||
+               d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>1 tubes) narrowvtx Copy B");
+  }
+  //set up for Run 15 pp 200
+  if (m_runnumber >= 421707)
+  {
+    isnarrow = d_trghelp.didLevel1TriggerGetScaled("BBCLL1(>0 tubes) narrowvtx");
+  }
+
+
+  if (!isnarrow) return 0;
+
+
+  //---------------------------------------------//
+  // EVENT IS OK
+  //---------------------------------------------//
+  if (verbosity > 0) std::cout << PHWHERE << " Passed Event selection" << std::endl;
+  m_pass++;
+
+  return EVENT_OK;
 }
 
