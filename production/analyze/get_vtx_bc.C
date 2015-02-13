@@ -43,10 +43,11 @@ void get_vtx_bc()
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-411914-22-11/testvtxproduction_fieldon-411914-22-11.root";
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-413721-22-11/testvtxproduction_fieldon-413721-22-11.root";
     // "/phenix/prod01/phnxreco/millepede/fieldon/fieldon-414431-22-11/testvtxproduction_fieldon-414431-22-11.root";
-    "/direct/phenix+prod01/phnxreco/millepede/ZF_production/zf-405836-22-11/testvtxproduction_zf-405836-22-11.root";
+    // "/direct/phenix+prod01/phnxreco/millepede/ZF_production/zf-405836-22-11/testvtxproduction_zf-405836-22-11.root";
+    "/direct/phenix+prod01/phnxreco/millepede/run15-productions/zf/zf-421822-0-0/testvtxproduction_zf-421822-0-0.root";
 
   bool print_plots = true;
-  const char *fileLabel = "zf-405836-22-11";
+  const char *fileLabel = "zf-421822-0-0";
 
   const char *eventCuts = "!tickCut && "
                           "TMath::Abs(vtx[2])<10 && "
