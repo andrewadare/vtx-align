@@ -5,7 +5,7 @@
 
 // This "preprocessing" script does some initial outlier rejection.
 // It also renames the ntuple(s).
-// This script uses the PISA geometry file listed in the provided config file. 
+// This script uses the PISA geometry file listed in the provided config file.
 // The opt string may contain:
 //      "": vtx only.
 //      "cnt": vtxtrks & cnttrks.
@@ -13,18 +13,18 @@
 //      "fixed-bc": use beamcenter from rootfiles/bc-411768.root when refitting
 //                  tracks after filtering
 
-void FilterData(const char *infilename = "rootfiles/anavtxcluster-411768-1-3.root",
-                const char *outfilename = "rootfiles/411768-2-0.root",
-                const char *configfilename = "production/config/config-411768-2-0.txt",
+void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-421822-0-1.root",
+                const char *outfilename = "rootfiles/421822-0-1.root",
+                const char *configfilename = "production/config/run15pp200/config-zf-421822-0-1.txt",
                 double vertexprobmin = 0.02,
                 double vertexprobmax = 0.98,
                 double maxdca = 0.5,
                 double maxres_s = 0.1,
                 double maxres_z = 0.1,
                 int nhitsmin = 3,
-                int nevents = 2e5, // -1 = everything
+                int nevents = -1, // -1 = everything
                 float frac4hit = -1, // -1 = no filter
-                TString opt = "fixed-bc,cnt") // see above
+                TString opt = "") // see above
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");
@@ -41,6 +41,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster-411768-1-3.roo
   string parFileName;
   GetParamFromConfig(configfilename, bc, e2w, v2c, parFileName);
   SvxTGeo *tgeo = VTXModel(parFileName.c_str());
+  // SvxTGeo *tgeo = VTXModel("geom/svxPISA-hubert-mod.par");
 
   std::cout << "\n-- Creating output file " << outfilename << " --" << std::endl;
   TFile *outFile = new TFile(outfilename, "recreate");
@@ -70,6 +71,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster-411768-1-3.roo
     std::cout << "\n-- Reading events from ntuple --" << std::endl;
     map <int, int> tmpmap;
     GetEventsFromClusTree(svxseg, tgeo, vtxevents, tmpmap, nevents);
+    cout << " Events: " << vtxevents.size() << endl;
   }
 
   //need to fit segments to get phi, theta
@@ -88,9 +90,10 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster-411768-1-3.roo
              maxdca,
              maxres_s, maxres_z,
              10,
-             10,
+             5,
              nhitsmin,
              frac4hit);
+
 
   //refit tracks with fixed bc if desired
   TGraphErrors *gbc = NULL;
