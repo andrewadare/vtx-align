@@ -9,7 +9,7 @@
 # Latest commit: ab29db21d1b29732201c5ce42ce8cedf795bae2d
 # Notes: Using west beam center.
 
-beamcenter: 0.353192 0.0528139
-east-to-west: -0.0070541 0.00819173 -0.143723
+beamcenter: 0.3532 0.0528
+east-to-west: 0 0 0
 vtx-to-cnt: 0 0 0
 geomfile: svxPISA-ideal.par
