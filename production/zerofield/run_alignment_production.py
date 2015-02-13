@@ -56,10 +56,10 @@ with open(configFileName,'r') as file:
 ##############################################
 print("\n--> Setting environment variables")
 
-#os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
+os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
 os.environ["DCACHE_DOOR"] = "phnxdoor1.rcf.bnl.gov:22133"
 
-# print("ODBCINI: {}".format(os.environ["ODBCINI"]))
+print("ODBCINI: {}".format(os.environ["ODBCINI"]))
 print("DCACHE_DORR: {}".format(os.environ["DCACHE_DOOR"]))
 
 ##############################################
@@ -71,15 +71,20 @@ print(os.getcwd())
 
 runRangeLow = runNumber - runNumber%1000
 runRangeHigh = runRangeLow + 1000
-prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run14/zerofdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
+# prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run14/zerofdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
+prdfDir = "/gpfs02/phenix/scratch/prdftmp/"
 prdfFile = "ZEROFDATA_P00-{:0>10}-{:0>4}.PRDFF".format(runNumber,segNumber)
 
 print(prdfDir+prdfFile)
-print("size: {}".format(os.stat(prdfDir+prdfFile).st_size))
-os.system("dccp {} .".format(prdfDir+prdfFile))
-os.system("ls -lh {}".format(prdfFile))
+# print("size: {}".format(os.stat(prdfDir+prdfFile).st_size))
+# os.system("dccp {} .".format(prdfDir+prdfFile))
+# os.system("ls -lh {}".format(prdfFile))
 # os.system("copy_prdf.pl {} .".format(prdfDir+prdfFile))
 # os.system("ls -lh {}".format(prdfFile))
+
+# temporarily copy until PRDFF's get into dcache
+os.system("cp {} .".format(prdfDir+prdfFile))
+os.system("ls -lh {}".format(prdfFile))
 
 ##############################################
 # Run the production
@@ -102,15 +107,11 @@ else:
 
 # set up the parameters to be passed to the macro
 pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
-pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/pixel_deadmap_run14auau200_run{}.dat".format(runNumber)
-pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/singleruns/chip_deadmap_run14auau200_run{}.dat".format(runNumber)
+pixel_diffmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/pixels/pixel_deadmap_run15pp200_run{}.dat".format(runNumber)
+pixel_chipmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/pixels/chip_deadmap_run15pp200_run{}.dat".format(runNumber)
 
-# pixel_refmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/pixel_reference_deadmap_run14auau200.dat"
-# pixel_diffmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/pixel_deadmap_diffs_run14auau_run{}.dat".format(runNumber)
-# pixel_chipmap = "/direct/phenix+hhj2/dcm07e/vtx/deadmaps_Run14AuAu200/runDiffMaps/chip_deadmap_run14auau_run{}.dat".format(runNumber)
-
-strip_deadchannel = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadChannels.txt".format(runNumber)
-strip_deadRCC = "/direct/phenix+hhj/theok/theok/stability/strip_deadmaps/run14/run{}_strip_hotdeadReadouts.txt".format(runNumber)
+strip_deadchannel = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/strips/run{}_strip_hotdeadChannels.txt".format(runNumber)
+strip_deadRCC = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/strips/run{}_strip_hotdeadReadouts.txt".format(runNumber)
 
 if standalone:
 	command = "root -b -q \'Fun4All_VTX_ZeroField_Standalone.C("
