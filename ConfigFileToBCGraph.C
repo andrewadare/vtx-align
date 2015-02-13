@@ -2,9 +2,9 @@
 
 void ConfigFileToBCGraph()
 {
-  int run = 411768;
+  int run = 421822;
   const char *configfilename =
-    Form("production/config/config-zf-%d-0-0_4.txt", run);
+    Form("production/config/run15pp200/config-zf-%d-0-1.txt", run);
 
   float bc[2] = {0};
   float e2w[3] = {0};
