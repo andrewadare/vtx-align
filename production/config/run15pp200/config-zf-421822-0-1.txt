@@ -1,0 +1,11 @@
+# D. McGlinchey
+# Feb 12 2015
+# Notes:
+#  Calculate initial beam center (now fixed)
+#  using get_vtx_bc.C
+#  and testvtxproduction_zf-421822-0-0.root
+
+beamcenter: 0.1658 0.0675
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: svxPISA-hubert-mod.par
