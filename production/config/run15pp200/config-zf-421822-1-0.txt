@@ -1,0 +1,10 @@
+# D. McGlinchey
+# Feb 12 2015
+# Notes:
+#  After a single arm alignment in x, y, z
+#  on the output of zf-421822-0-1
+ 
+beamcenter: 0.1658 0.0675
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: run15pp200/421822-0-2.par
