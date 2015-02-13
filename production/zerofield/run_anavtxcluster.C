@@ -6,12 +6,12 @@ void run_anavtxcluster(int nevents = 0,
     gSystem->Load("libfun4all.so");
     gSystem->Load("libfun4allfuncs.so");
     gSystem->Load("libCNT.so");
-    gSystem->Load("libcompactCNT.so");
+    // gSystem->Load("libcompactCNT.so");
     gSystem->Load("libsvx.so");
-    gSystem->Load("libsvxeval.so");
+    // gSystem->Load("libsvxeval.so");
     gSystem->Load("libsimreco.so");
     gSystem->Load("librecal.so");
-    gSystem->Load("libcteval");
+    // gSystem->Load("libcteval");
 
     gSystem->Load("libAnaVTXCluster.so");
 
@@ -22,7 +22,7 @@ void run_anavtxcluster(int nevents = 0,
     MasterRecalibratorManager *mr = new MasterRecalibratorManager();
     se->registerSubsystem(mr);
 
-    SubsysReco *ana = new AnaVTXCluster(outfile);
+    AnaVTXCluster *ana = new AnaVTXCluster(outfile);
     se->registerSubsystem(ana);
 
     // Input manager(s)
