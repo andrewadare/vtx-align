@@ -11,11 +11,9 @@ void TrigSelect()
   trgselname = "MB";
   TrigSelect *minbias = new TrigSelect(trgselname);
   trgsel.push_back(trgselname);
-  minbias->AddTrigger( "BBCLL1(>1 tubes)" );
-  minbias->AddTrigger( "BBCLL1(>1 tubes) narrowvtx" );
-  minbias->AddTrigger( "BBCLL1(>1 tubes) narrowvtx CopyA" );
-  minbias->AddTrigger( "BBCLL1(>1 tubes) narrowvtx CopyB" );
-  minbias->AddTrigger( "BBCLL1(>1 tubes) novertex" );
+  minbias->AddTrigger( "BBCLL1(>0 tubes)" );
+  minbias->AddTrigger( "BBCLL1(>0 tubes) narrowvtx" );
+  minbias->AddTrigger( "BBCLL1(>0 tubes) novertex" );
 
 
   TrigSelect *ppg      = new TrigSelect("PPG");      // This will veto ppg triggers
