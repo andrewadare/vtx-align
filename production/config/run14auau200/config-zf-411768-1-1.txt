@@ -1,9 +1,11 @@
-# This is /Users/adare/phenix/alignment/vtx-alignproduction/config/config-zf-411768-1-1.txt
-# Created by user damcglinchey
-# On Thu Oct 9 09:37 MST
-# Run number: 411768
-# Production step: 1
-# Sub-iteration step: 1
+# Example config file for production
+# Other metadata here for record-keeping:
+# - creation date/time
+# - run number used
+# - iteration
+# - input root file
+# - input pisa.par file
+# - current commit SHA `git rev-parse HEAD`
 
 beamcenter: 0.3532 0.0528
 east-to-west: 0 0 0
