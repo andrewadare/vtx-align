@@ -362,7 +362,7 @@ CalcRejectFrac(geoEvents &eventsin, geoEvents &eventsout)
   for (unsigned int i = 0; i < eventsout.size(); i++)
     nout += eventsout[i].size();
 
-  return (float)nout / (float)nin;
+  return (float)(nin - nout) / (float)nin;
 
 }
 
