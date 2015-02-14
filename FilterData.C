@@ -24,7 +24,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-421822-0-1.
                 int nhitsmin = 3,
                 int nevents = -1, // -1 = everything
                 float frac4hit = -1, // -1 = no filter
-                TString opt = "") // see above
+                TString opt = "fixed-bc") // see above
 {
   std::cout << "-- Opening " << infilename << " --" << std::endl;
   TFile *inFile = new TFile(infilename, "read");
@@ -104,7 +104,7 @@ void FilterData(const char *infilename = "rootfiles/anavtxcluster_zf-421822-0-1.
   else if (opt.Contains("fixed-bc"))
   {
     //use fixed bc from designated file
-    TString bcFileIn   = "rootfiles/bc-411768.root";
+    TString bcFileIn   = "rootfiles/bc-421822.root";
     TFile *bcf         = new TFile(bcFileIn.Data(), "read");
     gbc  = (TGraphErrors *) bcf->Get("gbc");
   }
