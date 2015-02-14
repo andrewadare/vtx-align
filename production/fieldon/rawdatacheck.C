@@ -38,7 +38,7 @@ RawDataCheck *rawdatacheck()
   GranuleCheck *TofEast = new CheckTof("EAST");
   GranuleCheck *TofWest = new CheckTof("WEST");
   GranuleCheck *Vtxp = new CheckVtxp("VTXP");
-  GranuleCheck *Vtxs = new CheckVtxs("VTXS");
+  // GranuleCheck *Vtxs = new CheckVtxs("VTXS");
   GranuleCheck *Zdc = new CheckZdc();
 
   //  OK, register them all...
@@ -64,7 +64,7 @@ RawDataCheck *rawdatacheck()
   chk->registerGranule(TofEast);
   chk->registerGranule(TofWest);
   chk->registerGranule(Vtxp);
-  chk->registerGranule(Vtxs);
+  // chk->registerGranule(Vtxs);
   chk->registerGranule(Zdc);
 
   // register everything with Fun4All
