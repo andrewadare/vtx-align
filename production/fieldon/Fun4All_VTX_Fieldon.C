@@ -156,13 +156,13 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     svxpar->set_ReadGeoParFromFile(1);
     svxpar->set_GeometryFileName(parfile);
 
-    svxpar->set_UseRefDiffPixelMap(1);
-    svxpar->set_ReadRefDiffPixelMapFromFile(1);
-    svxpar->set_RefDiffPixelMapFiles(pixel_refmap, pixel_diffmap, pixel_chipmap);
+    // svxpar->set_UseRefDiffPixelMap(1);
+    // svxpar->set_ReadRefDiffPixelMapFromFile(1);
+    // svxpar->set_RefDiffPixelMapFiles(pixel_refmap, pixel_diffmap, pixel_chipmap);
 
-    svxpar->set_ReadStripHotDeadFromFile(1);
-    svxpar->set_StripHotDeadFileName(strip_deadchannel);
-    svxpar->set_StripHotDeadReadoutsFileName(strip_deadRCC);
+    // svxpar->set_ReadStripHotDeadFromFile(1);
+    // svxpar->set_StripHotDeadFileName(strip_deadchannel);
+    // svxpar->set_StripHotDeadReadoutsFileName(strip_deadRCC);
 
 
     SvxDecode *svxdecode = new SvxDecode();
@@ -307,9 +307,9 @@ void Fun4All_VTX_Fieldon(int nEvents = 0,
     /// SvxCentralTrackReco should be called after PHCentralTrack is reconstructed.
     SvxCentralTrackReco *svxcentraltrack = new SvxCentralTrackReco();
     //svxcentraltrack->setSearchWindowFlag(2);
-    svxcentraltrack->setShiftPHCentralTrack(true);
-    svxcentraltrack->setPHCentralTrackPhiThetaShift(0, rotphcntphi_east, rotphcntthe_east);
-    svxcentraltrack->setPHCentralTrackPhiThetaShift(1, rotphcntphi_west, rotphcntthe_west);
+    svxcentraltrack->setRotatePHCentralTrack(true);
+    svxcentraltrack->setPHCentralTrackDphiDtheta(0, rotphcntphi_east, rotphcntthe_east);
+    svxcentraltrack->setPHCentralTrackDphiDtheta(1, rotphcntphi_west, rotphcntthe_west);
     se->registerSubsystem(svxcentraltrack);
 
 
