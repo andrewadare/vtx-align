@@ -71,20 +71,20 @@ print(os.getcwd())
 
 runRangeLow = runNumber - runNumber%1000
 runRangeHigh = runRangeLow + 1000
-# prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run14/zerofdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
-prdfDir = "/gpfs02/phenix/scratch/prdftmp/"
+prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run15/zerofdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
+# prdfDir = "/gpfs02/phenix/scratch/prdftmp/"
 prdfFile = "ZEROFDATA_P00-{:0>10}-{:0>4}.PRDFF".format(runNumber,segNumber)
 
 print(prdfDir+prdfFile)
-# print("size: {}".format(os.stat(prdfDir+prdfFile).st_size))
-# os.system("dccp {} .".format(prdfDir+prdfFile))
-# os.system("ls -lh {}".format(prdfFile))
-# os.system("copy_prdf.pl {} .".format(prdfDir+prdfFile))
-# os.system("ls -lh {}".format(prdfFile))
+print("size: {}".format(os.stat(prdfDir+prdfFile).st_size))
+os.system("dccp {} .".format(prdfDir+prdfFile))
+os.system("ls -lh {}".format(prdfFile))
+os.system("copy_prdf.pl {} .".format(prdfDir+prdfFile))
+os.system("ls -lh {}".format(prdfFile))
 
 # temporarily copy until PRDFF's get into dcache
-os.system("cp {} .".format(prdfDir+prdfFile))
-os.system("ls -lh {}".format(prdfFile))
+# os.system("cp {} .".format(prdfDir+prdfFile))
+# os.system("ls -lh {}".format(prdfFile))
 
 ##############################################
 # Run the production
