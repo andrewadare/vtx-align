@@ -1,0 +1,11 @@
+# D. McGlinchey
+# Feb 12 2015
+# Notes:
+#  After an HL x, y, z, s -> 421822-2-1
+#  and ARM x, y, z, P, Y -> 421822-2-2
+#  on the output of zf-421822-2-0
+ 
+beamcenter: 0.1658 0.0675
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: run15pp200/421822-2-2.par
