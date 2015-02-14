@@ -68,7 +68,7 @@ print("rot-phcnt-theta: {}, {}".format(rotPhcntTheta[0], rotPhcntTheta[1]))
 ##############################################
 print("\n--> Setting environment variables")
 
-#os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
+os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.master"
 # os.environ["ODBCINI"] = "/opt/phenix/etc/odbc.ini.test"
 os.environ["DCACHE_DOOR"] = "phnxdoor1.rcf.bnl.gov:22133"
 
@@ -84,7 +84,7 @@ print(os.getcwd())
 
 runRangeLow = runNumber - runNumber%1000
 runRangeHigh = runRangeLow + 1000
-prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run14/eventdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
+prdfDir = "/pnfs/rcf.bnl.gov/phenix/phnxsink/run15/eventdata/run_{:0>10}_{:0>10}/".format(runRangeLow,runRangeHigh)
 prdfFile = "EVENTDATA_P00-{:0>10}-{:0>4}.PRDFF".format(runNumber,segNumber)
 
 print(prdfDir+prdfFile)
