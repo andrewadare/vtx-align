@@ -106,12 +106,19 @@ else:
 	os.system("ln -sf {}Fun4All_VTX_ZeroField.C .".format(productionDir))
 
 # set up the parameters to be passed to the macro
-pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
-pixel_diffmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/pixels/pixel_deadmap_run15pp200_run{}.dat".format(runNumber)
-pixel_chipmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/pixels/chip_deadmap_run15pp200_run{}.dat".format(runNumber)
+# Deadmaps with the raw data check
+# pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
+# pixel_diffmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/pixels/pixel_deadmap_run15pp200_run{}.dat".format(runNumber)
+# pixel_chipmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/pixels/chip_deadmap_run15pp200_run{}.dat".format(runNumber)
+# strip_deadchannel = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/strips/run{}_strip_hotdeadChannels.txt".format(runNumber)
+# strip_deadRCC = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/strips/run{}_strip_hotdeadReadouts.txt".format(runNumber)
 
-strip_deadchannel = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/strips/run{}_strip_hotdeadChannels.txt".format(runNumber)
-strip_deadRCC = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/strips/run{}_strip_hotdeadReadouts.txt".format(runNumber)
+# Deadmaps without the raw data check
+pixel_refmap = "/direct/phenix+hhj2/dcm07e/run14MiniProd/fieldon/blank_pixel_refmap.txt"
+pixel_diffmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/woraw/pixels/pixel_deadmap_run15pp200_run{}.dat".format(runNumber)
+pixel_chipmap = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/woraw/pixels/chip_deadmap_run15pp200_run{}.dat".format(runNumber)
+strip_deadchannel = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/woraw/strips/run{}_strip_hotdeadChannels.txt".format(runNumber)
+strip_deadRCC = "/direct/phenix+prod01/phnxreco/millepede/deadmaps_run15pp200/zerofield/woraw/strips/run{}_strip_hotdeadReadouts.txt".format(runNumber)
 
 if standalone:
 	command = "root -b -q \'Fun4All_VTX_ZeroField_Standalone.C("
