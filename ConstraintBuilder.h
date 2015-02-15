@@ -607,12 +607,12 @@ WriteLadderConstraints(const char *filename,
     AddConstraints(wbr, ebr, geo, Ones,   fs, "bottom r translation");
 
     // TEMP: Fix radii in B3
-    for (int arm=0; arm<2; ++arm)
-      for (int lyr=3; lyr<4; ++lyr)
-      {
-        veci labels = LadderLabels(geo, arm, lyr, "r");
-        ApplyPreSigma(fs, labels, -1);
-      }
+    // for (int arm=0; arm<2; ++arm)
+    //   for (int lyr=3; lyr<4; ++lyr)
+    //   {
+    //     veci labels = LadderLabels(geo, arm, lyr, "r");
+    //     ApplyPreSigma(fs, labels, -1);
+    //   }
 
     // // TEMP: Fix all radii in W arm
     // for (int arm=1; arm<2; ++arm)
