@@ -6,6 +6,7 @@
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
 #include <TFitResult.h>
+#include <TGraphErrors.h>
 
 bool openPDF = true; // Mac only, but simple to adapt to other viewers with CLI
 
@@ -22,7 +23,7 @@ void SetAxisProps(TH1 *h, int xdivs = 208, int ydivs = 208,
                   bool centerX = true, bool centerY = true);
 
 void FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
-               TObjArray *cList = 0);
+               TGraphErrors *gbc, TObjArray *cList = 0);
 void ModifyPad(TVirtualPad *pad);
 void PrintMeanToPad(TH1D *h1, TH1D *h2, TString coord);
 bool CheckValue(ROOT::TTreeReaderValueBase *value);
@@ -31,7 +32,7 @@ TH1D *Hist(const char *prefix, int layer, int stage);
 TH2D *Hist2D(const char *prefix, int layer, int ladder, int stage);
 TGraphErrors *DeadLadderGraph(int lyr);
 
-double bcx = 0.3532, bcy = 0.0528; // TODO: read from file. This is terrible.
+// double bcx = 0.3532, bcy = 0.0528; // TODO: read from file. This is terrible.
 
 // To plot variables from only one TTree, either:
 // 1. set prod2 and subit2 to any int < 0, or
@@ -67,10 +68,15 @@ void DrawResults(int run = 123456,
     assert(inFiles[stage]);
   }
 
+  // get the beam center
+  TString bcFileIn   = Form("rootfiles/bc-%d.root", run);
+  TFile *bcf         = new TFile(bcFileIn.Data(), "read");
+  TGraphErrors *gbc  = (TGraphErrors *) bcf->Get("gbc");
+
   InitResidHists(treename, ntrees);
-  FillHists(inFiles[0], treename, 0, prod1, subit1, cList);
+  FillHists(inFiles[0], treename, 0, prod1, subit1, gbc, cList);
   if (ntrees == 2)
-    FillHists(inFiles[1], treename, 1, prod2, subit2, cList);
+    FillHists(inFiles[1], treename, 1, prod2, subit2, gbc, cList);
 
   DrawHalfLayerResidPlots(ntrees, cList);
   DrawLadderResidPlots(ntrees, cList);
@@ -112,7 +118,7 @@ void DrawResults(int run = 123456,
 
 void
 FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
-          TObjArray *cList)
+          TGraphErrors *gbc, TObjArray *cList)
 {
   TH1D *xydcae = new TH1D(Form("xydcae_%d_%d",prod,subiter),
                           Form(";east arm x-y DCA [cm];tracks"), 200, -0.11, 0.11);
@@ -283,8 +289,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
       hve->Fill(vertex[0], vertex[1]);
       hvze->Fill(vertex[2]);
       ezdcatheta->Fill(*theta, *zdca);
-      edxvsz->Fill(vertex[2], vertex[0] - bcx);
-      edyvsz->Fill(vertex[2], vertex[1] - bcy);
+      edxvsz->Fill(vertex[2], vertex[0] - gbc->GetX()[0]);
+      edyvsz->Fill(vertex[2], vertex[1] - gbc->GetY()[0]);
     }
     if (arm == 1)
     {
@@ -300,8 +306,8 @@ FillHists(TFile *f, const char *treename, int stage, int prod, int subiter,
       hvw->Fill(vertex[0], vertex[1]);
       hvzw->Fill(vertex[2]);
       wzdcatheta->Fill(*theta, *zdca);
-      wdxvsz->Fill(vertex[2], vertex[0] - bcx);
-      wdyvsz->Fill(vertex[2], vertex[1] - bcy);
+      wdxvsz->Fill(vertex[2], vertex[0] - gbc->GetX()[1]);
+      wdyvsz->Fill(vertex[2], vertex[1] - gbc->GetY()[1]);
     }
 
     xydcaphi->Fill(phiwrap, *xydca);
