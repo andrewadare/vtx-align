@@ -1,0 +1,11 @@
+# D. McGlinchey
+# Feb 12 2015
+# Notes:
+#  After an ARM alignment in x, y, z, P, Y -> 421822-11-1.par
+#  And a HL, x, y, z, s -> 421822-11-2.par
+#  on the output of zf-421822-11-0
+ 
+beamcenter: 0.1658 0.0675
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: run15pp200/421822-11-2.par
