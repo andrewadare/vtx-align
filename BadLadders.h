@@ -12,9 +12,10 @@ bool
 Dead(int layer, int ladder)
 {
   // return false; // TEMP - simulated data
+  // Dead ladders for Run 421822
   if (layer==1 && ladder==11) return true;
   if (layer==3 && ladder==10) return true;
-  if (layer==3 && ladder==16) return true;
+  if (layer==3 && ladder==2 ) return true;
   if (layer==3 && ladder==23) return true;
   return false;
 }
@@ -23,8 +24,8 @@ bool
 RegularizedLadder(int layer, int ladder)
 {
   // return false; // TEMP - simulated data
-  if (layer==3 && ladder==13) return true; // Behind a dead pixel ladder
-  if (layer==3 && ladder==17) return true; // Unstable, not sure why
+  // if (layer==3 && ladder==13) return true; // Behind a dead pixel ladder
+  // if (layer==3 && ladder==17) return true; // Unstable, not sure why
   return false;
 }
 
