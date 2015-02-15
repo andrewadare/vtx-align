@@ -1,0 +1,11 @@
+# D. McGlinchey
+# Feb 12 2015
+# Notes:
+#  First config file for run 15 pp 200 alignment
+#  The strip deadmaps are excluded from 
+#  both the deadmap's and the production
+
+beamcenter: 0 0
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: svxPISA-hubert-mod.par
