@@ -20,7 +20,7 @@ vtxalignDir = sys.argv[5]
 ##############################################
 # Set some parameters for running
 ##############################################
-nevents = 10000
+nevents = 0
 # nevents = 1000
 condorDir = os.environ["_CONDOR_SCRATCH_DIR"]
 #condorDir = "/direct/phenix+prod01/phnxreco/millepede/test/"
