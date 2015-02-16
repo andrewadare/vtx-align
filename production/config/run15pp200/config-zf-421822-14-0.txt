@@ -1,0 +1,10 @@
+# J. Orjuela-Koop
+# Feb 16 2015
+# Notes:
+#  After an ARM alignment in  x, y, z, P, Y -> for 421822-13-1.par
+#  on the output of zf-421822-13-0
+ 
+beamcenter: 0.1658 0.0675
+east-to-west: 0 0 0
+vtx-to-cnt: 0 0 0
+geomfile: run15pp200/421822-13-1.par
